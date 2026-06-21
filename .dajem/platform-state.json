@@ -1,0 +1,92 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "name": "Dajem Admin",
+      "email": "admin@dajem.com",
+      "phone": "+23480000000",
+      "role": "admin",
+      "createdAt": "2026-06-21T09:14:39.992Z",
+      "passwordSalt": "d732e61deac8449140d0abc88deff0e6",
+      "passwordHash": "e354efc82424d87835a05ea7018acaea7e606716e95c01fc6d284cb655d93faba5ad6518f2dbc17b796c22c397829b0ae9a6c8044b1fc21c20c8b1cd453d6b71"
+    }
+  ],
+  "carts": {},
+  "orders": [],
+  "bids": [],
+  "surveys": [],
+  "inventory": [
+    {
+      "productId": "doc-01",
+      "name": "Day-Old Broiler Chicks (Cobb 500)",
+      "category": "chicks",
+      "price": 850,
+      "description": "Vaccinated, high-yield day-old broiler chicks with excellent feed conversion rates.",
+      "stockStatus": "In Stock",
+      "availableUnits": 340,
+      "imageBg": "bg-amber-500/10 text-amber-600"
+    },
+    {
+      "productId": "doc-02",
+      "name": "Day-Old Layer Chicks (Black Nera)",
+      "category": "chicks",
+      "price": 900,
+      "description": "Highly productive layer breeds optimized for high egg production and robustness.",
+      "stockStatus": "Low Stock",
+      "availableUnits": 48,
+      "imageBg": "bg-yellow-500/10 text-yellow-600"
+    },
+    {
+      "productId": "feed-01",
+      "name": "Dajem Organic Broiler Starter",
+      "category": "feeds",
+      "price": 18500,
+      "description": "Premium feed formulation for maximum early-stage skeletal and muscular development (25kg).",
+      "stockStatus": "In Stock",
+      "availableUnits": 120,
+      "imageBg": "bg-emerald-500/10 text-emerald-600"
+    },
+    {
+      "productId": "feed-02",
+      "name": "Dajem High-Yield Layer Mash",
+      "category": "feeds",
+      "price": 16200,
+      "description": "Formulated with balanced calcium and amino acids for sustained laying performance (25kg).",
+      "stockStatus": "In Stock",
+      "availableUnits": 92,
+      "imageBg": "bg-teal-500/10 text-teal-600"
+    },
+    {
+      "productId": "equip-01",
+      "name": "Automatic Hanging Bell Drinkers",
+      "category": "equipment",
+      "price": 9800,
+      "description": "High-grade plastic waterers with automatic shut-off valves to reduce water wastage.",
+      "stockStatus": "In Stock",
+      "availableUnits": 65,
+      "imageBg": "bg-cyan-500/10 text-cyan-600"
+    },
+    {
+      "productId": "equip-02",
+      "name": "Smart Incubation Unit (120 Eggs)",
+      "category": "equipment",
+      "price": 145000,
+      "description": "Digitally controlled temperature, automatic turning gears, and humidity controllers for home or farm breeding.",
+      "stockStatus": "Low Stock",
+      "availableUnits": 9,
+      "imageBg": "bg-indigo-500/10 text-indigo-600"
+    },
+    {
+      "productId": "proc-01",
+      "name": "Fresh Whole Frozen Broiler Chicken",
+      "category": "processed",
+      "price": 4500,
+      "description": "Organically raised, hygienically processed, and instantly frozen to preserve freshness (1.5kg average).",
+      "stockStatus": "In Stock",
+      "availableUnits": 180,
+      "imageBg": "bg-blue-500/10 text-blue-600"
+    }
+  ],
+  "paymentIntents": [],
+  "communicationLogs": []
+}

@@ -1,0 +1,10 @@
+[build]
+command = "npm run build --workspace survey"
+
+[build.environment]
+NODE_VERSION = "20"
+NPM_FLAGS = "--include-workspace-root"
+
+[dev]
+command = "npm run dev --workspace survey"
+targetPort = 3003

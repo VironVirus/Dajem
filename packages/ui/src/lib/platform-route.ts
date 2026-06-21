@@ -1,0 +1,95 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  addToCart,
+  clearCart,
+  getSnapshot,
+  loginUser,
+  registerUser,
+  removeCartItem,
+  submitBid,
+  submitSurvey,
+  updateBidStatus,
+  updateCartItem,
+  updateInventoryItem,
+  updateSurveyStatus,
+} from "./server/platform-repository";
+import { clearSessionCookie, readSessionEmail, writeSessionCookie } from "./server/session";
+
+export const dynamic = "force-dynamic";
+
+function jsonError(error: unknown, status = 400) {
+  const message = error instanceof Error ? error.message : "Something went wrong.";
+  return NextResponse.json({ error: message }, { status });
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const snapshot = await getSnapshot(readSessionEmail(request));
+    return NextResponse.json({ snapshot });
+  } catch (error) {
+    return jsonError(error, 500);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const sessionEmail = readSessionEmail(request);
+
+  try {
+    const body = await request.json();
+    const action = body?.action as string | undefined;
+    const payload = body?.payload ?? {};
+
+    switch (action) {
+      case "register": {
+        const result = await registerUser(sessionEmail, payload);
+        const response = NextResponse.json({
+          snapshot: result.snapshot,
+          message: result.message,
+          preview: result.preview,
+        });
+        writeSessionCookie(response, result.sessionEmail);
+        return response;
+      }
+      case "login": {
+        const result = await loginUser(sessionEmail, payload);
+        const response = NextResponse.json({
+          snapshot: result.snapshot,
+          message: result.message,
+        });
+        writeSessionCookie(response, result.sessionEmail);
+        return response;
+      }
+      case "logout": {
+        const snapshot = await getSnapshot(null);
+        const response = NextResponse.json({
+          snapshot,
+          message: "You have been signed out.",
+        });
+        clearSessionCookie(response);
+        return response;
+      }
+      case "add-to-cart":
+        return NextResponse.json(await addToCart(sessionEmail, payload));
+      case "update-cart-item":
+        return NextResponse.json(await updateCartItem(sessionEmail, payload));
+      case "remove-cart-item":
+        return NextResponse.json(await removeCartItem(sessionEmail, payload));
+      case "clear-cart":
+        return NextResponse.json(await clearCart(sessionEmail));
+      case "submit-bid":
+        return NextResponse.json(await submitBid(sessionEmail, payload));
+      case "submit-survey":
+        return NextResponse.json(await submitSurvey(sessionEmail, payload));
+      case "update-bid-status":
+        return NextResponse.json(await updateBidStatus(sessionEmail, payload));
+      case "update-survey-status":
+        return NextResponse.json(await updateSurveyStatus(sessionEmail, payload));
+      case "update-inventory-item":
+        return NextResponse.json(await updateInventoryItem(sessionEmail, payload));
+      default:
+        return jsonError(new Error("Unsupported platform action."), 404);
+    }
+  } catch (error) {
+    return jsonError(error);
+  }
+}
