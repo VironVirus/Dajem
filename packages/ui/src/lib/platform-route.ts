@@ -17,6 +17,16 @@ import { clearSessionCookie, readSessionEmail, writeSessionCookie } from "./serv
 
 export const dynamic = "force-dynamic";
 
+function assertSameOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return;
+
+  const host = request.headers.get("host");
+  if (!host || new URL(origin).host !== host) {
+    throw new Error("Cross-site requests are not allowed.");
+  }
+}
+
 function jsonError(error: unknown, status = 400) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return NextResponse.json({ error: message }, { status });
@@ -32,9 +42,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const sessionEmail = readSessionEmail(request);
-
   try {
+    assertSameOrigin(request);
+    const sessionEmail = readSessionEmail(request);
     const body = await request.json();
     const action = body?.action as string | undefined;
     const payload = body?.payload ?? {};

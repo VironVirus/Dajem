@@ -2,11 +2,22 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "dajem_session";
-const SESSION_SECRET = process.env.DAJEM_SESSION_SECRET ?? "dajem-dev-session-secret";
 const SESSION_DOMAIN = process.env.DAJEM_COOKIE_DOMAIN;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+function getSessionSecret() {
+  const secret = process.env.DAJEM_SESSION_SECRET;
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("DAJEM_SESSION_SECRET must be configured in production.");
+  }
+
+  return "dajem-dev-session-secret";
+}
 
 function sign(payload: string) {
-  return createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+  return createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
 }
 
 function encode(payload: { email: string; issuedAt: string }) {
@@ -28,6 +39,13 @@ function decode(token: string) {
       email: string;
       issuedAt: string;
     };
+
+    const issuedAt = Date.parse(payload.issuedAt);
+    if (!Number.isFinite(issuedAt)) return null;
+
+    const ageMs = Date.now() - issuedAt;
+    if (ageMs < 0 || ageMs > SESSION_MAX_AGE_SECONDS * 1000) return null;
+
     return payload.email?.toLowerCase() ?? null;
   } catch {
     return null;
@@ -47,7 +65,7 @@ export function writeSessionCookie(response: NextResponse, email: string) {
     secure: process.env.NODE_ENV === "production",
     domain: SESSION_DOMAIN,
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
 

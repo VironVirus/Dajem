@@ -35,7 +35,15 @@ function normalizeEmail(email: string) {
 }
 
 function makeId(prefix: string) {
-  return `${prefix}-${Math.floor(Math.random() * 900000 + 100000)}`;
+  return `${prefix}-${randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function flutterwaveIsConfigured() {
+  return Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY);
+}
+
+function allowMockPayments() {
+  return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
 }
 
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {
@@ -144,13 +152,17 @@ export async function registerUser(
   sessionEmail: string | null,
   payload: { name: string; email: string; phone: string; password: string },
 ) {
-  const email = normalizeEmail(payload.email);
-  const name = payload.name.trim();
-  const phone = payload.phone.trim();
-  const password = payload.password.trim();
+  const email = normalizeEmail(String(payload.email ?? ""));
+  const name = String(payload.name ?? "").trim();
+  const phone = String(payload.phone ?? "").trim();
+  const password = String(payload.password ?? "").trim();
 
   if (!name || !email || !phone || !password) {
     throw new Error("Please complete all signup fields.");
+  }
+
+  if (password.length < 8) {
+    throw new Error("Please use a password with at least 8 characters.");
   }
 
   const { result, state } = await updatePlatformState((draft) => {
@@ -192,8 +204,8 @@ export async function loginUser(
   sessionEmail: string | null,
   payload: { email: string; password: string },
 ) {
-  const email = normalizeEmail(payload.email);
-  const password = payload.password.trim();
+  const email = normalizeEmail(String(payload.email ?? ""));
+  const password = String(payload.password ?? "").trim();
 
   if (!email || !password) {
     throw new Error("Please provide both email and password.");
@@ -202,12 +214,12 @@ export async function loginUser(
   const state = await readPlatformState();
   const user = state.users.find((entry) => normalizeEmail(entry.email) === email);
   if (!user) {
-    throw new Error("We could not find an account with that email.");
+    throw new Error("Invalid email or password.");
   }
 
   const hash = hashPassword(password, user.passwordSalt);
   if (hash !== user.passwordHash) {
-    throw new Error("Incorrect password.");
+    throw new Error("Invalid email or password.");
   }
 
   return {
@@ -331,17 +343,25 @@ export async function submitBid(
 ) {
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
+    const propertyTitle = String(payload.propertyTitle ?? "").trim();
+    const propertyLocation = String(payload.propertyLocation ?? "").trim();
+    const bidAmount = Number(payload.bidAmount);
+    const propertyPrice = Number(payload.propertyPrice);
+
+    if (!propertyTitle || !propertyLocation || !Number.isFinite(bidAmount) || bidAmount <= 0) {
+      throw new Error("Please enter a valid bid.");
+    }
 
     const bid: Bid = {
       id: makeId("BID"),
       propertyId: payload.propertyId,
-      propertyTitle: payload.propertyTitle,
-      propertyLocation: payload.propertyLocation,
-      propertyPrice: payload.propertyPrice,
+      propertyTitle,
+      propertyLocation,
+      propertyPrice: Number.isFinite(propertyPrice) ? propertyPrice : 0,
       userName: user.name,
       userEmail: user.email,
       userPhone: user.phone,
-      bidAmount: payload.bidAmount,
+      bidAmount,
       notes: payload.notes?.trim() || undefined,
       status: "Pending",
       date: formatDate(),
@@ -368,17 +388,24 @@ export async function submitSurvey(
 ) {
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
+    const location = String(payload.location ?? "").trim();
+    const serviceType = String(payload.serviceType ?? "").trim();
+    const description = String(payload.description ?? "").trim();
+
+    if (!location || !serviceType || !description) {
+      throw new Error("Please complete the survey request details.");
+    }
 
     const request: SurveyRequest = {
       id: makeId("SURV"),
       userName: user.name,
       userEmail: user.email,
       userPhone: user.phone,
-      location: payload.location.trim(),
-      serviceType: payload.serviceType.trim(),
-      description: payload.description.trim(),
-      fileName: payload.fileName,
-      fileSizeKb: payload.fileSizeKb,
+      location,
+      serviceType,
+      description,
+      fileName: payload.fileName?.slice(0, 140),
+      fileSizeKb: Math.max(0, Number(payload.fileSizeKb ?? 0)) || undefined,
       status: "Pending",
       date: formatDate(),
     };
@@ -466,7 +493,7 @@ export async function createPaymentIntent(sessionEmail: string | null) {
       amount,
       currency: "NGN",
       items: cart.map((item) => ({ ...item })),
-      provider: process.env.FLUTTERWAVE_SECRET_KEY ? "flutterwave" : "mock",
+      provider: flutterwaveIsConfigured() ? "flutterwave" : "mock",
       status: "pending",
       createdAt: nowIso(),
     };
@@ -497,6 +524,10 @@ export async function completePaymentIntent(
   const { result, state } = await updatePlatformState((draft) => {
     const intent = draft.paymentIntents.find((entry) => entry.txRef === payload.txRef);
     if (!intent) throw new Error("Payment session not found.");
+
+    if (payload.provider === "Simulation" && !allowMockPayments()) {
+      throw new Error("Mock payments are disabled in production.");
+    }
 
     if (intent.status === "paid") {
       const existing = draft.orders.find((order) => order.reference === intent.txRef);

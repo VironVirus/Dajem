@@ -4,6 +4,14 @@ import { readSessionEmail } from "./server/session";
 
 export const dynamic = "force-dynamic";
 
+function flutterwaveIsConfigured() {
+  return Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY);
+}
+
+function allowMockPayments() {
+  return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
+}
+
 export async function GET(request: NextRequest) {
   try {
     const sessionEmail = readSessionEmail(request);
@@ -19,7 +27,11 @@ export async function GET(request: NextRequest) {
       throw new Error("Payment session not found.");
     }
 
-    if (!process.env.FLUTTERWAVE_SECRET_KEY || !transactionId) {
+    if (!flutterwaveIsConfigured()) {
+      if (!allowMockPayments()) {
+        throw new Error("Flutterwave verification is not configured.");
+      }
+
       const result = await completePaymentIntent(sessionEmail ?? intent.userEmail, {
         txRef,
         provider: "Simulation",
@@ -30,6 +42,10 @@ export async function GET(request: NextRequest) {
         message: result.message,
         order: result.order,
       });
+    }
+
+    if (!transactionId) {
+      throw new Error("Missing Flutterwave transaction id.");
     }
 
     const verificationResponse = await fetch(`https://api.flutterwave.com/v3/transactions/${transactionId}/verify`, {

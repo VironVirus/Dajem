@@ -12,11 +12,19 @@ import type {
 } from "../store";
 import { seedInventory } from "../store";
 
-const DEFAULT_ADMIN_EMAIL = "admin@dajem.com";
-const DEFAULT_ADMIN_PASSWORD = "Admin@Dajem123";
-const DEFAULT_ADMIN_PHONE = "+23480000000";
+const DEV_ADMIN_EMAIL = "admin@dajem.local";
+const DEV_ADMIN_PASSWORD = "ChangeMe123!";
+const DEV_ADMIN_PHONE = "+23480000000";
 const SUPABASE_TABLE = process.env.SUPABASE_DAJEM_STATE_TABLE ?? "dajem_state";
 const SUPABASE_ROW_KEY = process.env.SUPABASE_DAJEM_STATE_KEY ?? "platform";
+
+function isProductionRuntime() {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.NETLIFY);
+}
+
+function allowFileBackend() {
+  return !isProductionRuntime() || process.env.DAJEM_ALLOW_FILE_FALLBACK === "true";
+}
 
 function resolveRepoRoot() {
   const cwd = process.cwd();
@@ -33,7 +41,7 @@ function resolveDataFilePath() {
     return process.env.DAJEM_DATA_FILE;
   }
 
-  if (process.env.NETLIFY) {
+  if (process.env.NETLIFY && allowFileBackend()) {
     return join("/tmp", ".dajem", "platform-state.json");
   }
 
@@ -48,24 +56,49 @@ export function hashPassword(password: string, salt: string) {
   return scryptSync(password, salt, 64).toString("hex");
 }
 
-function createAdminUser(): ServerUser {
+function getConfiguredAdminSeed() {
+  const email = process.env.DAJEM_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.DAJEM_ADMIN_PASSWORD?.trim();
+  const phone = process.env.DAJEM_ADMIN_PHONE?.trim() || DEV_ADMIN_PHONE;
+
+  if (email && password) {
+    return { email, password, phone };
+  }
+
+  if (isProductionRuntime()) {
+    return null;
+  }
+
+  return {
+    email: DEV_ADMIN_EMAIL,
+    password: DEV_ADMIN_PASSWORD,
+    phone: DEV_ADMIN_PHONE,
+  };
+}
+
+function createAdminUser(): ServerUser | null {
+  const seed = getConfiguredAdminSeed();
+  if (!seed) return null;
+
   const salt = randomBytes(16).toString("hex");
 
   return {
     id: "admin-1",
     name: "Dajem Admin",
-    email: DEFAULT_ADMIN_EMAIL,
-    phone: DEFAULT_ADMIN_PHONE,
+    email: seed.email,
+    phone: seed.phone,
     role: "admin",
     createdAt: nowIso(),
     passwordSalt: salt,
-    passwordHash: hashPassword(DEFAULT_ADMIN_PASSWORD, salt),
+    passwordHash: hashPassword(seed.password, salt),
   };
 }
 
 function createDefaultState(): PlatformState {
+  const admin = createAdminUser();
+
   return {
-    users: [createAdminUser()],
+    users: admin ? [admin] : [],
     carts: {},
     orders: [],
     bids: [],
@@ -91,10 +124,14 @@ function sanitizeState(raw: unknown): PlatformState {
 
   const candidate = raw as Partial<PlatformState>;
   const users = Array.isArray(candidate.users) ? candidate.users : [];
-  const adminExists = users.some((user) => user?.email?.toLowerCase() === DEFAULT_ADMIN_EMAIL);
+  const configuredAdmin = createAdminUser();
+  const adminEmail = configuredAdmin?.email.toLowerCase();
+  const adminExists = adminEmail
+    ? users.some((user) => user?.email?.toLowerCase() === adminEmail)
+    : true;
 
   return {
-    users: adminExists ? users as ServerUser[] : [createAdminUser(), ...(users as ServerUser[])],
+    users: adminExists || !configuredAdmin ? users as ServerUser[] : [configuredAdmin, ...(users as ServerUser[])],
     carts: candidate.carts && typeof candidate.carts === "object" ? candidate.carts : {},
     orders: Array.isArray(candidate.orders) ? candidate.orders : [],
     bids: Array.isArray(candidate.bids) ? candidate.bids : [],
@@ -191,17 +228,32 @@ async function writeToSupabase(state: PlatformState) {
 }
 
 export async function readPlatformState() {
+  const supabaseIsConfigured = Boolean(getSupabaseConfig());
   const supabaseState = await readFromSupabase();
   if (supabaseState) return supabaseState;
-  return readFromFile();
+
+  if (allowFileBackend()) {
+    return readFromFile();
+  }
+
+  if (supabaseIsConfigured) {
+    throw new Error("Supabase state is configured but could not be read.");
+  }
+
+  return createDefaultState();
 }
 
 export async function writePlatformState(state: PlatformState) {
   const normalized = sanitizeState(state);
   const wroteToSupabase = await writeToSupabase(normalized);
-  if (!wroteToSupabase) {
+  if (wroteToSupabase) return;
+
+  if (allowFileBackend()) {
     await writeToFile(normalized);
+    return;
   }
+
+  throw new Error("Supabase is required for persistent production actions.");
 }
 
 export async function updatePlatformState<T>(
@@ -226,17 +278,12 @@ export function publicUser(user: ServerUser): User {
 }
 
 export function getIntegrationStatus(): IntegrationStatus {
+  const supabaseConfigured = Boolean(getSupabaseConfig());
+
   return {
-    backend: getSupabaseConfig() ? "supabase" : "filesystem",
-    supabaseConfigured: Boolean(getSupabaseConfig()),
+    backend: supabaseConfigured ? "supabase" : allowFileBackend() ? "filesystem" : "unconfigured",
+    supabaseConfigured,
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY),
     netlifyConfigured: Boolean(process.env.NETLIFY || process.env.CONTEXT || process.env.DEPLOY_PRIME_URL || process.env.URL),
-  };
-}
-
-export function getDefaultAdminCredentials() {
-  return {
-    email: DEFAULT_ADMIN_EMAIL,
-    password: DEFAULT_ADMIN_PASSWORD,
   };
 }

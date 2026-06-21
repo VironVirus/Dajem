@@ -15,12 +15,35 @@ function buildApiHeaders() {
   };
 }
 
+function flutterwaveIsConfigured() {
+  return Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY);
+}
+
+function allowMockPayments() {
+  return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
+}
+
+function assertSameOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  if (!origin) return;
+
+  const host = request.headers.get("host");
+  if (!host || new URL(origin).host !== host) {
+    throw new Error("Cross-site requests are not allowed.");
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    assertSameOrigin(request);
     const sessionEmail = readSessionEmail(request);
     const { intent, snapshot } = await createPaymentIntent(sessionEmail);
 
-    if (!process.env.FLUTTERWAVE_SECRET_KEY || !process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY) {
+    if (!flutterwaveIsConfigured()) {
+      if (!allowMockPayments()) {
+        throw new Error("Flutterwave keys are required before checkout can run in production.");
+      }
+
       const result = await completePaymentIntent(sessionEmail, {
         txRef: intent.txRef,
         provider: "Simulation",

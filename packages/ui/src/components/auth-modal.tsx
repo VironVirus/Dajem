@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Mail, MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
+import { Mail, MessageSquareText, ShieldCheck } from "lucide-react";
 import type { CommunicationPreview } from "../lib/store";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
@@ -155,13 +155,6 @@ export function AuthModal({
                   value={loginForm.password}
                   onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
                 />
-              </div>
-              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-muted-foreground">
-                <div className="mb-1 flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Default admin access
-                </div>
-                <p>`admin@dajem.com` / `Admin@Dajem123`</p>
               </div>
               <Button type="submit" className="w-full bg-primary text-white" disabled={isBusy}>
                 {isBusy ? "Signing in..." : "Login to Dajem"}

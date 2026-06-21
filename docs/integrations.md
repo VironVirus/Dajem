@@ -58,6 +58,9 @@ Create one Netlify site per app and set:
 Set these shared environment variables on every Netlify site:
 
 - `DAJEM_SESSION_SECRET`
+- `DAJEM_ADMIN_EMAIL`
+- `DAJEM_ADMIN_PASSWORD`
+- `DAJEM_ADMIN_PHONE`
 - `NEXT_PUBLIC_DAJEM_LANDING_URL=https://dajem-landing.netlify.app`
 - `NEXT_PUBLIC_DAJEM_POULTRY_URL=https://dajem-poultry.netlify.app`
 - `NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL=https://dajem-properties.netlify.app`
@@ -78,7 +81,8 @@ Preview limitation on default `*.netlify.app` domains:
 
 Each app now has its own `netlify.toml` with the workspace build command and local dev command.
 
-## Default admin
+## Admin access
 
-- Email: `admin@dajem.com`
-- Password: `Admin@Dajem123`
+- Production admin credentials are no longer hardcoded.
+- Set `DAJEM_ADMIN_EMAIL` and `DAJEM_ADMIN_PASSWORD` in Netlify before using `/admin`.
+- Local development seeds `admin@dajem.local` / `ChangeMe123!` when no admin env vars are present.

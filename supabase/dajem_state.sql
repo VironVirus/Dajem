@@ -4,6 +4,11 @@ create table if not exists public.dajem_state (
   updated_at timestamptz not null default timezone('utc'::text, now())
 );
 
+alter table public.dajem_state enable row level security;
+
+revoke all on table public.dajem_state from anon;
+revoke all on table public.dajem_state from authenticated;
+
 create or replace function public.set_dajem_state_updated_at()
 returns trigger
 language plpgsql

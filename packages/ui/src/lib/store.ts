@@ -118,7 +118,7 @@ export interface PaymentIntent {
 }
 
 export interface IntegrationStatus {
-  backend: "filesystem" | "supabase";
+  backend: "filesystem" | "supabase" | "unconfigured";
   supabaseConfigured: boolean;
   flutterwaveConfigured: boolean;
   netlifyConfigured: boolean;
