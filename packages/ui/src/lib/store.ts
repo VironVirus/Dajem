@@ -164,13 +164,38 @@ export interface DajemCompanyLink {
   name: string;
   envKey: string;
   localUrl: string;
+  productionUrl: string;
 }
 
 export const dajemCompanyLinks: DajemCompanyLink[] = [
-  { id: "landing", name: "Dajem Group", envKey: "NEXT_PUBLIC_DAJEM_LANDING_URL", localUrl: "http://localhost:3000" },
-  { id: "poultry", name: "Dajem Poultry", envKey: "NEXT_PUBLIC_DAJEM_POULTRY_URL", localUrl: "http://localhost:3001" },
-  { id: "real-estate", name: "Dajem Real Estate", envKey: "NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL", localUrl: "http://localhost:3002" },
-  { id: "survey", name: "Dajem Survey & Plans", envKey: "NEXT_PUBLIC_DAJEM_SURVEY_URL", localUrl: "http://localhost:3003" },
+  {
+    id: "landing",
+    name: "Dajem Group",
+    envKey: "NEXT_PUBLIC_DAJEM_LANDING_URL",
+    localUrl: "http://localhost:3000",
+    productionUrl: "https://dajem-landing.netlify.app",
+  },
+  {
+    id: "poultry",
+    name: "Dajem Poultry",
+    envKey: "NEXT_PUBLIC_DAJEM_POULTRY_URL",
+    localUrl: "http://localhost:3001",
+    productionUrl: "https://dajem-poultry.netlify.app",
+  },
+  {
+    id: "real-estate",
+    name: "Dajem Real Estate",
+    envKey: "NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL",
+    localUrl: "http://localhost:3002",
+    productionUrl: "https://dajem-properties.netlify.app",
+  },
+  {
+    id: "survey",
+    name: "Dajem Survey & Plans",
+    envKey: "NEXT_PUBLIC_DAJEM_SURVEY_URL",
+    localUrl: "http://localhost:3003",
+    productionUrl: "https://dajem-survey.netlify.app",
+  },
 ];
 
 export const seedInventory: InventoryItem[] = [
@@ -283,7 +308,7 @@ export function getAppBaseUrl(app: DajemApp, currentOrigin?: string) {
     return company.localUrl;
   }
 
-  return "/";
+  return company.productionUrl;
 }
 
 export function getCompanyLinks(activeApp?: DajemApp, currentOrigin?: string) {

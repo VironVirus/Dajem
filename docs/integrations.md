@@ -8,6 +8,20 @@
 - The backend uses a shared filesystem state file for local development and can switch to Supabase automatically when the relevant env vars are configured.
 - Cross-site navigation is environment-driven now, so production deploys no longer depend on hardcoded `localhost` URLs.
 
+## Current Netlify URLs
+
+- Landing: `https://dajem-landing.netlify.app`
+- Poultry: `https://dajem-poultry.netlify.app`
+- Real Estate: `https://dajem-properties.netlify.app`
+- Survey: `https://dajem-survey.netlify.app`
+
+Current status on June 21, 2026:
+
+- Landing is live and already linking out correctly.
+- Real Estate is live.
+- Survey is live.
+- Poultry URL is reserved, but the site is still returning `404` until that deployment is completed.
+
 ## Supabase setup
 
 1. Create a Supabase project.
@@ -44,10 +58,10 @@ Create one Netlify site per app and set:
 Set these shared environment variables on every Netlify site:
 
 - `DAJEM_SESSION_SECRET`
-- `NEXT_PUBLIC_DAJEM_LANDING_URL`
-- `NEXT_PUBLIC_DAJEM_POULTRY_URL`
-- `NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL`
-- `NEXT_PUBLIC_DAJEM_SURVEY_URL`
+- `NEXT_PUBLIC_DAJEM_LANDING_URL=https://dajem-landing.netlify.app`
+- `NEXT_PUBLIC_DAJEM_POULTRY_URL=https://dajem-poultry.netlify.app`
+- `NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL=https://dajem-properties.netlify.app`
+- `NEXT_PUBLIC_DAJEM_SURVEY_URL=https://dajem-survey.netlify.app`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
