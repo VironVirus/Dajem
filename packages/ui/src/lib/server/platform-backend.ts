@@ -29,7 +29,15 @@ function resolveRepoRoot() {
 }
 
 function resolveDataFilePath() {
-  return process.env.DAJEM_DATA_FILE ?? join(resolveRepoRoot(), ".dajem", "platform-state.json");
+  if (process.env.DAJEM_DATA_FILE) {
+    return process.env.DAJEM_DATA_FILE;
+  }
+
+  if (process.env.NETLIFY) {
+    return join("/tmp", ".dajem", "platform-state.json");
+  }
+
+  return join(resolveRepoRoot(), ".dajem", "platform-state.json");
 }
 
 function nowIso() {
