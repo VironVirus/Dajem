@@ -1,5 +1,6 @@
 [build]
 command = "npm run build --workspace survey"
+publish = "apps/survey/.next"
 
 [build.environment]
 NODE_VERSION = "20"

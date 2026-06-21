@@ -1,5 +1,6 @@
 [build]
 command = "npm run build --workspace poultry"
+publish = "apps/poultry/.next"
 
 [build.environment]
 NODE_VERSION = "20"
