@@ -177,7 +177,7 @@ export default function RealEstatePage() {
         <section
           className="relative overflow-hidden bg-cover bg-center py-24"
           style={{
-            backgroundImage: "linear-gradient(135deg, rgba(240,253,250,.92), rgba(240,253,250,.76), rgba(255,255,255,.96)), url('/images/homes-hero.svg')",
+            backgroundImage: "linear-gradient(135deg, rgba(240,253,250,.72), rgba(240,253,250,.54), rgba(255,255,255,.86)), url('/images/homes-hero-generated.png'), url('/images/homes-hero.svg')",
           }}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#064e3b12_1px,transparent_1px),linear-gradient(to_bottom,#064e3b12_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />

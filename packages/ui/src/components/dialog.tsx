@@ -40,8 +40,7 @@ export function Dialog({ isOpen, onClose, title, children }: DialogProps) {
       {/* Modal Dialog Content */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg rounded-xl border bg-card text-card-foreground shadow-2xl p-6 transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300",
-          "border-border bg-background"
+          "relative z-50 w-full max-w-lg rounded-[1.5rem] border border-white/35 bg-background/88 p-5 text-card-foreground shadow-2xl backdrop-blur-2xl transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 sm:p-6 dark:border-white/10 dark:bg-slate-950/90"
         )}
       >
         {/* Close Button */}

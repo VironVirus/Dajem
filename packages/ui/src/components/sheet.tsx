@@ -47,7 +47,7 @@ export function Sheet({
       />
       <div
         className={cn(
-          "absolute top-0 h-full w-full bg-background shadow-2xl border-border border-l p-6 sm:w-[32rem] overflow-y-auto animate-in duration-300",
+          "absolute top-0 h-full w-full border-l border-white/25 bg-background/90 p-5 shadow-2xl backdrop-blur-2xl sm:w-[32rem] sm:p-6 overflow-y-auto animate-in duration-300 dark:border-white/10 dark:bg-slate-950/92",
           widthClassName,
           side === "right" ? "right-0 slide-in-from-right" : "left-0 border-r slide-in-from-left border-l-0",
         )}

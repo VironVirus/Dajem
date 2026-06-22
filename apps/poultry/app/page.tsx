@@ -107,7 +107,7 @@ export default function PoultryPage() {
         <section
           className="relative overflow-hidden bg-cover bg-center py-20"
           style={{
-            backgroundImage: "linear-gradient(135deg, rgba(255,251,235,.92), rgba(255,251,235,.76), rgba(255,255,255,.96)), url('/images/farms-hero.svg')",
+            backgroundImage: "linear-gradient(135deg, rgba(255,251,235,.72), rgba(255,251,235,.54), rgba(255,255,255,.86)), url('/images/farms-hero-generated.png'), url('/images/farms-hero.svg')",
           }}
         >
           <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-amber-500/5 blur-3xl -z-10" />

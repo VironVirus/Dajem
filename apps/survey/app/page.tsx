@@ -123,7 +123,7 @@ export default function SurveyPage() {
         <section
           className="relative overflow-hidden bg-cover bg-center py-24"
           style={{
-            backgroundImage: "linear-gradient(180deg, rgba(236,254,255,.92), rgba(236,254,255,.76), rgba(255,255,255,.96)), url('/images/orbital-hero.svg')",
+            backgroundImage: "linear-gradient(180deg, rgba(236,254,255,.76), rgba(236,254,255,.58), rgba(255,255,255,.88)), url('/images/orbital-hero-generated.png'), url('/images/orbital-hero.svg')",
           }}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />

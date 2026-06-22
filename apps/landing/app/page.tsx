@@ -101,7 +101,7 @@ export default function LandingPage() {
         <section
           className="relative overflow-hidden bg-cover bg-center py-24 md:py-32"
           style={{
-            backgroundImage: "linear-gradient(180deg, rgba(248,250,252,.92), rgba(248,250,252,.78), rgba(248,250,252,.96)), url('/images/group-hero.svg')",
+            backgroundImage: "linear-gradient(180deg, rgba(248,250,252,.78), rgba(248,250,252,.62), rgba(248,250,252,.9)), url('/images/group-hero-generated.png'), url('/images/group-hero.svg')",
           }}
         >
           {/* Decorative shapes */}
