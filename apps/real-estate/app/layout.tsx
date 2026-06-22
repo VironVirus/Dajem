@@ -6,10 +6,10 @@ import { DajemProvider, ThemeProvider } from "@repo/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dajem Real Estate | Premium Property Listings",
+  title: "Dajem Homes Limited | Homes, Hospitality & Property",
   description:
-    "Explore luxury apartments, commercial offices, industrial warehouses, and investment lands. High-quality property brokerage and management by Dajem Group.",
-  keywords: ["Dajem Real Estate", "Property Listings", "Apartments for Rent", "Properties for Sale", "Abuja", "Nigeria"],
+    "Dajem Homes Limited handles short-let apartments and suites, hotel management, hospitality management, real estate development, sales, marketing, consultancy, and property management.",
+  keywords: ["Dajem Homes Limited", "Short-let Apartments", "Hotel Management", "Real Estate Development", "Property Management", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

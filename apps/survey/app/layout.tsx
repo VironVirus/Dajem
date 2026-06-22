@@ -6,10 +6,10 @@ import { DajemProvider, ThemeProvider } from "@repo/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dajem Survey & Plans | Professional Surveying & Geomatics",
+  title: "Dajem Orbital Resources Limited | Surveying, Mapping & Contracts",
   description:
-    "Precision surveying, boundary demarkation, engineering surveys, GIS mapping, and architectural plans. Licensed geomatics professionals by Dajem Group.",
-  keywords: ["Dajem Survey", "Land Surveying", "GIS Mapping", "Architectural Plans", "Abuja", "Nigeria"],
+    "Dajem Orbital Resources Limited handles land surveying, digital mapping, geoinformatics, development management, architectural designs, civil engineering, logistics, haulage, and general contracts.",
+  keywords: ["Dajem Orbital Resources Limited", "Land Surveying", "Digital Mapping", "Geoinformatics", "Architectural Designs", "Civil Engineering", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

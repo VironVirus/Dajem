@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  ApprovalStatus,
   Bid,
   BidStatus,
   CartItem,
@@ -7,11 +8,16 @@ import type {
   CommunicationPreview,
   DashboardSnapshot,
   InventoryItem,
+  InventoryCategory,
   InventoryStockStatus,
   Order,
   PaymentIntent,
   PlatformState,
+  PropertyCategory,
+  PropertyListing,
+  PropertyType,
   ServerUser,
+  SurveyService,
   SurveyRequest,
   SurveyStatus,
   User,
@@ -46,6 +52,8 @@ function allowMockPayments() {
   return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
 }
 
+const sharedImageBase = "https://dajem-landing.netlify.app/images";
+
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {
   if (!sessionEmail) return null;
   return state.users.find((user) => normalizeEmail(user.email) === normalizeEmail(sessionEmail)) ?? null;
@@ -71,12 +79,12 @@ function buildRegistrationPreview(user: User): CommunicationPreview {
   return {
     sms: {
       to: user.phone,
-      message: `Hi ${user.name}, your Dajem Group account is active. Visit your dashboard to track poultry orders, bids, and surveys.`,
+      message: `Hi ${user.name}, your Dajem Group Limited account is active. Visit your dashboard to track Dajem Farms orders, Dajem Homes bids, and Dajem Orbital requests.`,
     },
     email: {
       to: user.email,
-      subject: "Welcome to Dajem Group",
-      message: `Hello ${user.name}, your unified Dajem portal is now ready. You can move between Poultry, Real Estate, Survey, and the shared dashboard with one login.`,
+      subject: "Welcome to Dajem Group Limited",
+      message: `Hello ${user.name}, your unified Dajem portal is now ready. You can move between Dajem Farms Limited, Dajem Homes Limited, Dajem Orbital Resources Limited, and the shared dashboard with one login.`,
     },
   };
 }
@@ -102,6 +110,17 @@ function previewToLogs(user: User, preview: CommunicationPreview): Communication
       createdAt,
     },
   ];
+}
+
+function buildEmailLog(userEmail: string, subject: string, message: string): CommunicationLog {
+  return {
+    id: randomUUID(),
+    userEmail,
+    channel: "email",
+    subject,
+    message,
+    createdAt: nowIso(),
+  };
 }
 
 function deriveStockStatus(availableUnits: number): InventoryStockStatus {
@@ -136,6 +155,15 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
     bids: isAdmin ? state.bids : state.bids.filter((bid) => normalizeEmail(bid.userEmail) === normalizeEmail(email)),
     surveys: isAdmin ? state.surveys : state.surveys.filter((survey) => normalizeEmail(survey.userEmail) === normalizeEmail(email)),
     inventory: state.inventory,
+    propertyListings: isAdmin
+      ? state.propertyListings
+      : state.propertyListings.filter((listing) => (
+        listing.status === "Approved"
+        || normalizeEmail(listing.submittedByEmail ?? "") === normalizeEmail(email)
+      )),
+    surveyServices: isAdmin
+      ? state.surveyServices
+      : state.surveyServices.filter((service) => service.status === "Approved"),
     communicationLogs: isAdmin
       ? state.communicationLogs
       : state.communicationLogs.filter((log) => normalizeEmail(log.userEmail) === normalizeEmail(email)),
@@ -363,16 +391,86 @@ export async function submitBid(
       userPhone: user.phone,
       bidAmount,
       notes: payload.notes?.trim() || undefined,
-      status: "Pending",
+      status: "Pending Approval",
       date: formatDate(),
     };
 
     draft.bids.unshift(bid);
+    draft.communicationLogs.unshift(buildEmailLog(
+      user.email,
+      "Property bid pending approval",
+      `Your bid for ${propertyTitle} has been received by Dajem Homes Limited and is pending approval.`,
+    ));
   });
 
   return {
     snapshot: snapshotFor(state, sessionEmail),
-    message: "Bid submitted. An agent will review it shortly.",
+    message: "Bid submitted and marked as pending approval.",
+  };
+}
+
+export async function submitPropertyListing(
+  sessionEmail: string | null,
+  payload: {
+    title: string;
+    location: string;
+    price: number;
+    type: PropertyType;
+    category: PropertyCategory;
+    beds?: number;
+    baths?: number;
+    size: number;
+    summary: string;
+    highlights?: string[];
+    imageUrl?: string;
+  },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    const user = requireUser(draft, sessionEmail);
+    const title = String(payload.title ?? "").trim();
+    const location = String(payload.location ?? "").trim();
+    const price = Number(payload.price);
+    const size = Number(payload.size);
+    const summary = String(payload.summary ?? "").trim();
+
+    if (!title || !location || !summary || !Number.isFinite(price) || price <= 0 || !Number.isFinite(size) || size <= 0) {
+      throw new Error("Please complete the property submission details.");
+    }
+
+    const listing: PropertyListing = {
+      id: makeId("PROP"),
+      title,
+      location,
+      price,
+      type: payload.type ?? "sale",
+      category: payload.category ?? "apartment",
+      beds: payload.beds ? Math.max(0, Number(payload.beds)) : undefined,
+      baths: payload.baths ? Math.max(0, Number(payload.baths)) : undefined,
+      size,
+      featured: false,
+      imageBg: "from-emerald-700/25 to-slate-900/10",
+      imageUrl: payload.imageUrl?.trim() || `${sharedImageBase}/homes-hero.svg`,
+      summary,
+      highlights: (payload.highlights ?? []).map((item) => String(item).trim()).filter(Boolean).slice(0, 6),
+      status: "Pending Approval",
+      submittedByName: user.name,
+      submittedByEmail: user.email,
+      submittedByPhone: user.phone,
+      createdAt: nowIso(),
+      date: formatDate(),
+    };
+
+    draft.propertyListings.unshift(listing);
+    draft.communicationLogs.unshift(buildEmailLog(
+      user.email,
+      "Property listing pending approval",
+      `Your property submission, ${title}, has been received by Dajem Homes Limited and is pending approval.`,
+    ));
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Property submitted and marked as pending approval.",
   };
 }
 
@@ -406,16 +504,21 @@ export async function submitSurvey(
       description,
       fileName: payload.fileName?.slice(0, 140),
       fileSizeKb: Math.max(0, Number(payload.fileSizeKb ?? 0)) || undefined,
-      status: "Pending",
+      status: "Pending Approval",
       date: formatDate(),
     };
 
     draft.surveys.unshift(request);
+    draft.communicationLogs.unshift(buildEmailLog(
+      user.email,
+      "Survey request pending approval",
+      `Your ${serviceType} request for ${location} has been received by Dajem Orbital Resources Limited and is pending approval.`,
+    ));
   });
 
   return {
     snapshot: snapshotFor(state, sessionEmail),
-    message: "Survey request logged and added to your dashboard.",
+    message: "Survey request logged and marked as pending approval.",
   };
 }
 
@@ -459,21 +562,202 @@ export async function updateSurveyStatus(
 
 export async function updateInventoryItem(
   sessionEmail: string | null,
-  payload: { productId: string; price: number; availableUnits: number; stockStatus?: InventoryStockStatus },
+  payload: {
+    productId?: string;
+    name?: string;
+    category?: InventoryCategory;
+    price: number;
+    description?: string;
+    availableUnits: number;
+    stockStatus?: InventoryStockStatus;
+    imageUrl?: string;
+    imageBg?: string;
+  },
 ) {
   const { state } = await updatePlatformState((draft) => {
     requireAdmin(draft, sessionEmail);
-    const item = draft.inventory.find((entry) => entry.productId === payload.productId);
-    if (!item) throw new Error("Inventory item not found.");
+    const productId = payload.productId?.trim();
+    const item = productId ? draft.inventory.find((entry) => entry.productId === productId) : null;
+    const price = Math.max(0, Number(payload.price));
+    const availableUnits = Math.max(0, Number(payload.availableUnits));
 
-    item.price = Math.max(0, Number(payload.price));
-    item.availableUnits = Math.max(0, Number(payload.availableUnits));
-    item.stockStatus = payload.stockStatus ?? deriveStockStatus(item.availableUnits);
+    if (item) {
+      item.name = payload.name?.trim() || item.name;
+      item.category = payload.category ?? item.category;
+      item.price = price;
+      item.description = payload.description?.trim() || item.description;
+      item.availableUnits = availableUnits;
+      item.stockStatus = payload.stockStatus ?? deriveStockStatus(item.availableUnits);
+      item.imageUrl = payload.imageUrl?.trim() || item.imageUrl;
+      item.imageBg = payload.imageBg?.trim() || item.imageBg;
+      return;
+    }
+
+    const name = payload.name?.trim();
+    const description = payload.description?.trim();
+    if (!name || !description) {
+      throw new Error("Please provide a product name and description.");
+    }
+
+    draft.inventory.unshift({
+      productId: productId || makeId("FARM"),
+      name,
+      category: payload.category ?? "produce",
+      price,
+      description,
+      stockStatus: payload.stockStatus ?? deriveStockStatus(availableUnits),
+      availableUnits,
+      imageBg: payload.imageBg?.trim() || "bg-emerald-500/10 text-emerald-700",
+      imageUrl: payload.imageUrl?.trim() || `${sharedImageBase}/farms-hero.svg`,
+    });
   });
 
   return {
     snapshot: snapshotFor(state, sessionEmail),
     message: "Inventory saved.",
+  };
+}
+
+export async function updatePropertyListingStatus(
+  sessionEmail: string | null,
+  payload: { propertyId: string; status: ApprovalStatus },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const listing = draft.propertyListings.find((entry) => entry.id === payload.propertyId);
+    if (!listing) throw new Error("Property listing not found.");
+
+    listing.status = payload.status;
+    if (listing.submittedByEmail) {
+      draft.communicationLogs.unshift(buildEmailLog(
+        listing.submittedByEmail,
+        `Property listing ${payload.status.toLowerCase()}`,
+        `${listing.title} is now marked as ${payload.status} by Dajem Homes Limited.`,
+      ));
+    }
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Property listing status updated.",
+  };
+}
+
+export async function upsertPropertyListing(
+  sessionEmail: string | null,
+  payload: {
+    id?: string;
+    title: string;
+    location: string;
+    price: number;
+    type: PropertyType;
+    category: PropertyCategory;
+    beds?: number;
+    baths?: number;
+    size: number;
+    featured?: boolean;
+    imageUrl?: string;
+    imageBg?: string;
+    summary: string;
+    highlights?: string[];
+    status?: ApprovalStatus;
+  },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const title = String(payload.title ?? "").trim();
+    const location = String(payload.location ?? "").trim();
+    const summary = String(payload.summary ?? "").trim();
+    const price = Number(payload.price);
+    const size = Number(payload.size);
+
+    if (!title || !location || !summary || !Number.isFinite(price) || price <= 0 || !Number.isFinite(size) || size <= 0) {
+      throw new Error("Please complete the property listing details.");
+    }
+
+    const existing = payload.id ? draft.propertyListings.find((entry) => entry.id === payload.id) : null;
+    const next: PropertyListing = {
+      id: existing?.id ?? makeId("PROP"),
+      title,
+      location,
+      price,
+      type: payload.type ?? existing?.type ?? "sale",
+      category: payload.category ?? existing?.category ?? "apartment",
+      beds: payload.beds ? Math.max(0, Number(payload.beds)) : undefined,
+      baths: payload.baths ? Math.max(0, Number(payload.baths)) : undefined,
+      size,
+      featured: Boolean(payload.featured),
+      imageBg: payload.imageBg?.trim() || existing?.imageBg || "from-emerald-700/25 to-slate-900/10",
+      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || `${sharedImageBase}/homes-hero.svg`,
+      summary,
+      highlights: (payload.highlights ?? existing?.highlights ?? []).map((item) => String(item).trim()).filter(Boolean).slice(0, 6),
+      status: payload.status ?? existing?.status ?? "Approved",
+      submittedByName: existing?.submittedByName,
+      submittedByEmail: existing?.submittedByEmail,
+      submittedByPhone: existing?.submittedByPhone,
+      createdAt: existing?.createdAt ?? nowIso(),
+      date: existing?.date ?? formatDate(),
+    };
+
+    if (existing) {
+      Object.assign(existing, next);
+    } else {
+      draft.propertyListings.unshift(next);
+    }
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Property listing saved.",
+  };
+}
+
+export async function upsertSurveyService(
+  sessionEmail: string | null,
+  payload: {
+    id?: string;
+    title: string;
+    description: string;
+    priceFrom: number;
+    timeline: string;
+    imageUrl?: string;
+    color?: string;
+    status?: ApprovalStatus;
+  },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const title = String(payload.title ?? "").trim();
+    const description = String(payload.description ?? "").trim();
+    const timeline = String(payload.timeline ?? "").trim();
+    const priceFrom = Math.max(0, Number(payload.priceFrom));
+
+    if (!title || !description || !timeline) {
+      throw new Error("Please complete the survey service details.");
+    }
+
+    const existing = payload.id ? draft.surveyServices.find((entry) => entry.id === payload.id) : null;
+    const next: SurveyService = {
+      id: existing?.id ?? makeId("SERV"),
+      title,
+      description,
+      priceFrom,
+      timeline,
+      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || `${sharedImageBase}/orbital-hero.svg`,
+      color: payload.color?.trim() || existing?.color || "text-cyan-600 bg-cyan-500/10",
+      status: payload.status ?? existing?.status ?? "Approved",
+    };
+
+    if (existing) {
+      Object.assign(existing, next);
+    } else {
+      draft.surveyServices.unshift(next);
+    }
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Survey service saved.",
   };
 }
 

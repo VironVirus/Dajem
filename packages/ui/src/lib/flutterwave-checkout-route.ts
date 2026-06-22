@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
           email: customerEmail,
         },
         customizations: {
-          title: "Dajem Poultry Checkout",
-          description: "Shared Dajem Poultry checkout powered by Flutterwave",
+          title: "Dajem Farms Checkout",
+          description: "Shared Dajem Farms checkout powered by Flutterwave test mode",
         },
       }),
       cache: "no-store",

@@ -17,6 +17,7 @@ import {
   Select, 
   Badge, 
   Dialog,
+  dajemCompanyProfiles,
   getAppBaseUrl,
 } from "@repo/ui";
 import { 
@@ -33,6 +34,10 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
+  const groupProfile = dajemCompanyProfiles.landing;
+  const farmsProfile = dajemCompanyProfiles.poultry;
+  const homesProfile = dajemCompanyProfiles["real-estate"];
+  const orbitalProfile = dajemCompanyProfiles.survey;
   const [inquirySent, setInquirySent] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: "",
@@ -51,39 +56,39 @@ export default function LandingPage() {
   const companies = [
     {
       id: "poultry",
-      title: "Dajem Poultry",
-      description: "Sustainable agriculture, premium poultry breeding, organic feed distribution, and modern processing technology.",
+      title: farmsProfile.displayName,
+      description: farmsProfile.summary,
       href: getAppBaseUrl("poultry"),
       icon: Egg,
       themeColor: "from-amber-500/20 to-yellow-600/10 dark:from-amber-500/10 dark:to-yellow-600/5",
       iconColor: "text-amber-500",
-      stats: "10K+ Daily Capacity",
-      cta: "Browse Products",
-      badge: "Agriculture"
+      stats: `${farmsProfile.registrationNumber} - Started ${farmsProfile.startDate}`,
+      cta: "Browse Farm Products",
+      badge: "General Farming"
     },
     {
       id: "real-estate",
-      title: "Dajem Real Estate",
-      description: "Discover and secure premium luxury properties, commercial spaces, residential estates, and flexible lease options.",
+      title: homesProfile.displayName,
+      description: homesProfile.summary,
       href: getAppBaseUrl("real-estate"),
       icon: Building2,
       themeColor: "from-emerald-500/20 to-teal-600/10 dark:from-emerald-500/10 dark:to-teal-600/5",
       iconColor: "text-emerald-500",
-      stats: "250+ Listings Available",
+      stats: `${homesProfile.registrationNumber} - Started ${homesProfile.startDate}`,
       cta: "Find Properties",
-      badge: "Real Estate"
+      badge: "Homes & Hospitality"
     },
     {
       id: "survey",
-      title: "Dajem Survey & Plans",
-      description: "High-precision engineering surveys, boundary mapping, geomatics, and stunning architectural drafting.",
+      title: orbitalProfile.displayName,
+      description: orbitalProfile.summary,
       href: getAppBaseUrl("survey"),
       icon: Map,
       themeColor: "from-cyan-500/20 to-blue-600/10 dark:from-cyan-500/10 dark:to-blue-600/5",
       iconColor: "text-cyan-500",
-      stats: "100% Survey Success",
+      stats: `${orbitalProfile.registrationNumber} - Started ${orbitalProfile.startDate}`,
       cta: "Get Estimate",
-      badge: "Geomatics & Architecture"
+      badge: "Surveying & Contracts"
     }
   ];
 
@@ -93,22 +98,27 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden py-24 md:py-32 bg-gradient-to-b from-primary/5 via-transparent to-background">
+        <section
+          className="relative overflow-hidden bg-cover bg-center py-24 md:py-32"
+          style={{
+            backgroundImage: "linear-gradient(180deg, rgba(248,250,252,.92), rgba(248,250,252,.78), rgba(248,250,252,.96)), url('/images/group-hero.svg')",
+          }}
+        >
           {/* Decorative shapes */}
           <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
           <div className="absolute top-1/3 right-1/10 w-96 h-96 rounded-full bg-primary/10 blur-3xl -z-10" />
 
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm rounded-full">
-              Pioneering Multi-Industry Synergy
+              {groupProfile.registrationNumber} - Opened {groupProfile.startDate}
             </Badge>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-primary via-slate-800 to-emerald-600 dark:from-blue-400 dark:via-white dark:to-emerald-400 bg-clip-text text-transparent leading-[1.15]">
-              Innovative Solutions for Agriculture, Real Estate, and Geomatics
+              {groupProfile.displayName}: Strategic Management for the Dajem Subsidiaries
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Dajem Group is a unified conglomerate operating at the intersection of modern agricultural solutions, premium structural assets, and precise cartographic surveying.
+              {groupProfile.summary}
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -116,13 +126,13 @@ export default function LandingPage() {
                 const el = document.getElementById("companies");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}>
-                Explore Our Companies
+                Explore Our Subsidiaries
               </Button>
               <Button size="lg" variant="outline" className="w-full sm:w-auto" onClick={() => {
                 const el = document.getElementById("contact");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}>
-                Contact Corporate Office
+                Contact Group Office
               </Button>
             </div>
           </div>
@@ -133,20 +143,20 @@ export default function LandingPage() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">100%</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Compliance & Trust</p>
+                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">4</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Registered Companies</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-emerald-500">15+</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Years Experience</p>
+                <p className="text-3xl font-extrabold text-emerald-500">2023</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Oldest Subsidiary Start</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">50K+</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customers Reached</p>
+                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">{groupProfile.registrationNumber.replace("RC:", "RC ")}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Registration</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-emerald-500">A+</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Service Rating</p>
+                <p className="text-3xl font-extrabold text-emerald-500">Enugu</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Corporate Base</p>
               </div>
             </div>
           </div>
@@ -160,21 +170,21 @@ export default function LandingPage() {
                 Corporate Foundations
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold text-primary dark:text-foreground mb-6">
-                Built on Integrity, Driven by Excellence
+                A Holding Company Built for Coordinated Growth
               </h2>
               <p className="text-muted-foreground mb-6 leading-relaxed">
-                Founded as a unified front to tackle key sectors, Dajem Group coordinates operations across three specialized companies. We blend cutting-edge technology, eco-friendly workflows, and a customer-first philosophy to build lasting value.
+                {groupProfile.displayName} was opened on {groupProfile.startDate} to own and control the subsidiary companies of Dajem Group and facilitate strategic management across the group.
               </p>
               <p className="text-muted-foreground mb-8 leading-relaxed">
-                Whether supplying organic feed to nourish farming operations, matching families with premium properties, or calculating precise boundaries for large infrastructures, our mission remains absolute: delivering trust and quality.
+                The group houses {farmsProfile.displayName}, {homesProfile.displayName}, and {orbitalProfile.displayName}, bringing farming, homes and hospitality, surveying, mapping, development management, construction support, logistics, and consultancy under one coordinated structure.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { title: "Precision Mapping", icon: Cpu },
-                  { title: "Sustainable Breeding", icon: ShieldCheck },
-                  { title: "Certified Developers", icon: Award },
-                  { title: "Client First Team", icon: Users2 }
+                  { title: "Strategic Management", icon: Cpu },
+                  { title: "Subsidiary Governance", icon: ShieldCheck },
+                  { title: "Registered Operations", icon: Award },
+                  { title: "Shared Admin Team", icon: Users2 }
                 ].map((item) => (
                   <div key={item.title} className="flex items-center gap-3 p-3 rounded-lg border bg-card/50">
                     <item.icon className="h-5 w-5 text-emerald-500" />
@@ -198,9 +208,9 @@ export default function LandingPage() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-xl font-bold text-primary dark:text-foreground">Dajem Group Conglomerate</h4>
+                <h4 className="text-xl font-bold text-primary dark:text-foreground">{groupProfile.displayName}</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Integrating logistics, management, compliance, and corporate finance under a single, highly-scalable administration.
+                  {groupProfile.registrationNumber}. Corporate address: {groupProfile.address}.
                 </p>
                 <div className="flex gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
@@ -222,7 +232,7 @@ export default function LandingPage() {
                 Our Subsidiaries
               </h2>
               <p className="text-muted-foreground">
-                Each company operates independently with specialized teams, while drawing core administrative and strategic support from the Dajem Group structure.
+                Each subsidiary operates in its own sector while drawing strategic support from {groupProfile.displayName}.
               </p>
             </div>
 
@@ -278,22 +288,22 @@ export default function LandingPage() {
                 <div>
                   <h3 className="text-2xl font-bold mb-4">Corporate Office</h3>
                   <p className="text-primary-foreground/80 text-sm leading-relaxed">
-                    Have questions about Dajem Group or interested in partnership opportunities? Drop us a line.
+                    Have questions about {groupProfile.displayName} or interested in partnership opportunities? Drop us a line.
                   </p>
                 </div>
 
                 <div className="space-y-4 text-sm">
                   <div>
                     <p className="font-semibold text-emerald-400">Headquarters</p>
-                    <p className="opacity-80">12 Dajem Avenue, Abuja</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-emerald-400">Hotline</p>
-                    <p className="opacity-80">+234 803 123 4567</p>
+                    <p className="opacity-80">{groupProfile.address}</p>
                   </div>
                   <div>
                     <p className="font-semibold text-emerald-400">Email Address</p>
-                    <p className="opacity-80">info@dajemgroup.com</p>
+                    <p className="opacity-80">{groupProfile.email}</p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-emerald-400">Registration</p>
+                    <p className="opacity-80">{groupProfile.registrationNumber}</p>
                   </div>
                 </div>
 
@@ -338,9 +348,9 @@ export default function LandingPage() {
                       onChange={(e) => setFormData({...formData, department: e.target.value})}
                       options={[
                         { value: "general", label: "General Corporate Inquiry" },
-                        { value: "poultry", label: "Dajem Poultry Operations" },
-                        { value: "realestate", label: "Dajem Real Estate Listings" },
-                        { value: "survey", label: "Dajem Survey & Plans Division" }
+                        { value: "poultry", label: `${farmsProfile.displayName} Operations` },
+                        { value: "realestate", label: `${homesProfile.displayName} Listings` },
+                        { value: "survey", label: `${orbitalProfile.displayName} Division` }
                       ]}
                     />
                   </div>

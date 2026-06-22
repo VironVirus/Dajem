@@ -7,8 +7,12 @@ import type {
   CommunicationPreview,
   DashboardSnapshot,
   DajemActionResponse,
+  ApprovalStatus,
+  InventoryCategory,
   InventoryStockStatus,
   Order,
+  PropertyCategory,
+  PropertyType,
   SurveyStatus,
 } from "../lib/store";
 import { emptySnapshot } from "../lib/store";
@@ -43,6 +47,19 @@ interface DajemContextValue {
     bidAmount: number;
     notes?: string;
   }) => Promise<void>;
+  submitPropertyListing: (payload: {
+    title: string;
+    location: string;
+    price: number;
+    type: PropertyType;
+    category: PropertyCategory;
+    beds?: number;
+    baths?: number;
+    size: number;
+    summary: string;
+    highlights?: string[];
+    imageUrl?: string;
+  }) => Promise<void>;
   submitSurvey: (payload: {
     location: string;
     serviceType: string;
@@ -51,12 +68,45 @@ interface DajemContextValue {
     fileSizeKb?: number;
   }) => Promise<void>;
   updateBidStatus: (bidId: string, status: BidStatus) => Promise<void>;
+  updatePropertyListingStatus: (propertyId: string, status: ApprovalStatus) => Promise<void>;
+  upsertPropertyListing: (payload: {
+    id?: string;
+    title: string;
+    location: string;
+    price: number;
+    type: PropertyType;
+    category: PropertyCategory;
+    beds?: number;
+    baths?: number;
+    size: number;
+    featured?: boolean;
+    imageUrl?: string;
+    imageBg?: string;
+    summary: string;
+    highlights?: string[];
+    status?: ApprovalStatus;
+  }) => Promise<void>;
+  upsertSurveyService: (payload: {
+    id?: string;
+    title: string;
+    description: string;
+    priceFrom: number;
+    timeline: string;
+    imageUrl?: string;
+    color?: string;
+    status?: ApprovalStatus;
+  }) => Promise<void>;
   updateSurveyStatus: (surveyId: string, status: SurveyStatus) => Promise<void>;
   updateInventoryItem: (payload: {
-    productId: string;
+    productId?: string;
+    name?: string;
+    category?: InventoryCategory;
     price: number;
+    description?: string;
     availableUnits: number;
     stockStatus?: InventoryStockStatus;
+    imageUrl?: string;
+    imageBg?: string;
   }) => Promise<void>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   verifyFlutterwaveCheckout: (params: { txRef: string; transactionId?: string }) => Promise<{ order?: Order }>;
@@ -277,11 +327,23 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     submitBid: async (payload) => {
       await postAction("submit-bid", payload);
     },
+    submitPropertyListing: async (payload) => {
+      await postAction("submit-property-listing", payload);
+    },
     submitSurvey: async (payload) => {
       await postAction("submit-survey", payload);
     },
     updateBidStatus: async (bidId, status) => {
       await postAction("update-bid-status", { bidId, status });
+    },
+    updatePropertyListingStatus: async (propertyId, status) => {
+      await postAction("update-property-listing-status", { propertyId, status });
+    },
+    upsertPropertyListing: async (payload) => {
+      await postAction("upsert-property-listing", payload);
+    },
+    upsertSurveyService: async (payload) => {
+      await postAction("upsert-survey-service", payload);
     },
     updateSurveyStatus: async (surveyId, status) => {
       await postAction("update-survey-status", { surveyId, status });

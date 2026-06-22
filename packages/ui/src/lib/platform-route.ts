@@ -7,11 +7,15 @@ import {
   registerUser,
   removeCartItem,
   submitBid,
+  submitPropertyListing,
   submitSurvey,
   updateBidStatus,
   updateCartItem,
   updateInventoryItem,
+  updatePropertyListingStatus,
   updateSurveyStatus,
+  upsertPropertyListing,
+  upsertSurveyService,
 } from "./server/platform-repository";
 import { clearSessionCookie, readSessionEmail, writeSessionCookie } from "./server/session";
 
@@ -88,10 +92,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await clearCart(sessionEmail));
       case "submit-bid":
         return NextResponse.json(await submitBid(sessionEmail, payload));
+      case "submit-property-listing":
+        return NextResponse.json(await submitPropertyListing(sessionEmail, payload));
       case "submit-survey":
         return NextResponse.json(await submitSurvey(sessionEmail, payload));
       case "update-bid-status":
         return NextResponse.json(await updateBidStatus(sessionEmail, payload));
+      case "update-property-listing-status":
+        return NextResponse.json(await updatePropertyListingStatus(sessionEmail, payload));
+      case "upsert-property-listing":
+        return NextResponse.json(await upsertPropertyListing(sessionEmail, payload));
+      case "upsert-survey-service":
+        return NextResponse.json(await upsertSurveyService(sessionEmail, payload));
       case "update-survey-status":
         return NextResponse.json(await updateSurveyStatus(sessionEmail, payload));
       case "update-inventory-item":

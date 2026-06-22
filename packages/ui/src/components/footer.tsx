@@ -1,11 +1,12 @@
 import * as React from "react";
-import { Landmark, Mail, Phone, MapPin, ExternalLink, Globe } from "lucide-react";
-import { getAppBaseUrl, getCompanyLinks } from "../lib/store";
+import { Landmark, Mail, MapPin, ExternalLink, Globe } from "lucide-react";
+import { dajemCompanyProfiles, getAppBaseUrl, getCompanyLinks } from "../lib/store";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const companies = getCompanyLinks().filter((company) => company.id !== "landing");
   const landingUrl = getAppBaseUrl("landing");
+  const group = dajemCompanyProfiles.landing;
 
   return (
     <footer className="border-t border-border bg-card text-card-foreground">
@@ -16,11 +17,11 @@ export function Footer() {
             <div className="flex items-center gap-2">
               <Landmark className="h-6 w-6 text-primary dark:text-blue-400" />
               <span className="text-lg font-bold tracking-tight text-primary dark:text-foreground">
-                Dajem Group
+                {group.displayName}
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              A premium, diversified conglomerate providing sustainable agricultural products, exceptional real estate assets, and geomatics surveying services.
+              {group.summary}
             </p>
           </div>
 
@@ -52,15 +53,15 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5" />
-                <span>12 Dajem Avenue, Commercial District, Abuja, Nigeria</span>
+                <span>{group.address}</span>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-emerald-500" />
-                <span>+234 803 123 4567</span>
+                <Landmark className="h-4 w-4 text-emerald-500" />
+                <span>{group.registrationNumber}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-emerald-500" />
-                <span>info@dajemgroup.com</span>
+                <span>{group.email}</span>
               </li>
             </ul>
           </div>
@@ -71,18 +72,18 @@ export function Footer() {
               Our Vision
             </h4>
             <p className="text-sm text-muted-foreground">
-              Driven by reliability, precision, and sustainability. Building a brighter, more connected, and resource-rich future across Africa and globally.
+              Coordinating Dajem Farms Limited, Dajem Homes Limited, and Dajem Orbital Resources Limited through shared strategic management.
             </p>
             <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
               <Globe className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Certified Sustainable Builder & Surveyor</span>
+              <span>Opened {group.startDate}</span>
             </div>
           </div>
         </div>
 
         {/* Bottom Banner */}
         <div className="border-t border-border/60 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
-          <p>&copy; {currentYear} Dajem Group. All rights reserved.</p>
+          <p>&copy; {currentYear} {group.displayName}. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <a href={`${landingUrl}#privacy`} className="hover:text-primary transition-colors">
               Privacy Policy

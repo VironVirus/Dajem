@@ -1,14 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, ClipboardList, Package, Shield, Users } from "lucide-react";
+import { BarChart3, ClipboardList, Home, ImageIcon, Package, Shield, UploadCloud, Users } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Input } from "./input";
+import { Label } from "./label";
 import { Select } from "./select";
+import { Textarea } from "./textarea";
 import { useDajem } from "./dajem-provider";
-import type { InventoryItem } from "../lib/store";
+import type {
+  ApprovalStatus,
+  InventoryCategory,
+  InventoryItem,
+  InventoryStockStatus,
+  PropertyCategory,
+  PropertyListing,
+  PropertyType,
+  SurveyService,
+} from "../lib/store";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -18,6 +29,128 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+function splitHighlights(value: string) {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function joinHighlights(value: string[] | undefined) {
+  return (value ?? []).join(", ");
+}
+
+function readImageFile(file: File, onValue: (value: string) => void) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === "string") {
+      onValue(reader.result);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function ImagePreview({ imageUrl, fallbackClass }: { imageUrl?: string; fallbackClass: string }) {
+  if (imageUrl) {
+    return (
+      <div
+        className="h-24 rounded-xl border bg-cover bg-center"
+        style={{ backgroundImage: `linear-gradient(135deg, rgba(15,23,42,.25), rgba(16,185,129,.18)), url(${imageUrl})` }}
+      />
+    );
+  }
+
+  return (
+    <div className={`flex h-24 items-center justify-center rounded-xl border ${fallbackClass}`}>
+      <ImageIcon className="h-6 w-6 opacity-70" />
+    </div>
+  );
+}
+
+const inventoryCategories: { value: InventoryCategory; label: string }[] = [
+  { value: "livestock", label: "Livestock" },
+  { value: "feeds", label: "Feeds" },
+  { value: "produce", label: "Farm Produce" },
+  { value: "equipment", label: "Equipment" },
+];
+
+const stockStatuses: { value: InventoryStockStatus; label: string }[] = [
+  { value: "In Stock", label: "In Stock" },
+  { value: "Low Stock", label: "Low Stock" },
+  { value: "Out of Stock", label: "Out of Stock" },
+];
+
+const approvalStatuses: { value: ApprovalStatus; label: string }[] = [
+  { value: "Pending Approval", label: "Pending Approval" },
+  { value: "Approved", label: "Approved" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+const sharedImageBase = "https://dajem-landing.netlify.app/images";
+
+const propertyTypes: { value: PropertyType; label: string }[] = [
+  { value: "sale", label: "For Sale" },
+  { value: "short-let", label: "Short-Let" },
+  { value: "hotel", label: "Hotel / Suite" },
+  { value: "management", label: "Management" },
+];
+
+const propertyCategories: { value: PropertyCategory; label: string }[] = [
+  { value: "apartment", label: "Apartment" },
+  { value: "suite", label: "Suite" },
+  { value: "hotel", label: "Hotel" },
+  { value: "land", label: "Land" },
+  { value: "commercial", label: "Commercial" },
+  { value: "short-let", label: "Short-Let" },
+];
+
+const blankInventory: InventoryItem = {
+  productId: "",
+  name: "",
+  category: "produce",
+  price: 0,
+  description: "",
+  stockStatus: "In Stock",
+  availableUnits: 0,
+  imageBg: "bg-emerald-500/10 text-emerald-700",
+  imageUrl: `${sharedImageBase}/farms-hero.svg`,
+};
+
+type PropertyForm = Omit<PropertyListing, "createdAt" | "date"> & {
+  highlightsText: string;
+};
+
+const blankProperty: PropertyForm = {
+  id: "",
+  title: "",
+  location: "",
+  price: 0,
+  type: "short-let",
+  category: "short-let",
+  beds: 1,
+  baths: 1,
+  size: 80,
+  featured: false,
+  imageBg: "from-emerald-700/25 to-slate-900/10",
+  imageUrl: `${sharedImageBase}/homes-hero.svg`,
+  summary: "",
+  highlights: [],
+  highlightsText: "",
+  status: "Approved",
+};
+
+const blankService: SurveyService = {
+  id: "",
+  title: "",
+  description: "",
+  priceFrom: 0,
+  timeline: "By scope",
+  imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+  color: "text-cyan-600 bg-cyan-500/10",
+  status: "Approved",
+};
+
 export function AdminView() {
   const {
     currentUser,
@@ -25,15 +158,61 @@ export function AdminView() {
     isBusy,
     updateBidStatus,
     updateInventoryItem,
+    updatePropertyListingStatus,
     updateSurveyStatus,
+    upsertPropertyListing,
+    upsertSurveyService,
     openAuthModal,
   } = useDajem();
   const [inventoryDrafts, setInventoryDrafts] = React.useState<Record<string, InventoryItem>>({});
+  const [newInventory, setNewInventory] = React.useState<InventoryItem>(blankInventory);
+  const [propertyDraft, setPropertyDraft] = React.useState<PropertyForm>(blankProperty);
+  const [serviceDraft, setServiceDraft] = React.useState<SurveyService>(blankService);
 
   React.useEffect(() => {
     const nextDrafts = Object.fromEntries(snapshot.inventory.map((item) => [item.productId, item]));
     setInventoryDrafts(nextDrafts);
   }, [snapshot.inventory]);
+
+  const saveInventory = async (item: InventoryItem) => {
+    await updateInventoryItem({
+      productId: item.productId || undefined,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      description: item.description,
+      availableUnits: item.availableUnits,
+      stockStatus: item.stockStatus,
+      imageUrl: item.imageUrl,
+      imageBg: item.imageBg,
+    });
+  };
+
+  const saveProperty = async (draft: PropertyForm) => {
+    await upsertPropertyListing({
+      id: draft.id || undefined,
+      title: draft.title,
+      location: draft.location,
+      price: draft.price,
+      type: draft.type,
+      category: draft.category,
+      beds: draft.beds,
+      baths: draft.baths,
+      size: draft.size,
+      featured: draft.featured,
+      imageUrl: draft.imageUrl,
+      imageBg: draft.imageBg,
+      summary: draft.summary,
+      highlights: splitHighlights(draft.highlightsText),
+      status: draft.status,
+    });
+    setPropertyDraft(blankProperty);
+  };
+
+  const saveService = async (draft: SurveyService) => {
+    await upsertSurveyService(draft);
+    setServiceDraft(blankService);
+  };
 
   if (!currentUser) {
     return (
@@ -42,7 +221,7 @@ export function AdminView() {
           <CardTitle>Admin Portal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Please log in with an admin account to manage the Dajem group portal.</p>
+          <p className="text-sm text-muted-foreground">Please log in with an admin account to manage the Dajem Group Limited portal.</p>
           <Button className="bg-primary text-white" onClick={() => openAuthModal("login")}>
             Login as admin
           </Button>
@@ -67,22 +246,22 @@ export function AdminView() {
   const metrics = [
     { label: "Users", value: snapshot.users.length, icon: Users },
     { label: "Orders", value: snapshot.orders.length, icon: Package },
-    { label: "Pending Bids", value: snapshot.bids.filter((bid) => bid.status === "Pending").length, icon: BarChart3 },
+    { label: "Pending Properties", value: snapshot.propertyListings.filter((item) => item.status === "Pending Approval").length, icon: Home },
     { label: "Survey Queue", value: snapshot.surveys.filter((survey) => survey.status !== "Completed & Sent").length, icon: ClipboardList },
   ];
 
   return (
     <div className="space-y-8">
       <div className="rounded-3xl border bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10 p-6">
-        <Badge variant="secondary" className="mb-3">Shared Admin Portal</Badge>
-        <h1 className="text-3xl font-bold text-primary dark:text-foreground">Dajem operations console</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Manage users, bids, surveys, inventory, and integration readiness from one shared workspace.
+        <Badge variant="secondary" className="mb-3">Unified Admin Portal</Badge>
+        <h1 className="text-3xl font-bold text-primary dark:text-foreground">Dajem Group operations console</h1>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Manage Dajem Farms products, Dajem Homes listings, Dajem Orbital service requests, approvals, images, users, and integrations from one shared workspace.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-full border px-3 py-1">Backend: {snapshot.integrations.backend}</span>
           <span className="rounded-full border px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Ready" : "Fallback mode"}</span>
-          <span className="rounded-full border px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Live handshake ready" : "Simulated checkout"}</span>
+          <span className="rounded-full border px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Test handshake ready" : "Not active"}</span>
         </div>
       </div>
 
@@ -100,6 +279,398 @@ export function AdminView() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dajem Farms Product Uploads</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form
+            className="grid gap-4 rounded-2xl border bg-muted/20 p-4 md:grid-cols-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveInventory(newInventory).then(() => setNewInventory(blankInventory));
+            }}
+          >
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="new-product-name">Product Name</Label>
+              <Input
+                id="new-product-name"
+                required
+                value={newInventory.name}
+                onChange={(event) => setNewInventory((current) => ({ ...current, name: event.target.value }))}
+              />
+            </div>
+            <Select
+              label="Category"
+              value={newInventory.category}
+              onChange={(event) => setNewInventory((current) => ({ ...current, category: event.target.value as InventoryCategory }))}
+              options={inventoryCategories}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-price">Price</Label>
+              <Input
+                id="new-product-price"
+                type="number"
+                min={0}
+                required
+                value={newInventory.price}
+                onChange={(event) => setNewInventory((current) => ({ ...current, price: Number(event.target.value) }))}
+              />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="new-product-desc">Description</Label>
+              <Textarea
+                id="new-product-desc"
+                required
+                value={newInventory.description}
+                onChange={(event) => setNewInventory((current) => ({ ...current, description: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-units">Units</Label>
+              <Input
+                id="new-product-units"
+                type="number"
+                min={0}
+                value={newInventory.availableUnits}
+                onChange={(event) => setNewInventory((current) => ({ ...current, availableUnits: Number(event.target.value) }))}
+              />
+            </div>
+            <Select
+              label="Stock"
+              value={newInventory.stockStatus}
+              onChange={(event) => setNewInventory((current) => ({ ...current, stockStatus: event.target.value as InventoryStockStatus }))}
+              options={stockStatuses}
+            />
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="new-product-image">Image URL</Label>
+              <Input
+                id="new-product-image"
+                value={newInventory.imageUrl ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, imageUrl: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-file">Upload Image</Label>
+              <Input
+                id="new-product-file"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) readImageFile(file, (imageUrl) => setNewInventory((current) => ({ ...current, imageUrl })));
+                }}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" disabled={isBusy} className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
+                <UploadCloud className="h-4 w-4" />
+                Add Product
+              </Button>
+            </div>
+          </form>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            {snapshot.inventory.map((item) => {
+              const draft = inventoryDrafts[item.productId] ?? item;
+              return (
+                <div key={item.productId} className="rounded-xl border p-4">
+                  <div className="grid gap-4 md:grid-cols-[140px_1fr]">
+                    <ImagePreview imageUrl={draft.imageUrl} fallbackClass={draft.imageBg} />
+                    <div className="space-y-4">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Input
+                          value={draft.name}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, name: event.target.value },
+                          }))}
+                        />
+                        <Select
+                          value={draft.category}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, category: event.target.value as InventoryCategory },
+                          }))}
+                          options={inventoryCategories}
+                        />
+                      </div>
+                      <Textarea
+                        value={draft.description}
+                        onChange={(event) => setInventoryDrafts((current) => ({
+                          ...current,
+                          [item.productId]: { ...draft, description: event.target.value },
+                        }))}
+                      />
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <Input
+                          type="number"
+                          value={draft.price}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, price: Number(event.target.value) },
+                          }))}
+                        />
+                        <Input
+                          type="number"
+                          value={draft.availableUnits}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, availableUnits: Number(event.target.value) },
+                          }))}
+                        />
+                        <Select
+                          value={draft.stockStatus}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, stockStatus: event.target.value as InventoryItem["stockStatus"] },
+                          }))}
+                          options={stockStatuses}
+                        />
+                        <Button disabled={isBusy} onClick={() => void saveInventory(draft)}>
+                          Save
+                        </Button>
+                      </div>
+                      <Input
+                        value={draft.imageUrl ?? ""}
+                        placeholder="Image URL or uploaded data URL"
+                        onChange={(event) => setInventoryDrafts((current) => ({
+                          ...current,
+                          [item.productId]: { ...draft, imageUrl: event.target.value },
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dajem Homes Listings & Approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <form
+              className="space-y-4 rounded-2xl border bg-muted/20 p-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveProperty(propertyDraft);
+              }}
+            >
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  required
+                  placeholder="Listing title"
+                  value={propertyDraft.title}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, title: event.target.value }))}
+                />
+                <Input
+                  required
+                  placeholder="Location"
+                  value={propertyDraft.location}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, location: event.target.value }))}
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-4">
+                <Input
+                  type="number"
+                  min={0}
+                  required
+                  placeholder="Price"
+                  value={propertyDraft.price}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, price: Number(event.target.value) }))}
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  required
+                  placeholder="Size"
+                  value={propertyDraft.size}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, size: Number(event.target.value) }))}
+                />
+                <Select
+                  value={propertyDraft.type}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, type: event.target.value as PropertyType }))}
+                  options={propertyTypes}
+                />
+                <Select
+                  value={propertyDraft.category}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, category: event.target.value as PropertyCategory }))}
+                  options={propertyCategories}
+                />
+              </div>
+              <Textarea
+                required
+                placeholder="Summary"
+                value={propertyDraft.summary}
+                onChange={(event) => setPropertyDraft((current) => ({ ...current, summary: event.target.value }))}
+              />
+              <Input
+                placeholder="Highlights, separated by commas"
+                value={propertyDraft.highlightsText}
+                onChange={(event) => setPropertyDraft((current) => ({ ...current, highlightsText: event.target.value }))}
+              />
+              <div className="grid gap-3 md:grid-cols-3">
+                <Input
+                  placeholder="Image URL"
+                  value={propertyDraft.imageUrl ?? ""}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, imageUrl: event.target.value }))}
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) readImageFile(file, (imageUrl) => setPropertyDraft((current) => ({ ...current, imageUrl })));
+                  }}
+                />
+                <Select
+                  value={propertyDraft.status}
+                  onChange={(event) => setPropertyDraft((current) => ({ ...current, status: event.target.value as ApprovalStatus }))}
+                  options={approvalStatuses}
+                />
+              </div>
+              <Button type="submit" disabled={isBusy} className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
+                Save Property Listing
+              </Button>
+            </form>
+
+            {snapshot.propertyListings.map((property) => (
+              <div key={property.id} className="rounded-xl border p-4">
+                <div className="grid gap-4 md:grid-cols-[120px_1fr]">
+                  <ImagePreview imageUrl={property.imageUrl} fallbackClass="bg-emerald-500/10 text-emerald-700" />
+                  <div>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{property.title}</p>
+                        <p className="text-xs text-muted-foreground">{property.location} - {formatCurrency(property.price)}</p>
+                        {property.submittedByEmail && (
+                          <p className="mt-1 text-xs text-muted-foreground">Submitted by {property.submittedByName} ({property.submittedByEmail})</p>
+                        )}
+                      </div>
+                      <Badge variant={property.status === "Approved" ? "default" : property.status === "Rejected" ? "destructive" : "secondary"}>
+                        {property.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{property.summary}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button size="sm" disabled={isBusy} onClick={() => void updatePropertyListingStatus(property.id, "Approved")}>
+                        Approve
+                      </Button>
+                      <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void updatePropertyListingStatus(property.id, "Rejected")}>
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPropertyDraft({
+                          ...property,
+                          highlightsText: joinHighlights(property.highlights),
+                        })}
+                      >
+                        Edit in Form
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Dajem Orbital Services & Requests</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <form
+              className="space-y-4 rounded-2xl border bg-muted/20 p-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveService(serviceDraft);
+              }}
+            >
+              <Input
+                required
+                placeholder="Service title"
+                value={serviceDraft.title}
+                onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value }))}
+              />
+              <Textarea
+                required
+                placeholder="Service description"
+                value={serviceDraft.description}
+                onChange={(event) => setServiceDraft((current) => ({ ...current, description: event.target.value }))}
+              />
+              <div className="grid gap-3 md:grid-cols-3">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Price from"
+                  value={serviceDraft.priceFrom}
+                  onChange={(event) => setServiceDraft((current) => ({ ...current, priceFrom: Number(event.target.value) }))}
+                />
+                <Input
+                  placeholder="Timeline"
+                  value={serviceDraft.timeline}
+                  onChange={(event) => setServiceDraft((current) => ({ ...current, timeline: event.target.value }))}
+                />
+                <Select
+                  value={serviceDraft.status}
+                  onChange={(event) => setServiceDraft((current) => ({ ...current, status: event.target.value as ApprovalStatus }))}
+                  options={approvalStatuses}
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  placeholder="Image URL"
+                  value={serviceDraft.imageUrl ?? ""}
+                  onChange={(event) => setServiceDraft((current) => ({ ...current, imageUrl: event.target.value }))}
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) readImageFile(file, (imageUrl) => setServiceDraft((current) => ({ ...current, imageUrl })));
+                  }}
+                />
+              </div>
+              <Button type="submit" disabled={isBusy} className="w-full bg-cyan-600 text-white hover:bg-cyan-700">
+                Save Survey Service
+              </Button>
+            </form>
+
+            {snapshot.surveyServices.map((service) => (
+              <div key={service.id} className="rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{service.title}</p>
+                    <p className="text-xs text-muted-foreground">{formatCurrency(service.priceFrom)} from - {service.timeline}</p>
+                  </div>
+                  <Badge variant={service.status === "Approved" ? "default" : service.status === "Rejected" ? "destructive" : "secondary"}>
+                    {service.status}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
+                <Button
+                  className="mt-3"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setServiceDraft(service)}
+                >
+                  Edit in Form
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -136,7 +707,7 @@ export function AdminView() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="font-semibold text-foreground">{bid.propertyTitle}</p>
-                      <p className="text-xs text-muted-foreground">{bid.userName} • {bid.userEmail}</p>
+                      <p className="text-xs text-muted-foreground">{bid.userName} - {bid.userEmail}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {formatCurrency(bid.bidAmount)} against {formatCurrency(bid.propertyPrice)}
                       </p>
@@ -170,7 +741,7 @@ export function AdminView() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-foreground">{survey.location}</p>
-                    <p className="text-xs text-muted-foreground">{survey.userName} • {survey.serviceType}</p>
+                    <p className="text-xs text-muted-foreground">{survey.userName} - {survey.serviceType}</p>
                   </div>
                   <Shield className="h-4 w-4 text-emerald-500" />
                 </div>
@@ -179,84 +750,15 @@ export function AdminView() {
                   value={survey.status}
                   onChange={(event) => void updateSurveyStatus(survey.id, event.target.value as typeof survey.status)}
                   options={[
-                    { value: "Pending", label: "Pending" },
+                    { value: "Pending Approval", label: "Pending Approval" },
                     { value: "In Progress", label: "In Progress" },
                     { value: "Completed & Sent", label: "Completed & Sent" },
+                    { value: "Rejected", label: "Rejected" },
                   ]}
                 />
               </div>
             ))
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Poultry Inventory Manager</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {snapshot.inventory.map((item) => {
-            const draft = inventoryDrafts[item.productId] ?? item;
-            return (
-              <div key={item.productId} className="rounded-xl border p-4">
-                <div className="mb-4 flex flex-col gap-1">
-                  <p className="font-semibold text-foreground">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">{item.category}</p>
-                </div>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <Input
-                    type="number"
-                    value={draft.price}
-                    onChange={(event) => setInventoryDrafts((current) => ({
-                      ...current,
-                      [item.productId]: {
-                        ...draft,
-                        price: Number(event.target.value),
-                      },
-                    }))}
-                  />
-                  <Input
-                    type="number"
-                    value={draft.availableUnits}
-                    onChange={(event) => setInventoryDrafts((current) => ({
-                      ...current,
-                      [item.productId]: {
-                        ...draft,
-                        availableUnits: Number(event.target.value),
-                      },
-                    }))}
-                  />
-                  <Select
-                    value={draft.stockStatus}
-                    onChange={(event) => setInventoryDrafts((current) => ({
-                      ...current,
-                      [item.productId]: {
-                        ...draft,
-                        stockStatus: event.target.value as InventoryItem["stockStatus"],
-                      },
-                    }))}
-                    options={[
-                      { value: "In Stock", label: "In Stock" },
-                      { value: "Low Stock", label: "Low Stock" },
-                      { value: "Out of Stock", label: "Out of Stock" },
-                    ]}
-                  />
-                  <Button
-                    disabled={isBusy}
-                    onClick={() => void updateInventoryItem({
-                      productId: item.productId,
-                      price: draft.price,
-                      availableUnits: draft.availableUnits,
-                      stockStatus: draft.stockStatus,
-                    })}
-                  >
-                    Save
-                  </Button>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">Current value: {formatCurrency(draft.price)}</p>
-              </div>
-            );
-          })}
         </CardContent>
       </Card>
     </div>

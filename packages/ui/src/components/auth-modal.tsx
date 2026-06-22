@@ -55,7 +55,7 @@ export function AuthModal({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={preview ? "Registration Communication Preview" : "Welcome to Dajem Group"}
+      title={preview ? "Registration Communication Preview" : "Welcome to Dajem Group Limited"}
     >
       {preview ? (
         <div className="space-y-4">

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Dajem Orbital surveying background">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#083344"/><stop offset=".5" stop-color="#0e7490"/><stop offset="1" stop-color="#064e3b"/></linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#bg)"/>
+  <g fill="none" stroke="#e0f2fe" stroke-opacity=".26" stroke-width="2">
+    <path d="M0 180h1200M0 300h1200M0 420h1200M0 540h1200"/>
+    <path d="M180 0v720M360 0v720M540 0v720M720 0v720M900 0v720"/>
+    <path d="M70 620C245 410 370 530 520 350s315-90 610-245"/>
+  </g>
+  <g fill="#ecfeff" opacity=".85">
+    <circle cx="305" cy="420" r="18"/><circle cx="520" cy="350" r="18"/><circle cx="795" cy="225" r="18"/><circle cx="1010" cy="115" r="18"/>
+  </g>
+  <path d="M305 420 520 350 795 225 1010 115" fill="none" stroke="#facc15" stroke-width="8" stroke-linecap="round"/>
+  <path d="M570 585h150l-75-330z" fill="#cffafe" opacity=".82"/>
+  <circle cx="645" cy="250" r="42" fill="#facc15"/>
+  <text x="72" y="112" fill="#ecfeff" font-family="Arial, sans-serif" font-size="48" font-weight="700">Dajem Orbital Resources Limited</text>
+</svg>

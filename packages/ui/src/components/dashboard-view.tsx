@@ -36,7 +36,7 @@ export function DashboardView() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Your shared dashboard aggregates Poultry cart activity, Real Estate bids, Survey requests, and communication logs.
+            Your shared dashboard aggregates Dajem Farms cart activity, Dajem Homes bids/listings, Dajem Orbital requests, and communication logs.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button className="bg-primary text-white" onClick={() => openAuthModal("login")}>
@@ -54,7 +54,11 @@ export function DashboardView() {
   const metrics = [
     { label: "Cart Items", value: snapshot.cart.reduce((total, item) => total + item.quantity, 0), icon: ShoppingCart },
     { label: "Orders", value: snapshot.orders.length, icon: Package },
-    { label: "Property Bids", value: snapshot.bids.length, icon: Layers3 },
+    {
+      label: "Property Activity",
+      value: snapshot.bids.length + snapshot.propertyListings.filter((listing) => listing.submittedByEmail === currentUser.email).length,
+      icon: Layers3,
+    },
     { label: "Survey Requests", value: snapshot.surveys.length, icon: ClipboardList },
   ];
 
@@ -64,7 +68,7 @@ export function DashboardView() {
         <Badge variant="secondary" className="w-max">Shared User Portal</Badge>
         <h1 className="text-3xl font-bold text-primary dark:text-foreground">Welcome back, {currentUser.name}</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Orders, bids, surveys, and your active poultry cart now live in one place across the whole Dajem group.
+          Orders, bids, property submissions, surveys, and your active Dajem Farms cart now live in one place across Dajem Group Limited.
         </p>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-full border px-3 py-1">Backend: {snapshot.integrations.backend}</span>
@@ -92,7 +96,7 @@ export function DashboardView() {
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Active Poultry Cart</CardTitle>
+            <CardTitle>Active Dajem Farms Cart</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {snapshot.cart.length === 0 ? (
@@ -164,26 +168,42 @@ export function DashboardView() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Property Bids</CardTitle>
+            <CardTitle>Dajem Homes Activity</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {snapshot.bids.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No bids submitted yet.</p>
+            {snapshot.bids.length === 0 && snapshot.propertyListings.filter((listing) => listing.submittedByEmail === currentUser.email).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No bids or listing submissions yet.</p>
             ) : (
-              snapshot.bids.map((bid) => (
-                <div key={bid.id} className="rounded-xl border p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{bid.propertyTitle}</p>
-                      <p className="text-xs text-muted-foreground">{bid.propertyLocation}</p>
+              <>
+                {snapshot.propertyListings.filter((listing) => listing.submittedByEmail === currentUser.email).map((listing) => (
+                  <div key={listing.id} className="rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{listing.title}</p>
+                        <p className="text-xs text-muted-foreground">{listing.location}</p>
+                      </div>
+                      <Badge variant={listing.status === "Approved" ? "default" : listing.status === "Rejected" ? "destructive" : "secondary"}>
+                        {listing.status}
+                      </Badge>
                     </div>
-                    <Badge variant={bid.status === "Connected" ? "default" : bid.status === "Rejected" ? "destructive" : "secondary"}>
-                      {bid.status}
-                    </Badge>
+                    <p className="mt-2 text-sm text-muted-foreground">Listing proposal: {formatCurrency(listing.price)}</p>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">Your bid: {formatCurrency(bid.bidAmount)}</p>
-                </div>
-              ))
+                ))}
+                {snapshot.bids.map((bid) => (
+                  <div key={bid.id} className="rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{bid.propertyTitle}</p>
+                        <p className="text-xs text-muted-foreground">{bid.propertyLocation}</p>
+                      </div>
+                      <Badge variant={bid.status === "Connected" ? "default" : bid.status === "Rejected" ? "destructive" : "secondary"}>
+                        {bid.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Your bid: {formatCurrency(bid.bidAmount)}</p>
+                  </div>
+                ))}
+              </>
             )}
           </CardContent>
         </Card>
@@ -204,7 +224,7 @@ export function DashboardView() {
                     <p className="font-semibold text-foreground">{survey.location}</p>
                     <p className="text-xs text-muted-foreground">{survey.serviceType}</p>
                   </div>
-                  <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "In Progress" ? "secondary" : "outline"}>
+                  <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "Rejected" ? "destructive" : survey.status === "In Progress" ? "secondary" : "outline"}>
                     {survey.status}
                   </Badge>
                 </div>

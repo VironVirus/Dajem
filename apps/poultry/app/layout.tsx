@@ -6,10 +6,10 @@ import { DajemProvider, ThemeProvider } from "@repo/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dajem Poultry | Quality Feeds & Breeds",
+  title: "Dajem Farms Limited | Farming & Farm Products",
   description:
-    "We provide premium day-old chicks, high-quality organic feeds, standard processing equipment, and fresh farm broilers. Certified agricultural solutions by Dajem Group.",
-  keywords: ["Dajem Poultry", "Poultry Farming", "Day Old Chicks", "Organic Feed", "Abuja", "Nigeria"],
+    "Dajem Farms Limited handles farming generally, including farm products, livestock, feeds, and agricultural operations from Enugu, Nigeria.",
+  keywords: ["Dajem Farms Limited", "Farming", "Farm Products", "Poultry", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

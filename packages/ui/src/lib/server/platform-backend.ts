@@ -7,10 +7,12 @@ import type {
   IntegrationStatus,
   InventoryItem,
   PlatformState,
+  PropertyListing,
   ServerUser,
+  SurveyService,
   User,
 } from "../store";
-import { seedInventory } from "../store";
+import { seedInventory, seedPropertyListings, seedSurveyServices } from "../store";
 
 const DEV_ADMIN_EMAIL = "admin@dajem.local";
 const DEV_ADMIN_PASSWORD = "ChangeMe123!";
@@ -104,6 +106,8 @@ function createDefaultState(): PlatformState {
     bids: [],
     surveys: [],
     inventory: seedInventory,
+    propertyListings: seedPropertyListings,
+    surveyServices: seedSurveyServices,
     paymentIntents: [],
     communicationLogs: [],
   };
@@ -116,6 +120,37 @@ function cloneState(state: PlatformState) {
 function normalizeInventory(inventory: InventoryItem[]) {
   if (inventory.length > 0) return inventory;
   return seedInventory;
+}
+
+function migrateInventory(inventory: InventoryItem[]) {
+  const legacySeedIds = new Set(["doc-01", "doc-02", "feed-01", "feed-02", "equip-01", "equip-02", "proc-01"]);
+  const looksLikeLegacySeed = inventory.length > 0 && inventory.every((item) => legacySeedIds.has(item.productId));
+
+  if (looksLikeLegacySeed) {
+    return seedInventory;
+  }
+
+  return normalizeInventory(inventory).map((item) => ({
+    ...item,
+    imageUrl: item.imageUrl || seedInventory[0]?.imageUrl,
+  }));
+}
+
+function normalizePropertyListings(listings: PropertyListing[]) {
+  if (listings.length > 0) return listings;
+  return seedPropertyListings;
+}
+
+function normalizeSurveyServices(services: SurveyService[]) {
+  if (services.length > 0) return services;
+  return seedSurveyServices;
+}
+
+function migratePendingStatus<T extends { status?: string }>(items: T[]) {
+  return items.map((item) => ({
+    ...item,
+    status: item.status === "Pending" ? "Pending Approval" : item.status,
+  }));
 }
 
 function sanitizeState(raw: unknown): PlatformState {
@@ -134,9 +169,11 @@ function sanitizeState(raw: unknown): PlatformState {
     users: adminExists || !configuredAdmin ? users as ServerUser[] : [configuredAdmin, ...(users as ServerUser[])],
     carts: candidate.carts && typeof candidate.carts === "object" ? candidate.carts : {},
     orders: Array.isArray(candidate.orders) ? candidate.orders : [],
-    bids: Array.isArray(candidate.bids) ? candidate.bids : [],
-    surveys: Array.isArray(candidate.surveys) ? candidate.surveys : [],
-    inventory: normalizeInventory(Array.isArray(candidate.inventory) ? candidate.inventory : []),
+    bids: Array.isArray(candidate.bids) ? migratePendingStatus(candidate.bids) : [],
+    surveys: Array.isArray(candidate.surveys) ? migratePendingStatus(candidate.surveys) : [],
+    inventory: migrateInventory(Array.isArray(candidate.inventory) ? candidate.inventory : []),
+    propertyListings: normalizePropertyListings(Array.isArray(candidate.propertyListings) ? candidate.propertyListings : []),
+    surveyServices: normalizeSurveyServices(Array.isArray(candidate.surveyServices) ? candidate.surveyServices : []),
     paymentIntents: Array.isArray(candidate.paymentIntents) ? candidate.paymentIntents : [],
     communicationLogs: Array.isArray(candidate.communicationLogs) ? candidate.communicationLogs : [],
   };

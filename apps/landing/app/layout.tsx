@@ -6,10 +6,10 @@ import { DajemProvider, ThemeProvider } from "@repo/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dajem Group | Synergy & Excellence",
+  title: "Dajem Group Limited | Strategic Management",
   description:
-    "Welcome to Dajem Group, a diversified conglomerate leading in sustainable poultry farming, modern real estate, and high-precision land surveying and architectural services.",
-  keywords: ["Dajem Group", "Dajem Poultry", "Dajem Real Estate", "Dajem Survey & Plans", "Abuja", "Nigeria"],
+    "Dajem Group Limited owns and controls the subsidiary companies of Dajem Group and facilitates strategic management across Dajem Farms, Dajem Homes, and Dajem Orbital Resources.",
+  keywords: ["Dajem Group Limited", "Dajem Farms Limited", "Dajem Homes Limited", "Dajem Orbital Resources Limited", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

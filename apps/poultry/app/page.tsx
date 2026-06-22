@@ -17,6 +17,7 @@ import {
   Select,
   Sheet,
   Textarea,
+  dajemCompanyProfiles,
   getAppBaseUrl,
   useDajem,
 } from "@repo/ui";
@@ -43,6 +44,7 @@ function formatCurrency(amount: number) {
 }
 
 export default function PoultryPage() {
+  const profile = dajemCompanyProfiles.poultry;
   const {
     snapshot,
     addToCart,
@@ -102,20 +104,25 @@ export default function PoultryPage() {
       <Header activeApp="poultry" onCartClick={() => setCartOpen(true)} />
 
       <main className="flex-1">
-        <section className="relative overflow-hidden py-20 bg-gradient-to-br from-amber-500/10 via-transparent to-background">
+        <section
+          className="relative overflow-hidden bg-cover bg-center py-20"
+          style={{
+            backgroundImage: "linear-gradient(135deg, rgba(255,251,235,.92), rgba(255,251,235,.76), rgba(255,255,255,.96)), url('/images/farms-hero.svg')",
+          }}
+        >
           <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-amber-500/5 blur-3xl -z-10" />
           <div className="absolute bottom-10 left-10 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl -z-10" />
 
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 md:grid-cols-2">
             <div className="space-y-6">
               <Badge variant="secondary" className="bg-amber-100 px-3 py-1 font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                Sustainable Agriculture
+                {profile.registrationNumber} - Started {profile.startDate}
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight text-primary dark:text-foreground sm:text-5xl">
-                Shared Poultry Cart, Live Inventory, and Flutterwave-Ready Checkout
+                {profile.displayName}: Farm Products, Live Inventory, and Flutterwave Test Checkout
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
-                Dajem Poultry now runs on the shared Dajem portal. Sign in once, add products to your cart, and track orders from the dashboard across the whole group.
+                {profile.summary} Sign in, add farm products to your cart, and track orders from the shared Dajem Group Limited dashboard.
               </p>
 
               <div className="flex flex-wrap gap-4 pt-2">
@@ -125,7 +132,7 @@ export default function PoultryPage() {
                   onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  Shop Catalog
+                  Shop Farm Catalog
                 </Button>
                 <Button
                   size="lg"
@@ -148,16 +155,16 @@ export default function PoultryPage() {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your cart and order history are tied to the shared Dajem account layer, with Supabase-ready persistence and a live Flutterwave handshake when keys are added.
+                Your cart and order history are tied to the shared Dajem account layer. The current payment setup is ready for Flutterwave test keys before live keys are added later.
               </p>
               <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-xs font-semibold text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Cross-app auth cookie
+                  Shared account layer
                 </div>
                 <div className="flex items-center gap-2">
                   <Truck className="h-4 w-4 text-emerald-500" />
-                  Shared delivery flow
+                  Farm order flow
                 </div>
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-emerald-500" />
@@ -165,7 +172,7 @@ export default function PoultryPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-emerald-500" />
-                  Payment callback ready
+                  Test payment ready
                 </div>
               </div>
             </div>
@@ -177,20 +184,20 @@ export default function PoultryPage() {
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               {[
                 {
-                  title: "Bio-Secure Incubators",
-                  desc: "All breeders are raised under strict veterinary surveillance with early vaccination schedules.",
+                  title: "General Farming Focus",
+                  desc: "Dajem Farms Limited is structured for farming generally, with poultry products currently powering the online catalog.",
                   icon: ShieldCheck,
                   color: "text-emerald-500 bg-emerald-500/10",
                 },
                 {
-                  title: "100% Organic Feeds",
-                  desc: "Zero hormones, balanced formulations, and transparent stock management through the shared admin portal.",
+                  title: "Farm Product Management",
+                  desc: "Products, images, stock, and pricing are controlled from the unified admin portal.",
                   icon: Sparkles,
                   color: "text-amber-500 bg-amber-500/10",
                 },
                 {
-                  title: "Logistics Optimization",
-                  desc: "Coordinated fulfillment and route-ready order tracking from the unified dashboard.",
+                  title: "Order Coordination",
+                  desc: "Order records and customer communication previews are linked to the shared dashboard.",
                   icon: Truck,
                   color: "text-blue-500 bg-blue-500/10",
                 },
@@ -212,10 +219,10 @@ export default function PoultryPage() {
         <section id="catalog" className="container mx-auto max-w-6xl px-4 py-20">
           <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <Badge variant="secondary" className="mb-3">Dajem Store</Badge>
+              <Badge variant="secondary" className="mb-3">{profile.displayName}</Badge>
               <h2 className="text-3xl font-bold text-primary dark:text-foreground">Browse Farm Products</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Inventory is now centrally managed and visible in the admin portal.
+                Inventory, product images, price, and stock levels are centrally managed from the admin portal.
               </p>
             </div>
 
@@ -235,10 +242,10 @@ export default function PoultryPage() {
                   onChange={(event) => setSelectedCategory(event.target.value)}
                   options={[
                     { value: "all", label: "All Categories" },
-                    { value: "chicks", label: "Day-Old Chicks" },
-                    { value: "feeds", label: "Poultry Feeds" },
+                    { value: "livestock", label: "Livestock" },
+                    { value: "feeds", label: "Feeds" },
+                    { value: "produce", label: "Farm Produce" },
                     { value: "equipment", label: "Farm Equipment" },
-                    { value: "processed", label: "Processed Products" },
                   ]}
                 />
               </div>
@@ -249,8 +256,11 @@ export default function PoultryPage() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {filteredProducts.map((product) => (
                 <Card key={product.productId} className="flex h-full flex-col hover:-translate-y-1 duration-300">
-                  <div className={`flex h-40 items-center justify-center rounded-t-xl border-b ${product.imageBg}`}>
-                    <Egg className="h-12 w-12 opacity-80" />
+                  <div
+                    className={`flex h-40 items-center justify-center rounded-t-xl border-b bg-cover bg-center ${product.imageBg}`}
+                    style={product.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.28)), url(${product.imageUrl})` } : undefined}
+                  >
+                    {!product.imageUrl && <Egg className="h-12 w-12 opacity-80" />}
                   </div>
                   <CardHeader className="flex-1 p-5">
                     <div className="mb-2 flex items-start justify-between gap-2">
@@ -285,7 +295,7 @@ export default function PoultryPage() {
             </div>
           ) : (
             <div className="rounded-xl border bg-card py-16 text-center">
-              <p className="text-muted-foreground">No poultry products match your active search or filters.</p>
+              <p className="text-muted-foreground">No farm products match your active search or filters.</p>
               <Button variant="outline" className="mt-4" onClick={() => { setSearchTerm(""); setSelectedCategory("all"); }}>
                 Reset Filters
               </Button>
@@ -298,7 +308,7 @@ export default function PoultryPage() {
             <Card className="border bg-card p-8 shadow-lg">
               <div className="mx-auto mb-8 max-w-2xl text-center">
                 <Badge variant="secondary" className="mb-2">Bulk Orders</Badge>
-                <h3 className="text-2xl font-bold text-primary dark:text-foreground">Request Commercial Farm Quotation</h3>
+                  <h3 className="text-2xl font-bold text-primary dark:text-foreground">Request Commercial Farm Quotation</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Operating at scale? Our logistics desk will prepare a volume-based proposal and delivery plan.
                 </p>
@@ -321,9 +331,10 @@ export default function PoultryPage() {
                   <Select
                     label="Desired Product Category"
                     options={[
-                      { value: "chicks-bulk", label: "Day-Old Chicks (1,000+)" },
-                      { value: "feeds-bulk", label: "Commercial Feed Supply (100+ bags)" },
-                      { value: "equip-bulk", label: "Automated Hatchery/Feeding Equipment" },
+                      { value: "livestock-bulk", label: "Livestock / Poultry Supply" },
+                      { value: "feeds-bulk", label: "Commercial Feed Supply" },
+                      { value: "produce-bulk", label: "Farm Produce Supply" },
+                      { value: "equip-bulk", label: "Farm Equipment" },
                     ]}
                   />
                 </div>
@@ -352,7 +363,7 @@ export default function PoultryPage() {
         <div className="space-y-5">
           {!currentUser ? (
             <div className="space-y-4 rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-              <p>Sign in to keep your poultry cart synced with the Dajem dashboard.</p>
+              <p>Sign in to keep your Dajem Farms cart synced with the shared dashboard.</p>
               <div className="flex flex-wrap gap-3">
                 <Button onClick={() => openAuthModal("login")}>Login</Button>
                 <Button variant="outline" onClick={() => openAuthModal("signup")}>
@@ -467,7 +478,7 @@ export default function PoultryPage() {
           <div className="space-y-2">
             <p className="text-lg font-semibold text-foreground">Request Logged</p>
             <p className="text-sm text-muted-foreground">
-              Our B2B sales desk has received your logistics request and will respond with a customized SLA quote.
+              Our Dajem Farms desk has received your request and will respond with a customized quote.
             </p>
           </div>
           <Button className="bg-primary text-white" onClick={() => setBulkSent(false)}>

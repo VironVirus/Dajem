@@ -15,6 +15,7 @@ import {
   Label,
   Select,
   Textarea,
+  dajemCompanyProfiles,
   useDajem,
 } from "@repo/ui";
 import {
@@ -40,6 +41,7 @@ function formatCurrency(amount: number) {
 }
 
 export default function SurveyPage() {
+  const profile = dajemCompanyProfiles.survey;
   const { currentUser, openAuthModal, requireAuth, snapshot, submitSurvey } = useDajem();
   const [calculatorInputs, setCalculatorInputs] = React.useState({
     serviceType: "boundary",
@@ -48,7 +50,7 @@ export default function SurveyPage() {
   });
   const [quoteForm, setQuoteForm] = React.useState({
     location: "",
-    serviceType: "boundary",
+    serviceType: "Land Surveying",
     description: "",
   });
   const [uploadedFile, setUploadedFile] = React.useState<{ name: string; sizeKb: number } | null>(null);
@@ -78,32 +80,13 @@ export default function SurveyPage() {
     });
   }, [calculatorInputs]);
 
-  const services = [
-    {
-      title: "Boundary Surveying",
-      desc: "Accurate parcel line marking for title processing and dispute resolution.",
-      icon: Ruler,
-      color: "text-cyan-500 bg-cyan-500/10",
-    },
-    {
-      title: "Topographical Surveys",
-      desc: "Detailed contour mapping for civil works, estates, and utility layouts.",
-      icon: Compass,
-      color: "text-emerald-500 bg-emerald-500/10",
-    },
-    {
-      title: "Architectural & Structural Plans",
-      desc: "Municipally compliant drafting for residential and commercial development.",
-      icon: Map,
-      color: "text-blue-500 bg-blue-500/10",
-    },
-    {
-      title: "GIS Mapping & Remote Sensing",
-      desc: "Drone-informed spatial intelligence and large-area mapping support.",
-      icon: Layers,
-      color: "text-indigo-500 bg-indigo-500/10",
-    },
-  ];
+  const serviceIcons = [Ruler, Compass, Map, Layers];
+  const services = snapshot.surveyServices
+    .filter((service) => service.status === "Approved")
+    .map((service, index) => ({
+      ...service,
+      icon: serviceIcons[index % serviceIcons.length],
+    }));
 
   const userSurveys = currentUser ? snapshot.surveys.filter((survey) => survey.userEmail === currentUser.email) : [];
 
@@ -128,7 +111,7 @@ export default function SurveyPage() {
     });
 
     setQuoteSent(true);
-    setQuoteForm({ location: "", serviceType: "boundary", description: "" });
+    setQuoteForm({ location: "", serviceType: "Land Surveying", description: "" });
     setUploadedFile(null);
   };
 
@@ -137,18 +120,23 @@ export default function SurveyPage() {
       <Header activeApp="survey" />
 
       <main className="flex-1">
-        <section className="relative overflow-hidden py-24 bg-gradient-to-b from-cyan-500/10 via-transparent to-background">
+        <section
+          className="relative overflow-hidden bg-cover bg-center py-24"
+          style={{
+            backgroundImage: "linear-gradient(180deg, rgba(236,254,255,.92), rgba(236,254,255,.76), rgba(255,255,255,.96)), url('/images/orbital-hero.svg')",
+          }}
+        >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
               <Badge variant="secondary" className="bg-cyan-100 px-3 py-1 font-semibold text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
-                Precision Geomatics & Design
+                {profile.registrationNumber} - Started {profile.startDate}
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
-                Shared survey uploads, tracker cards, and completed-file handoff
+                {profile.displayName}: Surveying, Mapping, Design, Construction, Logistics, and Contracts
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
-                Dajem Survey & Plans now feeds the shared dashboard. Upload land documents, monitor progress, and let admin move each request from pending to delivered.
+                {profile.summary} Submit a request, receive pending approval, and track admin updates from your shared dashboard.
               </p>
               <div className="flex gap-4 pt-2">
                 <Button size="lg" className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
@@ -163,12 +151,12 @@ export default function SurveyPage() {
             <div className="space-y-6 rounded-2xl border bg-card p-6 shadow-xl lg:col-span-5">
               <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
                 <Sparkles className="h-5 w-5 text-cyan-500" />
-                Geomatics Standards
+                Company Profile
               </h4>
               <div className="space-y-4 text-sm text-muted-foreground">
-                <div className="rounded-xl border p-4">Shared tracker cards are generated for every submitted request.</div>
-                <div className="rounded-xl border p-4">Completed admin updates unlock a downloadable mock survey package.</div>
-                <div className="rounded-xl border p-4">Supabase-ready persistence keeps survey activity linked beyond the demo layer.</div>
+                <div className="rounded-xl border p-4">{profile.address}</div>
+                <div className="rounded-xl border p-4">{profile.email}</div>
+                <div className="rounded-xl border p-4">Requests are saved as pending approval and email previews are logged for later delivery.</div>
               </div>
             </div>
           </div>
@@ -176,9 +164,9 @@ export default function SurveyPage() {
 
         <section id="services" className="container mx-auto max-w-6xl px-4 py-20">
           <div className="mx-auto mb-16 max-w-2xl text-center">
-            <Badge variant="secondary" className="mb-2">Geomatics Catalog</Badge>
-            <h2 className="text-3xl font-bold text-primary dark:text-foreground">Our Technical Services</h2>
-            <p className="mt-1 text-sm text-muted-foreground">We use production-grade surveying workflows with clear client-facing progress updates.</p>
+            <Badge variant="secondary" className="mb-2">Dajem Orbital Catalog</Badge>
+            <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Services</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Services are managed from the unified admin portal and displayed here after approval.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {services.map((service) => (
@@ -190,7 +178,10 @@ export default function SurveyPage() {
                   <CardTitle className="text-lg font-bold leading-snug">{service.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 p-6 pt-0">
-                  <p className="text-xs leading-relaxed text-muted-foreground">{service.desc}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{service.description}</p>
+                  <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+                    From {formatCurrency(service.priceFrom)} - {service.timeline}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -212,8 +203,8 @@ export default function SurveyPage() {
                   options={[
                     { value: "boundary", label: "Boundary Survey & Beacon Setting" },
                     { value: "topo", label: "Topographical & Contour Layout" },
-                    { value: "architectural", label: "Architectural Drafting (Building Plan)" },
-                    { value: "gis", label: "GIS Layout & Aerial Orthomosaic" },
+                    { value: "architectural", label: "Architectural Design & Supervision" },
+                    { value: "gis", label: "Digital Mapping & Geoinformatics" },
                   ]}
                 />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -285,7 +276,7 @@ export default function SurveyPage() {
             <form onSubmit={handleQuoteSubmit} className="space-y-4">
               {!currentUser && (
                 <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                  <p className="mb-3">Sign in first so we can attach this request to your Dajem dashboard and tracker.</p>
+                  <p className="mb-3">Sign in first so we can attach this request to your shared dashboard and tracker.</p>
                   <div className="flex flex-wrap gap-3">
                     <Button type="button" onClick={() => openAuthModal("login")}>Login</Button>
                     <Button type="button" variant="outline" onClick={() => openAuthModal("signup")}>
@@ -301,7 +292,7 @@ export default function SurveyPage() {
                   <Input
                     id="q-loc"
                     required
-                    placeholder="e.g. Kurudu, Abuja"
+                    placeholder="e.g. Ogui, Enugu"
                     value={quoteForm.location}
                     onChange={(event) => setQuoteForm((current) => ({ ...current, location: event.target.value }))}
                   />
@@ -310,12 +301,14 @@ export default function SurveyPage() {
                   label="Desired Technical Service"
                   value={quoteForm.serviceType}
                   onChange={(event) => setQuoteForm((current) => ({ ...current, serviceType: event.target.value }))}
-                  options={[
-                    { value: "Boundary Survey & Beacons", label: "Boundary Survey & Beacons" },
-                    { value: "Topographical Elevation Layout", label: "Topographical Elevation Layout" },
-                    { value: "Architectural Drawing Plan", label: "Architectural Drawing Plan" },
-                    { value: "Registry Lodgement / Recertification", label: "Registry Lodgement / Recertification" },
-                  ]}
+                  options={services.length > 0
+                    ? services.map((service) => ({ value: service.title, label: service.title }))
+                    : [
+                      { value: "Land Surveying", label: "Land Surveying" },
+                      { value: "Digital Mapping & Geoinformatics", label: "Digital Mapping & Geoinformatics" },
+                      { value: "Architectural Design & Supervision", label: "Architectural Design & Supervision" },
+                      { value: "Civil Engineering & Construction", label: "Civil Engineering & Construction" },
+                    ]}
                 />
               </div>
 
@@ -398,7 +391,7 @@ export default function SurveyPage() {
                   <CardHeader>
                     <div className="flex items-center justify-between gap-3">
                       <CardTitle className="text-lg">{survey.location}</CardTitle>
-                      <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "In Progress" ? "secondary" : "outline"}>
+                      <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "Rejected" ? "destructive" : survey.status === "In Progress" ? "secondary" : "outline"}>
                         {survey.status}
                       </Badge>
                     </div>
@@ -427,7 +420,7 @@ export default function SurveyPage() {
           <div className="space-y-2">
             <p className="text-lg font-semibold text-foreground">Survey request logged</p>
             <p className="text-sm text-muted-foreground">
-              Your request now appears in the shared dashboard and admin tracker for status updates.
+              Your request is now pending approval. An email preview has been saved in your dashboard while real email delivery is prepared later.
             </p>
           </div>
           <Button className="bg-primary text-white" onClick={() => setQuoteSent(false)}>

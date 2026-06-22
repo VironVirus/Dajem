@@ -66,7 +66,7 @@ function CallbackContent() {
         </div>
         <div className="flex flex-wrap justify-center gap-3">
           <a href={getAppBaseUrl("poultry")}>
-            <Button variant="outline">Back to Poultry</Button>
+            <Button variant="outline">Back to Dajem Farms</Button>
           </a>
           <a href={`${getAppBaseUrl("landing")}/dashboard`}>
             <Button className="bg-primary text-white">Open Dashboard</Button>
