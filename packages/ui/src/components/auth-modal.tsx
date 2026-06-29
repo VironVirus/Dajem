@@ -7,6 +7,7 @@ import { Button } from "./button";
 import { Dialog } from "./dialog";
 import { Input } from "./input";
 import { Label } from "./label";
+import { Select } from "./select";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,7 +23,36 @@ interface AuthModalProps {
     email: string;
     phone: string;
     password: string;
+    officialTitle?: string;
+    identificationType?: string;
+    identificationNumber?: string;
+    identificationImageUrl?: string;
   }) => Promise<void>;
+}
+
+async function compressImage(file: File) {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const nextImage = new Image();
+    nextImage.onload = () => resolve(nextImage);
+    nextImage.onerror = reject;
+    nextImage.src = dataUrl;
+  });
+
+  const maxSize = 900;
+  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return canvas.toDataURL("image/jpeg", 0.72);
 }
 
 export function AuthModal({
@@ -42,12 +72,25 @@ export function AuthModal({
     email: "",
     phone: "",
     password: "",
+    officialTitle: "",
+    identificationType: "NIN",
+    identificationNumber: "",
+    identificationImageUrl: "",
   });
 
   React.useEffect(() => {
     if (!isOpen) {
       setLoginForm({ email: "", password: "" });
-      setSignupForm({ name: "", email: "", phone: "", password: "" });
+      setSignupForm({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        officialTitle: "",
+        identificationType: "NIN",
+        identificationNumber: "",
+        identificationImageUrl: "",
+      });
     }
   }, [isOpen]);
 
@@ -117,9 +160,6 @@ export function AuthModal({
                 Sign Up
               </button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              One account unlocks the shared cart, bids, surveys, dashboard, and admin tools.
-            </p>
           </div>
 
           {error && (
@@ -177,6 +217,14 @@ export function AuthModal({
                   onChange={(event) => setSignupForm((current) => ({ ...current, name: event.target.value }))}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="signup-title">Official title</Label>
+                <Input
+                  id="signup-title"
+                  value={signupForm.officialTitle}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, officialTitle: event.target.value }))}
+                />
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="signup-email">Email</Label>
@@ -198,6 +246,42 @@ export function AuthModal({
                     onChange={(event) => setSignupForm((current) => ({ ...current, phone: event.target.value }))}
                   />
                 </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Select
+                  label="Means of identification"
+                  value={signupForm.identificationType}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, identificationType: event.target.value }))}
+                  options={[
+                    { value: "Drivers License", label: "Drivers License" },
+                    { value: "NIN", label: "NIN" },
+                    { value: "International Passport", label: "International Passport" },
+                    { value: "Voters Card", label: "Voters Card" },
+                  ]}
+                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-id-number">Identification number</Label>
+                  <Input
+                    id="signup-id-number"
+                    value={signupForm.identificationNumber}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, identificationNumber: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="signup-id-image">Identification image</Label>
+                <Input
+                  id="signup-id-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void compressImage(file).then((identificationImageUrl) => {
+                      setSignupForm((current) => ({ ...current, identificationImageUrl }));
+                    });
+                  }}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="signup-password">Password</Label>

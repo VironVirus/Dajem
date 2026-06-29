@@ -52,7 +52,9 @@ function allowMockPayments() {
   return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
 }
 
-const sharedImageBase = "https://dajem-landing.netlify.app/images";
+const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
+const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
 
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {
   if (!sessionEmail) return null;
@@ -84,7 +86,7 @@ function buildRegistrationPreview(user: User): CommunicationPreview {
     email: {
       to: user.email,
       subject: "Welcome to Dajem Group Limited",
-      message: `Hello ${user.name}, your unified Dajem portal is now ready. You can move between Dajem Farms Limited, Dajem Homes Limited, Dajem Orbital Resources Limited, and the shared dashboard with one login.`,
+      message: `Hello ${user.name}, your unified Dajem portal is now ready. You can move between Dajem Orbital Resources Limited, Dajem Farms Limited, Dajem Homes Limited, and the shared dashboard with one login.`,
     },
   };
 }
@@ -134,11 +136,18 @@ function cloneCartItem(item: InventoryItem, quantity: number): CartItem {
     productId: item.productId,
     name: item.name,
     category: item.category,
-    price: item.price,
+    price: item.promoPrice ?? item.price,
     quantity,
     description: item.description,
     stockStatus: item.stockStatus,
     imageBg: item.imageBg,
+    imageUrl: item.imageUrl,
+    age: item.age,
+    weight: item.weight,
+    originalPrice: item.originalPrice,
+    promoPrice: item.promoPrice,
+    promoEndsAt: item.promoEndsAt,
+    promoLabel: item.promoLabel,
   };
 }
 
@@ -178,12 +187,25 @@ export async function getSnapshot(sessionEmail: string | null) {
 
 export async function registerUser(
   sessionEmail: string | null,
-  payload: { name: string; email: string; phone: string; password: string },
+  payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    officialTitle?: string;
+    identificationType?: string;
+    identificationNumber?: string;
+    identificationImageUrl?: string;
+  },
 ) {
   const email = normalizeEmail(String(payload.email ?? ""));
   const name = String(payload.name ?? "").trim();
   const phone = String(payload.phone ?? "").trim();
   const password = String(payload.password ?? "").trim();
+  const officialTitle = String(payload.officialTitle ?? "").trim();
+  const identificationType = String(payload.identificationType ?? "").trim();
+  const identificationNumber = String(payload.identificationNumber ?? "").trim();
+  const identificationImageUrl = String(payload.identificationImageUrl ?? "").trim();
 
   if (!name || !email || !phone || !password) {
     throw new Error("Please complete all signup fields.");
@@ -209,6 +231,10 @@ export async function registerUser(
       createdAt: nowIso(),
       passwordSalt,
       passwordHash: hashPassword(password, passwordSalt),
+      officialTitle: officialTitle || undefined,
+      identificationType: (identificationType as ServerUser["identificationType"]) || undefined,
+      identificationNumber: identificationNumber || undefined,
+      identificationImageUrl: identificationImageUrl || undefined,
     };
 
     draft.users.unshift(user);
@@ -449,7 +475,7 @@ export async function submitPropertyListing(
       size,
       featured: false,
       imageBg: "from-emerald-700/25 to-slate-900/10",
-      imageUrl: payload.imageUrl?.trim() || `${sharedImageBase}/homes-hero.svg`,
+      imageUrl: payload.imageUrl?.trim() || homesImageUrl,
       summary,
       highlights: (payload.highlights ?? []).map((item) => String(item).trim()).filter(Boolean).slice(0, 6),
       status: "Pending Approval",
@@ -482,6 +508,16 @@ export async function submitSurvey(
     description: string;
     fileName?: string;
     fileSizeKb?: number;
+    applicationNumber?: string;
+    acquisitionSource?: string;
+    acquisitionCompany?: string;
+    hasExistingSurveyPlan?: boolean;
+    planNumber?: string;
+    planYear?: string;
+    billingType?: "Change of Title" | "Full Survey" | "Service Request";
+    uploadedDocuments?: string[];
+    missingDocuments?: string[];
+    attested?: boolean;
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
@@ -494,8 +530,10 @@ export async function submitSurvey(
       throw new Error("Please complete the survey request details.");
     }
 
+    const acquisitionSource = payload.acquisitionSource?.trim();
     const request: SurveyRequest = {
       id: makeId("SURV"),
+      applicationNumber: payload.applicationNumber?.trim() || makeId("APP"),
       userName: user.name,
       userEmail: user.email,
       userPhone: user.phone,
@@ -504,6 +542,19 @@ export async function submitSurvey(
       description,
       fileName: payload.fileName?.slice(0, 140),
       fileSizeKb: Math.max(0, Number(payload.fileSizeKb ?? 0)) || undefined,
+      acquisitionSource: acquisitionSource === "company" || acquisitionSource === "agent" || acquisitionSource === "former-owner" || acquisitionSource === "other"
+        ? acquisitionSource
+        : undefined,
+      acquisitionCompany: payload.acquisitionCompany?.trim() || undefined,
+      hasExistingSurveyPlan: payload.hasExistingSurveyPlan,
+      planNumber: payload.planNumber?.trim() || undefined,
+      planYear: payload.planYear?.trim() || undefined,
+      billingType: payload.billingType ?? "Service Request",
+      uploadedDocuments: payload.uploadedDocuments ?? [],
+      missingDocuments: payload.missingDocuments ?? [],
+      attested: Boolean(payload.attested),
+      paymentStatus: "Awaiting Review",
+      processingNote: "Submitted for document verification. Processing update expected within 24 hours.",
       status: "Pending Approval",
       date: formatDate(),
     };
@@ -512,7 +563,7 @@ export async function submitSurvey(
     draft.communicationLogs.unshift(buildEmailLog(
       user.email,
       "Survey request pending approval",
-      `Your ${serviceType} request for ${location} has been received by Dajem Orbital Resources Limited and is pending approval.`,
+      `Your ${serviceType} request for ${location} has been received by Dajem Orbital Resources Limited and is pending approval. Application number: ${request.applicationNumber}.`,
     ));
   });
 
@@ -572,6 +623,12 @@ export async function updateInventoryItem(
     stockStatus?: InventoryStockStatus;
     imageUrl?: string;
     imageBg?: string;
+    age?: string;
+    weight?: string;
+    originalPrice?: number;
+    promoPrice?: number;
+    promoEndsAt?: string;
+    promoLabel?: string;
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
@@ -590,6 +647,12 @@ export async function updateInventoryItem(
       item.stockStatus = payload.stockStatus ?? deriveStockStatus(item.availableUnits);
       item.imageUrl = payload.imageUrl?.trim() || item.imageUrl;
       item.imageBg = payload.imageBg?.trim() || item.imageBg;
+      item.age = payload.age?.trim() || undefined;
+      item.weight = payload.weight?.trim() || undefined;
+      item.originalPrice = Number.isFinite(Number(payload.originalPrice)) && Number(payload.originalPrice) > 0 ? Number(payload.originalPrice) : undefined;
+      item.promoPrice = Number.isFinite(Number(payload.promoPrice)) && Number(payload.promoPrice) > 0 ? Number(payload.promoPrice) : undefined;
+      item.promoEndsAt = payload.promoEndsAt?.trim() || undefined;
+      item.promoLabel = payload.promoLabel?.trim() || undefined;
       return;
     }
 
@@ -608,7 +671,13 @@ export async function updateInventoryItem(
       stockStatus: payload.stockStatus ?? deriveStockStatus(availableUnits),
       availableUnits,
       imageBg: payload.imageBg?.trim() || "bg-emerald-500/10 text-emerald-700",
-      imageUrl: payload.imageUrl?.trim() || `${sharedImageBase}/farms-hero.svg`,
+      imageUrl: payload.imageUrl?.trim() || farmsImageUrl,
+      age: payload.age?.trim() || undefined,
+      weight: payload.weight?.trim() || undefined,
+      originalPrice: Number.isFinite(Number(payload.originalPrice)) && Number(payload.originalPrice) > 0 ? Number(payload.originalPrice) : undefined,
+      promoPrice: Number.isFinite(Number(payload.promoPrice)) && Number(payload.promoPrice) > 0 ? Number(payload.promoPrice) : undefined,
+      promoEndsAt: payload.promoEndsAt?.trim() || undefined,
+      promoLabel: payload.promoLabel?.trim() || undefined,
     });
   });
 
@@ -688,7 +757,7 @@ export async function upsertPropertyListing(
       size,
       featured: Boolean(payload.featured),
       imageBg: payload.imageBg?.trim() || existing?.imageBg || "from-emerald-700/25 to-slate-900/10",
-      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || `${sharedImageBase}/homes-hero.svg`,
+      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || homesImageUrl,
       summary,
       highlights: (payload.highlights ?? existing?.highlights ?? []).map((item) => String(item).trim()).filter(Boolean).slice(0, 6),
       status: payload.status ?? existing?.status ?? "Approved",
@@ -743,7 +812,7 @@ export async function upsertSurveyService(
       description,
       priceFrom,
       timeline,
-      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || `${sharedImageBase}/orbital-hero.svg`,
+      imageUrl: payload.imageUrl?.trim() || existing?.imageUrl || orbitalImageUrl,
       color: payload.color?.trim() || existing?.color || "text-cyan-600 bg-cyan-500/10",
       status: payload.status ?? existing?.status ?? "Approved",
     };

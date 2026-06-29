@@ -19,6 +19,8 @@ import {
   Dialog,
   dajemCompanyProfiles,
   getAppBaseUrl,
+  HeroSlideshow,
+  useDajem,
 } from "@repo/ui";
 import { 
   Building2, 
@@ -38,6 +40,7 @@ export default function LandingPage() {
   const farmsProfile = dajemCompanyProfiles.poultry;
   const homesProfile = dajemCompanyProfiles["real-estate"];
   const orbitalProfile = dajemCompanyProfiles.survey;
+  const { navigateToUrl } = useDajem();
   const [inquirySent, setInquirySent] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: "",
@@ -55,6 +58,18 @@ export default function LandingPage() {
 
   const companies = [
     {
+      id: "survey",
+      title: orbitalProfile.displayName,
+      description: orbitalProfile.summary,
+      href: getAppBaseUrl("survey"),
+      icon: Map,
+      themeColor: "from-cyan-500/20 to-blue-600/10 dark:from-cyan-500/10 dark:to-blue-600/5",
+      iconColor: "text-cyan-500",
+      stats: "Surveying, mapping, engineering, logistics, and contracts",
+      cta: "Get Estimate",
+      badge: "Surveying & Contracts"
+    },
+    {
       id: "poultry",
       title: farmsProfile.displayName,
       description: farmsProfile.summary,
@@ -62,7 +77,7 @@ export default function LandingPage() {
       icon: Egg,
       themeColor: "from-amber-500/20 to-yellow-600/10 dark:from-amber-500/10 dark:to-yellow-600/5",
       iconColor: "text-amber-500",
-      stats: `${farmsProfile.registrationNumber} - Started ${farmsProfile.startDate}`,
+      stats: "Livestock, grills, eggs, produce, equipment, and consultancy",
       cta: "Browse Farm Products",
       badge: "General Farming"
     },
@@ -74,21 +89,9 @@ export default function LandingPage() {
       icon: Building2,
       themeColor: "from-emerald-500/20 to-teal-600/10 dark:from-emerald-500/10 dark:to-teal-600/5",
       iconColor: "text-emerald-500",
-      stats: `${homesProfile.registrationNumber} - Started ${homesProfile.startDate}`,
+      stats: "Short-let, hospitality, development, sales, and management",
       cta: "Find Properties",
       badge: "Homes & Hospitality"
-    },
-    {
-      id: "survey",
-      title: orbitalProfile.displayName,
-      description: orbitalProfile.summary,
-      href: getAppBaseUrl("survey"),
-      icon: Map,
-      themeColor: "from-cyan-500/20 to-blue-600/10 dark:from-cyan-500/10 dark:to-blue-600/5",
-      iconColor: "text-cyan-500",
-      stats: `${orbitalProfile.registrationNumber} - Started ${orbitalProfile.startDate}`,
-      cta: "Get Estimate",
-      badge: "Surveying & Contracts"
     }
   ];
 
@@ -98,11 +101,13 @@ export default function LandingPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section
-          className="relative overflow-hidden bg-cover bg-center py-24 md:py-32"
-          style={{
-            backgroundImage: "linear-gradient(180deg, rgba(248,250,252,.78), rgba(248,250,252,.62), rgba(248,250,252,.9)), url('/images/group-hero-generated.png'), url('/images/group-hero.svg')",
-          }}
+        <HeroSlideshow
+          className="py-24 md:py-32"
+          overlayClassName="bg-[linear-gradient(180deg,rgba(248,250,252,0.42),rgba(248,250,252,0.58),rgba(248,250,252,0.82))] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.3),rgba(2,6,23,0.58),rgba(2,6,23,0.84))]"
+          slides={[
+            { src: "/images/group-hero-boardroom-v2.png", position: "center" },
+            { src: "/images/group-hero-generated.png", position: "center" },
+          ]}
         >
           {/* Decorative shapes */}
           <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
@@ -110,7 +115,7 @@ export default function LandingPage() {
 
           <div className="container mx-auto px-4 text-center max-w-4xl">
             <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm rounded-full">
-              {groupProfile.registrationNumber} - Opened {groupProfile.startDate}
+              Strategic holding company for the Dajem subsidiaries
             </Badge>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-primary via-slate-800 to-emerald-600 dark:from-blue-400 dark:via-white dark:to-emerald-400 bg-clip-text text-transparent leading-[1.15]">
@@ -136,7 +141,7 @@ export default function LandingPage() {
               </Button>
             </div>
           </div>
-        </section>
+        </HeroSlideshow>
 
         {/* Corporate Trust Banner */}
         <section className="py-12 border-y border-border bg-card/40 backdrop-blur-sm">
@@ -151,8 +156,8 @@ export default function LandingPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Oldest Subsidiary Start</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">{groupProfile.registrationNumber.replace("RC:", "RC ")}</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Registration</p>
+                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">HQ</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Coordination</p>
               </div>
               <div className="space-y-2">
                 <p className="text-3xl font-extrabold text-emerald-500">Enugu</p>
@@ -176,8 +181,17 @@ export default function LandingPage() {
                 {groupProfile.displayName} was opened on {groupProfile.startDate} to own and control the subsidiary companies of Dajem Group and facilitate strategic management across the group.
               </p>
               <p className="text-muted-foreground mb-8 leading-relaxed">
-                The group houses {farmsProfile.displayName}, {homesProfile.displayName}, and {orbitalProfile.displayName}, bringing farming, homes and hospitality, surveying, mapping, development management, construction support, logistics, and consultancy under one coordinated structure.
+                The group houses {orbitalProfile.displayName}, {farmsProfile.displayName}, and {homesProfile.displayName}, bringing surveying, mapping, development management, construction support, logistics, consultancy, farming, homes, hospitality, and property services under one coordinated structure.
               </p>
+              <div className="mb-8 grid grid-cols-1 gap-3 rounded-2xl border bg-card/60 p-4 text-sm text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Registration Details</p>
+                {[groupProfile, orbitalProfile, farmsProfile, homesProfile].map((company) => (
+                  <div key={company.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-background/60 px-3 py-2">
+                    <span className="font-semibold text-foreground">{company.displayName}</span>
+                    <span>{company.registrationNumber} - {company.startDate}</span>
+                  </div>
+                ))}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
@@ -210,7 +224,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <h4 className="text-xl font-bold text-primary dark:text-foreground">{groupProfile.displayName}</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {groupProfile.registrationNumber}. Corporate address: {groupProfile.address}.
+                  Corporate address: {groupProfile.address}.
                 </p>
                 <div className="flex gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
@@ -267,7 +281,7 @@ export default function LandingPage() {
                   <CardFooter className="pt-4 mt-4">
                     <Button 
                       className="w-full bg-primary hover:bg-primary/95 text-white flex items-center justify-center gap-1.5 group-hover:bg-emerald-500 transition-colors"
-                      onClick={() => window.location.href = company.href}
+                      onClick={() => void navigateToUrl(company.href)}
                     >
                       <span>{company.cta}</span>
                       <ArrowUpRight className="h-4 w-4" />
@@ -301,10 +315,6 @@ export default function LandingPage() {
                     <p className="font-semibold text-emerald-400">Email Address</p>
                     <p className="opacity-80">{groupProfile.email}</p>
                   </div>
-                  <div>
-                    <p className="font-semibold text-emerald-400">Registration</p>
-                    <p className="opacity-80">{groupProfile.registrationNumber}</p>
-                  </div>
                 </div>
 
                 <div className="text-xs opacity-60">
@@ -323,7 +333,6 @@ export default function LandingPage() {
                       <Input 
                         id="name" 
                         required
-                        placeholder="John Doe" 
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                       />
@@ -334,7 +343,6 @@ export default function LandingPage() {
                         id="email" 
                         type="email"
                         required
-                        placeholder="john@example.com" 
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                       />
@@ -348,19 +356,18 @@ export default function LandingPage() {
                       onChange={(e) => setFormData({...formData, department: e.target.value})}
                       options={[
                         { value: "general", label: "General Corporate Inquiry" },
+                        { value: "survey", label: `${orbitalProfile.displayName} Division` },
                         { value: "poultry", label: `${farmsProfile.displayName} Operations` },
                         { value: "realestate", label: `${homesProfile.displayName} Listings` },
-                        { value: "survey", label: `${orbitalProfile.displayName} Division` }
                       ]}
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="subject">Subject</Label>
-                    <Input 
-                      id="subject" 
-                      required
-                      placeholder="Collaboration opportunity" 
+                      <Input 
+                        id="subject" 
+                        required
                       value={formData.subject}
                       onChange={(e) => setFormData({...formData, subject: e.target.value})}
                     />
@@ -372,7 +379,6 @@ export default function LandingPage() {
                       id="message" 
                       required
                       rows={4} 
-                      placeholder="Provide detailed description..." 
                       value={formData.message}
                       onChange={(e) => setFormData({...formData, message: e.target.value})}
                     />

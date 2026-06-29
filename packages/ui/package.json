@@ -8,6 +8,7 @@
     "./tailwind.config": "./tailwind.config.ts",
     "./components/*": "./src/components/*",
     "./lib/platform-route": "./src/lib/platform-route.ts",
+    "./lib/session-handoff-route": "./src/lib/session-handoff-route.ts",
     "./lib/flutterwave-checkout-route": "./src/lib/flutterwave-checkout-route.ts",
     "./lib/flutterwave-verify-route": "./src/lib/flutterwave-verify-route.ts",
     "./lib/*": "./src/lib/*",

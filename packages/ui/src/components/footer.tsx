@@ -1,12 +1,30 @@
 import * as React from "react";
 import { Landmark, Mail, MapPin, ExternalLink, Globe } from "lucide-react";
 import { dajemCompanyProfiles, getAppBaseUrl, getCompanyLinks } from "../lib/store";
+import { useDajem } from "./dajem-provider";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const companies = getCompanyLinks().filter((company) => company.id !== "landing");
   const landingUrl = getAppBaseUrl("landing");
   const group = dajemCompanyProfiles.landing;
+  const { navigateToUrl } = useDajem();
+
+  const handleNavigate = React.useCallback((event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    void navigateToUrl(href);
+  }, [navigateToUrl]);
 
   return (
     <footer className="border-t border-border bg-card text-card-foreground">
@@ -35,6 +53,7 @@ export function Footer() {
                 <li key={company.name}>
                   <a
                     href={company.url}
+                    onClick={(event) => handleNavigate(event, company.url)}
                     className="group text-sm text-muted-foreground hover:text-primary dark:hover:text-foreground flex items-center gap-1.5 transition-colors"
                   >
                     <span>{company.name}</span>
@@ -56,10 +75,6 @@ export function Footer() {
                 <span>{group.address}</span>
               </li>
               <li className="flex items-center gap-2">
-                <Landmark className="h-4 w-4 text-emerald-500" />
-                <span>{group.registrationNumber}</span>
-              </li>
-              <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-emerald-500" />
                 <span>{group.email}</span>
               </li>
@@ -72,11 +87,11 @@ export function Footer() {
               Our Vision
             </h4>
             <p className="text-sm text-muted-foreground">
-              Coordinating Dajem Farms Limited, Dajem Homes Limited, and Dajem Orbital Resources Limited through shared strategic management.
+              Coordinating Dajem Orbital Resources Limited, Dajem Farms Limited, and Dajem Homes Limited through shared strategic management.
             </p>
             <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
               <Globe className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Opened {group.startDate}</span>
+              <span>Unified Dajem web portal</span>
             </div>
           </div>
         </div>

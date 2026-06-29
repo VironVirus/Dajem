@@ -19,6 +19,7 @@ const DEV_ADMIN_PASSWORD = "ChangeMe123!";
 const DEV_ADMIN_PHONE = "+23480000000";
 const SUPABASE_TABLE = process.env.SUPABASE_DAJEM_STATE_TABLE ?? "dajem_state";
 const SUPABASE_ROW_KEY = process.env.SUPABASE_DAJEM_STATE_KEY ?? "platform";
+let supabaseRuntimeState: "unknown" | "healthy" | "degraded" = "unknown";
 
 function isProductionRuntime() {
   return process.env.NODE_ENV === "production" || Boolean(process.env.NETLIFY);
@@ -26,6 +27,10 @@ function isProductionRuntime() {
 
 function allowFileBackend() {
   return !isProductionRuntime() || process.env.DAJEM_ALLOW_FILE_FALLBACK === "true";
+}
+
+function allowTransientNetlifyFallback() {
+  return Boolean(process.env.NETLIFY);
 }
 
 function resolveRepoRoot() {
@@ -52,6 +57,16 @@ function resolveDataFilePath() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function markSupabaseHealthy() {
+  supabaseRuntimeState = "healthy";
+}
+
+function markSupabaseDegraded() {
+  if (getSupabaseConfig()) {
+    supabaseRuntimeState = "degraded";
+  }
 }
 
 export function hashPassword(password: string, salt: string) {
@@ -180,12 +195,25 @@ function sanitizeState(raw: unknown): PlatformState {
 }
 
 function getSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const secret = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const secret = process.env.SUPABASE_SECRET_KEY
+    ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+    ?? process.env.SUPABASE_SERVICE_KEY;
 
-  if (!url || !secret) return null;
+  if (!rawUrl || !secret) return null;
 
-  return { url, secret };
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (parsed.pathname.startsWith("/rest/v1")) {
+      parsed.pathname = "";
+      parsed.search = "";
+      parsed.hash = "";
+    }
+
+    return { url: parsed.origin, secret };
+  } catch {
+    return null;
+  }
 }
 
 function getSupabaseAdminClient() {
@@ -235,11 +263,14 @@ async function readFromSupabase() {
     if (!data?.value) {
       const seeded = createDefaultState();
       await writeToSupabase(seeded);
+      markSupabaseHealthy();
       return seeded;
     }
 
+    markSupabaseHealthy();
     return sanitizeState(data.value);
   } catch (error) {
+    markSupabaseDegraded();
     console.error("Supabase state read failed, falling back to filesystem.", error);
     return null;
   }
@@ -257,8 +288,10 @@ async function writeToSupabase(state: PlatformState) {
     });
 
     if (error) throw error;
+    markSupabaseHealthy();
     return true;
   } catch (error) {
+    markSupabaseDegraded();
     console.error("Supabase state write failed, falling back to filesystem.", error);
     return false;
   }
@@ -269,12 +302,12 @@ export async function readPlatformState() {
   const supabaseState = await readFromSupabase();
   if (supabaseState) return supabaseState;
 
-  if (allowFileBackend()) {
+  if (allowFileBackend() || allowTransientNetlifyFallback()) {
     return readFromFile();
   }
 
   if (supabaseIsConfigured) {
-    throw new Error("Supabase state is configured but could not be read.");
+    return createDefaultState();
   }
 
   return createDefaultState();
@@ -285,7 +318,7 @@ export async function writePlatformState(state: PlatformState) {
   const wroteToSupabase = await writeToSupabase(normalized);
   if (wroteToSupabase) return;
 
-  if (allowFileBackend()) {
+  if (allowFileBackend() || allowTransientNetlifyFallback()) {
     await writeToFile(normalized);
     return;
   }
@@ -311,14 +344,25 @@ export function publicUser(user: ServerUser): User {
     phone: user.phone,
     role: user.role,
     createdAt: user.createdAt,
+    officialTitle: user.officialTitle,
+    identificationType: user.identificationType,
+    identificationNumber: user.identificationNumber,
+    identificationImageUrl: user.identificationImageUrl,
   };
 }
 
 export function getIntegrationStatus(): IntegrationStatus {
   const supabaseConfigured = Boolean(getSupabaseConfig());
+  const backend = supabaseConfigured && supabaseRuntimeState !== "degraded"
+    ? "supabase"
+    : allowFileBackend() || allowTransientNetlifyFallback()
+      ? "filesystem"
+      : supabaseConfigured
+        ? "supabase"
+        : "unconfigured";
 
   return {
-    backend: supabaseConfigured ? "supabase" : allowFileBackend() ? "filesystem" : "unconfigured",
+    backend,
     supabaseConfigured,
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY),
     netlifyConfigured: Boolean(process.env.NETLIFY || process.env.CONTEXT || process.env.DEPLOY_PRIME_URL || process.env.URL),

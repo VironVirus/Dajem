@@ -15,7 +15,7 @@ function formatCurrency(amount: number) {
 
 function CallbackContent() {
   const searchParams = useSearchParams();
-  const { verifyFlutterwaveCheckout } = useDajem();
+  const { navigateToUrl, verifyFlutterwaveCheckout } = useDajem();
   const [status, setStatus] = React.useState<"verifying" | "success" | "error">("verifying");
   const [message, setMessage] = React.useState("Verifying your payment with Flutterwave...");
   const [orderTotal, setOrderTotal] = React.useState<number | null>(null);
@@ -65,12 +65,12 @@ function CallbackContent() {
           )}
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <a href={getAppBaseUrl("poultry")}>
-            <Button variant="outline">Back to Dajem Farms</Button>
-          </a>
-          <a href={`${getAppBaseUrl("landing")}/dashboard`}>
-            <Button className="bg-primary text-white">Open Dashboard</Button>
-          </a>
+          <Button variant="outline" onClick={() => void navigateToUrl(getAppBaseUrl("poultry"))}>
+            Back to Dajem Farms
+          </Button>
+          <Button className="bg-primary text-white" onClick={() => void navigateToUrl(`${getAppBaseUrl("landing")}/dashboard`)}>
+            Open Dashboard
+          </Button>
         </div>
       </CardContent>
     </Card>

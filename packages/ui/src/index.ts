@@ -10,6 +10,7 @@ export * from "./components/dialog";
 export * from "./components/sheet";
 export * from "./components/header";
 export * from "./components/footer";
+export * from "./components/hero-slideshow";
 export * from "./components/theme-provider";
 export * from "./components/theme-toggle";
 export * from "./components/dajem-provider";

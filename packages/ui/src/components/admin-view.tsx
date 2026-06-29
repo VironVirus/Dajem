@@ -70,9 +70,12 @@ function ImagePreview({ imageUrl, fallbackClass }: { imageUrl?: string; fallback
 
 const inventoryCategories: { value: InventoryCategory; label: string }[] = [
   { value: "livestock", label: "Livestock" },
-  { value: "feeds", label: "Feeds" },
+  { value: "grills", label: "Grills" },
+  { value: "eggs", label: "Eggs" },
+  { value: "consultancy", label: "Farm Consultancy" },
   { value: "produce", label: "Farm Produce" },
-  { value: "equipment", label: "Equipment" },
+  { value: "equipment", label: "Farm Equipment" },
+  { value: "agro-allied", label: "Agro-Allied Products" },
 ];
 
 const stockStatuses: { value: InventoryStockStatus; label: string }[] = [
@@ -87,7 +90,9 @@ const approvalStatuses: { value: ApprovalStatus; label: string }[] = [
   { value: "Rejected", label: "Rejected" },
 ];
 
-const sharedImageBase = "https://dajem-landing.netlify.app/images";
+const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
+const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
 
 const propertyTypes: { value: PropertyType; label: string }[] = [
   { value: "sale", label: "For Sale" },
@@ -114,7 +119,13 @@ const blankInventory: InventoryItem = {
   stockStatus: "In Stock",
   availableUnits: 0,
   imageBg: "bg-emerald-500/10 text-emerald-700",
-  imageUrl: `${sharedImageBase}/farms-hero.svg`,
+  imageUrl: farmsImageUrl,
+  age: "",
+  weight: "",
+  originalPrice: undefined,
+  promoPrice: undefined,
+  promoEndsAt: "",
+  promoLabel: "",
 };
 
 type PropertyForm = Omit<PropertyListing, "createdAt" | "date"> & {
@@ -133,7 +144,7 @@ const blankProperty: PropertyForm = {
   size: 80,
   featured: false,
   imageBg: "from-emerald-700/25 to-slate-900/10",
-  imageUrl: `${sharedImageBase}/homes-hero.svg`,
+  imageUrl: homesImageUrl,
   summary: "",
   highlights: [],
   highlightsText: "",
@@ -146,7 +157,7 @@ const blankService: SurveyService = {
   description: "",
   priceFrom: 0,
   timeline: "By scope",
-  imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+  imageUrl: orbitalImageUrl,
   color: "text-cyan-600 bg-cyan-500/10",
   status: "Approved",
 };
@@ -185,6 +196,12 @@ export function AdminView() {
       stockStatus: item.stockStatus,
       imageUrl: item.imageUrl,
       imageBg: item.imageBg,
+      age: item.age,
+      weight: item.weight,
+      originalPrice: item.originalPrice,
+      promoPrice: item.promoPrice,
+      promoEndsAt: item.promoEndsAt,
+      promoLabel: item.promoLabel,
     });
   };
 
@@ -319,6 +336,59 @@ export function AdminView() {
                 onChange={(event) => setNewInventory((current) => ({ ...current, price: Number(event.target.value) }))}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-age">Age</Label>
+              <Input
+                id="new-product-age"
+                value={newInventory.age ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, age: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-weight">Weight</Label>
+              <Input
+                id="new-product-weight"
+                value={newInventory.weight ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, weight: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-original-price">Price Before Slash</Label>
+              <Input
+                id="new-product-original-price"
+                type="number"
+                min={0}
+                value={newInventory.originalPrice ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, originalPrice: event.target.value ? Number(event.target.value) : undefined }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-promo-price">Promo Price</Label>
+              <Input
+                id="new-product-promo-price"
+                type="number"
+                min={0}
+                value={newInventory.promoPrice ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, promoPrice: event.target.value ? Number(event.target.value) : undefined }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-promo-end">Promo End Date</Label>
+              <Input
+                id="new-product-promo-end"
+                type="date"
+                value={newInventory.promoEndsAt ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, promoEndsAt: event.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-product-promo-label">Promo Label</Label>
+              <Input
+                id="new-product-promo-label"
+                value={newInventory.promoLabel ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, promoLabel: event.target.value }))}
+              />
+            </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="new-product-desc">Description</Label>
               <Textarea
@@ -411,6 +481,22 @@ export function AdminView() {
                           onChange={(event) => setInventoryDrafts((current) => ({
                             ...current,
                             [item.productId]: { ...draft, price: Number(event.target.value) },
+                          }))} 
+                        />
+                        <Input
+                          value={draft.age ?? ""}
+                          aria-label="Age"
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, age: event.target.value },
+                          }))}
+                        />
+                        <Input
+                          value={draft.weight ?? ""}
+                          aria-label="Weight"
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, weight: event.target.value },
                           }))}
                         />
                         <Input
@@ -433,9 +519,45 @@ export function AdminView() {
                           Save
                         </Button>
                       </div>
+                      <div className="grid gap-3 md:grid-cols-4">
+                        <Input
+                          type="number"
+                          aria-label="Price before slash"
+                          value={draft.originalPrice ?? ""}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, originalPrice: event.target.value ? Number(event.target.value) : undefined },
+                          }))}
+                        />
+                        <Input
+                          type="number"
+                          aria-label="Promo price"
+                          value={draft.promoPrice ?? ""}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, promoPrice: event.target.value ? Number(event.target.value) : undefined },
+                          }))}
+                        />
+                        <Input
+                          type="date"
+                          aria-label="Promo end date"
+                          value={draft.promoEndsAt ?? ""}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, promoEndsAt: event.target.value },
+                          }))}
+                        />
+                        <Input
+                          aria-label="Promo label"
+                          value={draft.promoLabel ?? ""}
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, promoLabel: event.target.value },
+                          }))}
+                        />
+                      </div>
                       <Input
                         value={draft.imageUrl ?? ""}
-                        placeholder="Image URL or uploaded data URL"
                         onChange={(event) => setInventoryDrafts((current) => ({
                           ...current,
                           [item.productId]: { ...draft, imageUrl: event.target.value },
@@ -466,13 +588,11 @@ export function AdminView() {
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
                   required
-                  placeholder="Listing title"
                   value={propertyDraft.title}
                   onChange={(event) => setPropertyDraft((current) => ({ ...current, title: event.target.value }))}
                 />
                 <Input
                   required
-                  placeholder="Location"
                   value={propertyDraft.location}
                   onChange={(event) => setPropertyDraft((current) => ({ ...current, location: event.target.value }))}
                 />
@@ -482,7 +602,6 @@ export function AdminView() {
                   type="number"
                   min={0}
                   required
-                  placeholder="Price"
                   value={propertyDraft.price}
                   onChange={(event) => setPropertyDraft((current) => ({ ...current, price: Number(event.target.value) }))}
                 />
@@ -490,7 +609,6 @@ export function AdminView() {
                   type="number"
                   min={1}
                   required
-                  placeholder="Size"
                   value={propertyDraft.size}
                   onChange={(event) => setPropertyDraft((current) => ({ ...current, size: Number(event.target.value) }))}
                 />
@@ -507,18 +625,15 @@ export function AdminView() {
               </div>
               <Textarea
                 required
-                placeholder="Summary"
                 value={propertyDraft.summary}
                 onChange={(event) => setPropertyDraft((current) => ({ ...current, summary: event.target.value }))}
               />
               <Input
-                placeholder="Highlights, separated by commas"
                 value={propertyDraft.highlightsText}
                 onChange={(event) => setPropertyDraft((current) => ({ ...current, highlightsText: event.target.value }))}
               />
               <div className="grid gap-3 md:grid-cols-3">
                 <Input
-                  placeholder="Image URL"
                   value={propertyDraft.imageUrl ?? ""}
                   onChange={(event) => setPropertyDraft((current) => ({ ...current, imageUrl: event.target.value }))}
                 />
@@ -598,13 +713,11 @@ export function AdminView() {
             >
               <Input
                 required
-                placeholder="Service title"
                 value={serviceDraft.title}
                 onChange={(event) => setServiceDraft((current) => ({ ...current, title: event.target.value }))}
               />
               <Textarea
                 required
-                placeholder="Service description"
                 value={serviceDraft.description}
                 onChange={(event) => setServiceDraft((current) => ({ ...current, description: event.target.value }))}
               />
@@ -612,12 +725,10 @@ export function AdminView() {
                 <Input
                   type="number"
                   min={0}
-                  placeholder="Price from"
                   value={serviceDraft.priceFrom}
                   onChange={(event) => setServiceDraft((current) => ({ ...current, priceFrom: Number(event.target.value) }))}
                 />
                 <Input
-                  placeholder="Timeline"
                   value={serviceDraft.timeline}
                   onChange={(event) => setServiceDraft((current) => ({ ...current, timeline: event.target.value }))}
                 />
@@ -629,7 +740,6 @@ export function AdminView() {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
-                  placeholder="Image URL"
                   value={serviceDraft.imageUrl ?? ""}
                   onChange={(event) => setServiceDraft((current) => ({ ...current, imageUrl: event.target.value }))}
                 />

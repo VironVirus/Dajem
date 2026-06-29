@@ -32,9 +32,19 @@ interface DajemContextValue {
   closeAuthModal: () => void;
   refresh: () => Promise<void>;
   requireAuth: (mode?: AuthMode) => boolean;
-  register: (payload: { name: string; email: string; phone: string; password: string }) => Promise<void>;
+  register: (payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    officialTitle?: string;
+    identificationType?: string;
+    identificationNumber?: string;
+    identificationImageUrl?: string;
+  }) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
+  navigateToUrl: (targetUrl: string) => Promise<void>;
   addToCart: (productId: string, quantity?: number) => Promise<void>;
   updateCartItem: (productId: string, quantity: number) => Promise<void>;
   removeCartItem: (productId: string) => Promise<void>;
@@ -66,6 +76,16 @@ interface DajemContextValue {
     description: string;
     fileName?: string;
     fileSizeKb?: number;
+    applicationNumber?: string;
+    acquisitionSource?: string;
+    acquisitionCompany?: string;
+    hasExistingSurveyPlan?: boolean;
+    planNumber?: string;
+    planYear?: string;
+    billingType?: "Change of Title" | "Full Survey" | "Service Request";
+    uploadedDocuments?: string[];
+    missingDocuments?: string[];
+    attested?: boolean;
   }) => Promise<void>;
   updateBidStatus: (bidId: string, status: BidStatus) => Promise<void>;
   updatePropertyListingStatus: (propertyId: string, status: ApprovalStatus) => Promise<void>;
@@ -107,6 +127,12 @@ interface DajemContextValue {
     stockStatus?: InventoryStockStatus;
     imageUrl?: string;
     imageBg?: string;
+    age?: string;
+    weight?: string;
+    originalPrice?: number;
+    promoPrice?: number;
+    promoEndsAt?: string;
+    promoLabel?: string;
   }) => Promise<void>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   verifyFlutterwaveCheckout: (params: { txRef: string; transactionId?: string }) => Promise<{ order?: Order }>;
@@ -229,7 +255,16 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = React.useCallback(async (payload: { name: string; email: string; phone: string; password: string }) => {
+  const register = React.useCallback(async (payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    officialTitle?: string;
+    identificationType?: string;
+    identificationNumber?: string;
+    identificationImageUrl?: string;
+  }) => {
     const result = await postAction("register", payload);
     setAuthPreview(result.preview ?? null);
   }, [postAction]);
@@ -245,6 +280,43 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     setAuthModalOpen(false);
     setAuthPreview(null);
   }, [postAction]);
+
+  const navigateToUrl = React.useCallback(async (targetUrl: string) => {
+    if (typeof window === "undefined") return;
+
+    const resolvedTarget = new URL(targetUrl, window.location.origin);
+    if (!snapshot.currentUser || resolvedTarget.origin === window.location.origin) {
+      window.location.assign(resolvedTarget.toString());
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/platform", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "create-session-handoff",
+          payload: {
+            targetOrigin: resolvedTarget.origin,
+            nextPath: `${resolvedTarget.pathname}${resolvedTarget.search}${resolvedTarget.hash}`,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error ?? "Unable to continue into the selected app.");
+      }
+
+      window.location.assign(typeof data?.redirectUrl === "string" ? data.redirectUrl : resolvedTarget.toString());
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to continue into the selected app.");
+      window.location.assign(resolvedTarget.toString());
+    }
+  }, [snapshot.currentUser]);
 
   const startFlutterwaveCheckout = React.useCallback(async () => {
     setBusyAction("flutterwave-checkout");
@@ -312,6 +384,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     register,
     login,
     logout,
+    navigateToUrl,
     addToCart: async (productId, quantity) => {
       await postAction("add-to-cart", { productId, quantity });
     },
@@ -362,6 +435,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     isBootstrapping,
     login,
     logout,
+    navigateToUrl,
     openAuthModal,
     postAction,
     refresh,

@@ -21,7 +21,7 @@ function buildSurveyDownloadHref(title: string) {
 }
 
 export function DashboardView() {
-  const { snapshot, currentUser, isBootstrapping, openAuthModal } = useDajem();
+  const { snapshot, currentUser, isBootstrapping, navigateToUrl, openAuthModal } = useDajem();
 
   if (isBootstrapping) {
     return <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">Loading your shared Dajem dashboard...</div>;
@@ -67,6 +67,13 @@ export function DashboardView() {
       <div className="flex flex-col gap-3 rounded-3xl border bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10 p-6">
         <Badge variant="secondary" className="w-max">Shared User Portal</Badge>
         <h1 className="text-3xl font-bold text-primary dark:text-foreground">Welcome back, {currentUser.name}</h1>
+        {(currentUser.officialTitle || currentUser.identificationType) && (
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {currentUser.officialTitle && <span className="rounded-full border px-3 py-1">Title: {currentUser.officialTitle}</span>}
+            {currentUser.identificationType && <span className="rounded-full border px-3 py-1">ID: {currentUser.identificationType}</span>}
+            {currentUser.identificationNumber && <span className="rounded-full border px-3 py-1">ID No: {currentUser.identificationNumber}</span>}
+          </div>
+        )}
         <p className="max-w-2xl text-sm text-muted-foreground">
           Orders, bids, property submissions, surveys, and your active Dajem Farms cart now live in one place across Dajem Group Limited.
         </p>
@@ -112,10 +119,14 @@ export function DashboardView() {
                 </div>
               ))
             )}
-            <a href={`${getAppBaseUrl("poultry")}/#catalog`} className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+              onClick={() => void navigateToUrl(`${getAppBaseUrl("poultry")}/#catalog`)}
+            >
               Continue shopping
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </button>
           </CardContent>
         </Card>
 
@@ -222,13 +233,19 @@ export function DashboardView() {
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-foreground">{survey.location}</p>
-                    <p className="text-xs text-muted-foreground">{survey.serviceType}</p>
+                    <p className="text-xs text-muted-foreground">{survey.applicationNumber ?? survey.id} - {survey.serviceType}</p>
                   </div>
                   <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "Rejected" ? "destructive" : survey.status === "In Progress" ? "secondary" : "outline"}>
                     {survey.status}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{survey.description}</p>
+                {survey.paymentStatus && (
+                  <p className="mt-2 text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
+                )}
+                {survey.missingDocuments && survey.missingDocuments.length > 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">Missing documents: {survey.missingDocuments.join(", ")}</p>
+                )}
                 {survey.status === "Completed & Sent" && survey.completedFileName && (
                   <a
                     className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"

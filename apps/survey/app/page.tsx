@@ -11,6 +11,7 @@ import {
   Dialog,
   Footer,
   Header,
+  HeroSlideshow,
   Input,
   Label,
   Select,
@@ -40,6 +41,22 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+const serviceFeeOptions = [
+  "Property Search - N20,000 per lodgement, maximum of 3 plots per search",
+  "Property Site Inspection - N50,000 per plot",
+  "Reestablishment of Survey Beacons and Capping - N20,000 per plot",
+  "Perimeter Survey / Boundary Survey - Based on scale of fees",
+  "Topography / Detail Survey - Based on scale of fees booklet",
+  "Estate / Layout Survey - Based on scale of fees booklet",
+  "Estate / Layout Designs - Based on official meeting",
+  "Digital Mapping and Geoinformatics - Based on official meeting",
+  "Architectural Designs - Based on official meeting",
+  "Dispute Surveys and Others - Based on official meeting",
+];
+
+const newSurveyDocuments = ["C of O", "Deed of Assignment", "Power of Attorney", "Allocation Letter"];
+const existingSurveyDocuments = ["Old Survey Plan", "Deed of Assignment", "Deed of Lease", "Power of Attorney"];
+
 export default function SurveyPage() {
   const profile = dajemCompanyProfiles.survey;
   const { currentUser, openAuthModal, requireAuth, snapshot, submitSurvey } = useDajem();
@@ -50,8 +67,15 @@ export default function SurveyPage() {
   });
   const [quoteForm, setQuoteForm] = React.useState({
     location: "",
-    serviceType: "Land Surveying",
+    serviceType: serviceFeeOptions[0],
     description: "",
+    acquisitionSource: "former-owner",
+    acquisitionCompany: "Dajem Orbital Resources Limited",
+    hasExistingSurveyPlan: "no",
+    planNumber: "",
+    planYear: "",
+    uploadedDocuments: [] as string[],
+    attested: false,
   });
   const [uploadedFile, setUploadedFile] = React.useState<{ name: string; sizeKb: number } | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
@@ -89,6 +113,9 @@ export default function SurveyPage() {
     }));
 
   const userSurveys = currentUser ? snapshot.surveys.filter((survey) => survey.userEmail === currentUser.email) : [];
+  const requiredDocuments = quoteForm.hasExistingSurveyPlan === "yes" ? existingSurveyDocuments : newSurveyDocuments;
+  const missingDocuments = requiredDocuments.filter((documentName) => !quoteForm.uploadedDocuments.includes(documentName));
+  const billingType = quoteForm.hasExistingSurveyPlan === "yes" ? "Change of Title" : "Full Survey";
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -101,6 +128,7 @@ export default function SurveyPage() {
   const handleQuoteSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!requireAuth("signup")) return;
+    if (!quoteForm.attested) return;
 
     await submitSurvey({
       location: quoteForm.location,
@@ -108,10 +136,30 @@ export default function SurveyPage() {
       description: quoteForm.description,
       fileName: uploadedFile?.name,
       fileSizeKb: uploadedFile?.sizeKb,
+      acquisitionSource: quoteForm.acquisitionSource,
+      acquisitionCompany: quoteForm.acquisitionSource === "company" ? quoteForm.acquisitionCompany : undefined,
+      hasExistingSurveyPlan: quoteForm.hasExistingSurveyPlan === "yes",
+      planNumber: quoteForm.planNumber,
+      planYear: quoteForm.planYear,
+      billingType,
+      uploadedDocuments: quoteForm.uploadedDocuments,
+      missingDocuments,
+      attested: quoteForm.attested,
     });
 
     setQuoteSent(true);
-    setQuoteForm({ location: "", serviceType: "Land Surveying", description: "" });
+    setQuoteForm({
+      location: "",
+      serviceType: serviceFeeOptions[0],
+      description: "",
+      acquisitionSource: "former-owner",
+      acquisitionCompany: "Dajem Orbital Resources Limited",
+      hasExistingSurveyPlan: "no",
+      planNumber: "",
+      planYear: "",
+      uploadedDocuments: [],
+      attested: false,
+    });
     setUploadedFile(null);
   };
 
@@ -120,17 +168,19 @@ export default function SurveyPage() {
       <Header activeApp="survey" />
 
       <main className="flex-1">
-        <section
-          className="relative overflow-hidden bg-cover bg-center py-24"
-          style={{
-            backgroundImage: "linear-gradient(180deg, rgba(236,254,255,.76), rgba(236,254,255,.58), rgba(255,255,255,.88)), url('/images/orbital-hero-generated.png'), url('/images/orbital-hero.svg')",
-          }}
+        <HeroSlideshow
+          className="py-24"
+          overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.3),rgba(236,254,255,0.54),rgba(255,255,255,0.84))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.24),rgba(2,6,23,0.58),rgba(2,6,23,0.84))]"
+          slides={[
+            { src: "/images/orbital-hero-field-v2.png", position: "center" },
+            { src: "/images/orbital-hero-generated.png", position: "center" },
+          ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
               <Badge variant="secondary" className="bg-cyan-100 px-3 py-1 font-semibold text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
-                {profile.registrationNumber} - Started {profile.startDate}
+                Started {profile.startDate}
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
                 {profile.displayName}: Surveying, Mapping, Design, Construction, Logistics, and Contracts
@@ -140,7 +190,7 @@ export default function SurveyPage() {
               </p>
               <div className="flex gap-4 pt-2">
                 <Button size="lg" className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
-                  Request Precision Quote
+                  Start Verification Portal
                 </Button>
                 <Button size="lg" variant="outline" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
                   Cost Estimator
@@ -148,7 +198,7 @@ export default function SurveyPage() {
               </div>
             </div>
 
-            <div className="space-y-6 rounded-2xl border bg-card p-6 shadow-xl lg:col-span-5">
+            <div className="space-y-6 rounded-2xl border bg-card/78 p-6 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 lg:col-span-5">
               <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
                 <Sparkles className="h-5 w-5 text-cyan-500" />
                 Company Profile
@@ -160,7 +210,7 @@ export default function SurveyPage() {
               </div>
             </div>
           </div>
-        </section>
+        </HeroSlideshow>
 
         <section id="services" className="container mx-auto max-w-6xl px-4 py-20">
           <div className="mx-auto mb-16 max-w-2xl text-center">
@@ -180,7 +230,7 @@ export default function SurveyPage() {
                 <CardContent className="flex-1 p-6 pt-0">
                   <p className="text-xs leading-relaxed text-muted-foreground">{service.description}</p>
                   <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                    From {formatCurrency(service.priceFrom)} - {service.timeline}
+                    {service.priceFrom > 0 ? `From ${formatCurrency(service.priceFrom)} - ${service.timeline}` : service.timeline}
                   </div>
                 </CardContent>
               </Card>
@@ -292,7 +342,6 @@ export default function SurveyPage() {
                   <Input
                     id="q-loc"
                     required
-                    placeholder="e.g. Ogui, Enugu"
                     value={quoteForm.location}
                     onChange={(event) => setQuoteForm((current) => ({ ...current, location: event.target.value }))}
                   />
@@ -302,25 +351,107 @@ export default function SurveyPage() {
                   value={quoteForm.serviceType}
                   onChange={(event) => setQuoteForm((current) => ({ ...current, serviceType: event.target.value }))}
                   options={services.length > 0
-                    ? services.map((service) => ({ value: service.title, label: service.title }))
-                    : [
-                      { value: "Land Surveying", label: "Land Surveying" },
-                      { value: "Digital Mapping & Geoinformatics", label: "Digital Mapping & Geoinformatics" },
-                      { value: "Architectural Design & Supervision", label: "Architectural Design & Supervision" },
-                      { value: "Civil Engineering & Construction", label: "Civil Engineering & Construction" },
-                    ]}
+                    ? [...serviceFeeOptions.map((service) => ({ value: service, label: service })), ...services.map((service) => ({ value: service.title, label: service.title }))]
+                    : serviceFeeOptions.map((service) => ({ value: service, label: service }))}
                 />
               </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Select
+                  label="Land Acquired From"
+                  value={quoteForm.acquisitionSource}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionSource: event.target.value }))}
+                  options={[
+                    { value: "former-owner", label: "Former Owner" },
+                    { value: "agent", label: "Agent" },
+                    { value: "company", label: "Company" },
+                    { value: "other", label: "Other" },
+                  ]}
+                />
+                {quoteForm.acquisitionSource === "company" && (
+                  <Select
+                    label="Company"
+                    value={quoteForm.acquisitionCompany}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionCompany: event.target.value }))}
+                    options={[
+                      { value: "Dajem Orbital Resources Limited", label: "Dajem Orbital Resources Limited" },
+                      { value: "Dajem Homes Limited", label: "Dajem Homes Limited" },
+                      { value: "Others", label: "Others" },
+                    ]}
+                  />
+                )}
+                <Select
+                  label="Existing Survey Plan"
+                  value={quoteForm.hasExistingSurveyPlan}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, hasExistingSurveyPlan: event.target.value, uploadedDocuments: [] }))}
+                  options={[
+                    { value: "no", label: "No - Full Survey" },
+                    { value: "yes", label: "Yes - Change of Title" },
+                  ]}
+                />
+              </div>
+
+              {quoteForm.hasExistingSurveyPlan === "yes" && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-number">Survey Plan Number</Label>
+                    <Input
+                      id="plan-number"
+                      value={quoteForm.planNumber}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, planNumber: event.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plan-year">Survey Plan Year</Label>
+                    <Input
+                      id="plan-year"
+                      type="number"
+                      value={quoteForm.planYear}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, planYear: event.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="q-desc">Project Details & Location Landmark</Label>
                 <Textarea
                   id="q-desc"
                   rows={4}
-                  placeholder="Describe landmark, layout number, or specific architectural requirements..."
+                  required
                   value={quoteForm.description}
                   onChange={(event) => setQuoteForm((current) => ({ ...current, description: event.target.value }))}
                 />
+              </div>
+
+              <div className="rounded-xl border bg-muted/30 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">Document Checklist</p>
+                    <p className="text-xs text-muted-foreground">Missing documents are saved in your profile and request tracker.</p>
+                  </div>
+                  <Badge variant="outline">{billingType}</Badge>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {requiredDocuments.map((documentName) => (
+                    <label key={documentName} className="flex items-center gap-3 rounded-lg border bg-background/70 p-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={quoteForm.uploadedDocuments.includes(documentName)}
+                        onChange={(event) => setQuoteForm((current) => ({
+                          ...current,
+                          uploadedDocuments: event.target.checked
+                            ? [...current.uploadedDocuments, documentName]
+                            : current.uploadedDocuments.filter((item) => item !== documentName),
+                        }))}
+                      />
+                      <span>{documentName}</span>
+                    </label>
+                  ))}
+                </div>
+                {missingDocuments.length > 0 && (
+                  <p className="mt-3 text-xs text-muted-foreground">Not yet uploaded: {missingDocuments.join(", ")}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -347,13 +478,14 @@ export default function SurveyPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setUploadedFile({ name: "AllocationLetter_Scan.pdf", sizeKb: 842 })}
-                      >
-                        Simulate Upload
-                      </Button>
+                      <Input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) setUploadedFile({ name: file.name, sizeKb: Math.round(file.size / 1024) });
+                        }}
+                      />
                       {uploadedFile && (
                         <Button type="button" variant="ghost" onClick={() => setUploadedFile(null)}>
                           Remove File
@@ -364,8 +496,18 @@ export default function SurveyPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-cyan-600 text-white hover:bg-cyan-700">
-                Submit Quotation Request
+              <label className="flex gap-3 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={quoteForm.attested}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, attested: event.target.checked }))}
+                  required
+                />
+                <span>I attest that every information submitted is true, accurate, and legally provided. I understand that processing may take 24 hours before payment instructions are issued.</span>
+              </label>
+
+              <Button type="submit" className="w-full bg-cyan-600 text-white hover:bg-cyan-700" disabled={!quoteForm.attested}>
+                Submit Verification Request
               </Button>
             </form>
           </Card>
@@ -397,8 +539,21 @@ export default function SurveyPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    <p className="text-xs font-semibold text-cyan-600">{survey.applicationNumber ?? survey.id}</p>
                     <p className="text-sm text-muted-foreground">{survey.serviceType}</p>
                     <p className="text-sm text-muted-foreground">{survey.description}</p>
+                    {survey.billingType && (
+                      <Badge variant="outline">{survey.billingType}</Badge>
+                    )}
+                    {survey.paymentStatus && (
+                      <p className="text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
+                    )}
+                    {survey.processingNote && (
+                      <p className="text-xs text-muted-foreground">{survey.processingNote}</p>
+                    )}
+                    {survey.missingDocuments && survey.missingDocuments.length > 0 && (
+                      <p className="text-xs text-muted-foreground">Missing documents: {survey.missingDocuments.join(", ")}</p>
+                    )}
                     {survey.fileName && (
                       <p className="text-xs text-muted-foreground">Attached: {survey.fileName}</p>
                     )}

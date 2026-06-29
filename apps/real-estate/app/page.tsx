@@ -11,6 +11,7 @@ import {
   Dialog,
   Footer,
   Header,
+  HeroSlideshow,
   Input,
   Label,
   Select,
@@ -174,17 +175,19 @@ export default function RealEstatePage() {
       <Header activeApp="real-estate" />
 
       <main className="flex-1">
-        <section
-          className="relative overflow-hidden bg-cover bg-center py-24"
-          style={{
-            backgroundImage: "linear-gradient(135deg, rgba(240,253,250,.72), rgba(240,253,250,.54), rgba(255,255,255,.86)), url('/images/homes-hero-generated.png'), url('/images/homes-hero.svg')",
-          }}
+        <HeroSlideshow
+          className="py-24"
+          overlayClassName="bg-[linear-gradient(135deg,rgba(239,246,255,0.28),rgba(239,246,255,0.5),rgba(255,255,255,0.82))] dark:bg-[linear-gradient(135deg,rgba(30,64,175,0.24),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
+          slides={[
+            { src: "/images/homes-hero-suite-v2.png", position: "center" },
+            { src: "/images/homes-hero-generated.png", position: "center" },
+          ]}
         >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#064e3b12_1px,transparent_1px),linear-gradient(to_bottom,#064e3b12_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1d4ed812_1px,transparent_1px),linear-gradient(to_bottom,#1d4ed812_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
 
           <div className="container mx-auto max-w-6xl px-4 text-center space-y-6">
-            <Badge variant="secondary" className="bg-emerald-100 px-3 py-1 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              {profile.registrationNumber} - Started {profile.startDate}
+            <Badge variant="secondary" className="bg-blue-100 px-3 py-1 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+              Started {profile.startDate}
             </Badge>
             <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
               {profile.displayName}: Homes, Hospitality, Development, and Property Management
@@ -193,7 +196,7 @@ export default function RealEstatePage() {
               {profile.summary}
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <Button size="lg" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
+              <Button size="lg" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
                 Browse Listings
               </Button>
               <Button size="lg" variant="outline" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
@@ -201,7 +204,7 @@ export default function RealEstatePage() {
               </Button>
             </div>
           </div>
-        </section>
+        </HeroSlideshow>
 
         <section className="border-y border-border bg-muted/20 py-12">
           <div className="container mx-auto grid max-w-6xl gap-4 px-4 md:grid-cols-3">
@@ -237,7 +240,6 @@ export default function RealEstatePage() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
                   <Input
                     id="search"
-                    placeholder="Search short-let, Enugu, suite..."
                     className="pl-9"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
@@ -273,16 +275,20 @@ export default function RealEstatePage() {
 
           {filteredProperties.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProperties.map((property) => (
+              {filteredProperties.map((property) => {
+                const listedBy = property.submittedByName ?? profile.displayName;
+                const isOfficial = !property.submittedByEmail;
+                return (
                 <Card key={property.id} className="group relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-lg">
                   <div
                     className={`flex h-56 flex-col justify-between rounded-t-xl border-b bg-gradient-to-br bg-cover bg-center p-4 ${property.imageBg}`}
-                    style={property.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15,23,42,.28), rgba(4,120,87,.18)), url(${property.imageUrl})` } : undefined}
+                    style={property.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15,23,42,.28), rgba(37,99,235,.18)), url(${property.imageUrl})` } : undefined}
                   >
                     <div className="flex items-center justify-between">
-                      <Badge variant="default" className={property.type === "sale" ? "bg-primary text-white" : "bg-emerald-600 text-white"}>
+                      <Badge variant="default" className={property.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
                         {propertyTypeLabel(property.type)}
                       </Badge>
+                      {isOfficial && <Badge className="bg-blue-600 text-white">Official</Badge>}
                       {property.featured && (
                         <Badge className="border-transparent bg-amber-500 text-white hover:bg-amber-600">
                           Featured
@@ -290,7 +296,7 @@ export default function RealEstatePage() {
                       )}
                     </div>
                     <div className="flex w-max items-center gap-1.5 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
-                      <Tag className="h-3 w-3 text-emerald-500" />
+                      <Tag className="h-3 w-3 text-blue-500" />
                       <span className="capitalize">{property.category}</span>
                     </div>
                   </div>
@@ -298,31 +304,32 @@ export default function RealEstatePage() {
                   <CardHeader className="flex-1 p-5">
                     <CardTitle className="line-clamp-1 text-xl font-bold tracking-tight">{property.title}</CardTitle>
                     <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                      <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-500" />
                       <span className="line-clamp-1">{property.location}</span>
                     </div>
+                    <p className="mt-2 text-xs font-semibold text-muted-foreground">Listed by {listedBy}</p>
                   </CardHeader>
 
                   <CardContent className="px-5 pb-4 pt-0">
-                    <p className="mb-4 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                    <p className="mb-4 text-2xl font-extrabold text-blue-600 dark:text-blue-400">
                       {formatCurrency(property.price)}
                       {(property.type === "short-let" || property.type === "hotel") && <span className="text-sm font-normal text-muted-foreground"> / night from</span>}
                     </p>
                     <div className="grid grid-cols-3 gap-2 border-t pt-3 text-xs font-semibold text-muted-foreground">
                       {property.beds !== undefined && (
                         <div className="flex items-center gap-1">
-                          <BedDouble className="h-4 w-4 shrink-0 text-emerald-500" />
+                          <BedDouble className="h-4 w-4 shrink-0 text-blue-500" />
                           <span>{property.beds} Beds</span>
                         </div>
                       )}
                       {property.baths !== undefined && (
                         <div className="flex items-center gap-1">
-                          <Bath className="h-4 w-4 shrink-0 text-emerald-500" />
+                          <Bath className="h-4 w-4 shrink-0 text-blue-500" />
                           <span>{property.baths} Baths</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1">
-                        <Maximize className="h-4 w-4 shrink-0 text-emerald-500" />
+                        <Maximize className="h-4 w-4 shrink-0 text-blue-500" />
                         <span>{property.size} sqm</span>
                       </div>
                     </div>
@@ -340,7 +347,8 @@ export default function RealEstatePage() {
                     </Button>
                   </div>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border bg-card py-20 text-center">
@@ -388,11 +396,11 @@ export default function RealEstatePage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="p-title">Property Title</Label>
-                    <Input id="p-title" required placeholder="e.g. Furnished 2-Bedroom Short-Let" value={listingForm.title} onChange={(event) => setListingForm((current) => ({ ...current, title: event.target.value }))} />
+                    <Input id="p-title" required value={listingForm.title} onChange={(event) => setListingForm((current) => ({ ...current, title: event.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="p-loc">Exact Location</Label>
-                    <Input id="p-loc" required placeholder="e.g. GRA, Enugu" value={listingForm.location} onChange={(event) => setListingForm((current) => ({ ...current, location: event.target.value }))} />
+                    <Input id="p-loc" required value={listingForm.location} onChange={(event) => setListingForm((current) => ({ ...current, location: event.target.value }))} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
@@ -400,36 +408,36 @@ export default function RealEstatePage() {
                   <Select label="Category" value={listingForm.category} onChange={(event) => setListingForm((current) => ({ ...current, category: event.target.value as PropertyCategory }))} options={propertyCategoryOptions.filter((item) => item.value !== "all")} />
                   <div className="space-y-1.5">
                     <Label htmlFor="p-price">Expected Price</Label>
-                    <Input id="p-price" type="number" required placeholder="e.g. 85000" value={listingForm.price} onChange={(event) => setListingForm((current) => ({ ...current, price: event.target.value }))} />
+                    <Input id="p-price" type="number" required value={listingForm.price} onChange={(event) => setListingForm((current) => ({ ...current, price: event.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="p-size">Size (sqm)</Label>
-                    <Input id="p-size" type="number" required placeholder="e.g. 120" value={listingForm.size} onChange={(event) => setListingForm((current) => ({ ...current, size: event.target.value }))} />
+                    <Input id="p-size" type="number" required value={listingForm.size} onChange={(event) => setListingForm((current) => ({ ...current, size: event.target.value }))} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="p-beds">Beds</Label>
-                    <Input id="p-beds" type="number" placeholder="Optional" value={listingForm.beds} onChange={(event) => setListingForm((current) => ({ ...current, beds: event.target.value }))} />
+                    <Input id="p-beds" type="number" value={listingForm.beds} onChange={(event) => setListingForm((current) => ({ ...current, beds: event.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="p-baths">Baths</Label>
-                    <Input id="p-baths" type="number" placeholder="Optional" value={listingForm.baths} onChange={(event) => setListingForm((current) => ({ ...current, baths: event.target.value }))} />
+                    <Input id="p-baths" type="number" value={listingForm.baths} onChange={(event) => setListingForm((current) => ({ ...current, baths: event.target.value }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="p-image">Image URL</Label>
-                    <Input id="p-image" placeholder="Optional image URL" value={listingForm.imageUrl} onChange={(event) => setListingForm((current) => ({ ...current, imageUrl: event.target.value }))} />
+                    <Input id="p-image" value={listingForm.imageUrl} onChange={(event) => setListingForm((current) => ({ ...current, imageUrl: event.target.value }))} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="p-desc">Property Description</Label>
-                  <Textarea id="p-desc" required rows={4} placeholder="Describe the property, amenities, title documents, management requirements, or hospitality use..." value={listingForm.summary} onChange={(event) => setListingForm((current) => ({ ...current, summary: event.target.value }))} />
+                  <Textarea id="p-desc" required rows={4} value={listingForm.summary} onChange={(event) => setListingForm((current) => ({ ...current, summary: event.target.value }))} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="p-highlights">Highlights</Label>
-                  <Input id="p-highlights" placeholder="Separate with commas, e.g. Serviced, Secure parking, Daily cleaning" value={listingForm.highlights} onChange={(event) => setListingForm((current) => ({ ...current, highlights: event.target.value }))} />
+                  <Input id="p-highlights" value={listingForm.highlights} onChange={(event) => setListingForm((current) => ({ ...current, highlights: event.target.value }))} />
                 </div>
-                <Button type="submit" className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700" disabled={isBusy}>
+                <Button type="submit" className="w-full bg-blue-600 font-semibold text-white hover:bg-blue-700" disabled={isBusy}>
                   Submit for Pending Approval
                 </Button>
               </form>
@@ -448,15 +456,19 @@ export default function RealEstatePage() {
               style={activeProperty.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.76), rgba(255,255,255,.52)), url(${activeProperty.imageUrl})` } : undefined}
             >
               <div className="mb-4 flex items-center justify-between">
-                <Badge variant="default" className={activeProperty.type === "sale" ? "bg-primary text-white" : "bg-emerald-600 text-white"}>
+                <Badge variant="default" className={activeProperty.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
                   {propertyTypeLabel(activeProperty.type)}
                 </Badge>
+                {!activeProperty.submittedByEmail && <Badge className="bg-blue-600 text-white">Official</Badge>}
                 {activeProperty.featured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
               </div>
               <p className="text-3xl font-extrabold text-primary dark:text-foreground">
                 {formatCurrency(activeProperty.price)}
               </p>
               <p className="mt-3 text-sm text-muted-foreground">{activeProperty.summary}</p>
+              <p className="mt-3 text-xs font-semibold text-muted-foreground">
+                Listed by {activeProperty.submittedByName ?? profile.displayName}
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -476,7 +488,7 @@ export default function RealEstatePage() {
 
             <div className="rounded-xl border p-5">
               <div className="mb-3 flex items-center gap-2 font-semibold text-foreground">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <ShieldCheck className="h-4 w-4 text-blue-500" />
                 Deal highlights
               </div>
               <div className="flex flex-wrap gap-2">
@@ -501,7 +513,7 @@ export default function RealEstatePage() {
             ) : (
               <form onSubmit={handleBidSubmit} className="space-y-4 rounded-xl border p-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Building className="h-4 w-4 text-emerald-500" />
+                  <Building className="h-4 w-4 text-blue-500" />
                   Submit tracked bid
                 </div>
                 <div className="space-y-1.5">
@@ -520,12 +532,11 @@ export default function RealEstatePage() {
                   <Textarea
                     id="bid-notes"
                     rows={4}
-                    placeholder="Preferred inspection date, title questions, hospitality notes, or management requirements..."
                     value={bidForm.notes}
                     onChange={(event) => setBidForm((current) => ({ ...current, notes: event.target.value }))}
                   />
                 </div>
-                <Button type="submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy}>
+                <Button type="submit" className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={isBusy}>
                   Submit Bid for Review
                 </Button>
               </form>

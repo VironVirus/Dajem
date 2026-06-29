@@ -1,12 +1,13 @@
 export type DajemApp = "landing" | "poultry" | "real-estate" | "survey";
 export type UserRole = "user" | "admin";
-export type InventoryCategory = "livestock" | "feeds" | "produce" | "equipment";
+export type InventoryCategory = "livestock" | "grills" | "eggs" | "consultancy" | "produce" | "equipment" | "agro-allied";
 export type InventoryStockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 export type BidStatus = "Pending Approval" | "Connected" | "Rejected";
 export type SurveyStatus = "Pending Approval" | "In Progress" | "Completed & Sent" | "Rejected";
 export type ApprovalStatus = "Pending Approval" | "Approved" | "Rejected";
 export type PropertyType = "sale" | "short-let" | "hotel" | "management";
 export type PropertyCategory = "apartment" | "suite" | "hotel" | "land" | "commercial" | "short-let";
+export type IdentificationType = "Drivers License" | "NIN" | "International Passport" | "Voters Card";
 
 export interface User {
   id: string;
@@ -15,6 +16,10 @@ export interface User {
   phone: string;
   role: UserRole;
   createdAt: string;
+  officialTitle?: string;
+  identificationType?: IdentificationType;
+  identificationNumber?: string;
+  identificationImageUrl?: string;
 }
 
 export interface ServerUser extends User {
@@ -32,6 +37,12 @@ export interface InventoryItem {
   availableUnits: number;
   imageBg: string;
   imageUrl?: string;
+  age?: string;
+  weight?: string;
+  originalPrice?: number;
+  promoPrice?: number;
+  promoEndsAt?: string;
+  promoLabel?: string;
 }
 
 export interface CartItem {
@@ -44,6 +55,12 @@ export interface CartItem {
   stockStatus: InventoryStockStatus;
   imageBg: string;
   imageUrl?: string;
+  age?: string;
+  weight?: string;
+  originalPrice?: number;
+  promoPrice?: number;
+  promoEndsAt?: string;
+  promoLabel?: string;
 }
 
 export interface Order {
@@ -117,6 +134,18 @@ export interface SurveyRequest {
   description: string;
   fileName?: string;
   fileSizeKb?: number;
+  applicationNumber?: string;
+  acquisitionSource?: "company" | "agent" | "former-owner" | "other";
+  acquisitionCompany?: string;
+  hasExistingSurveyPlan?: boolean;
+  planNumber?: string;
+  planYear?: string;
+  billingType?: "Change of Title" | "Full Survey" | "Service Request";
+  uploadedDocuments?: string[];
+  missingDocuments?: string[];
+  attested?: boolean;
+  processingNote?: string;
+  paymentStatus?: "Awaiting Review" | "Payment Link Sent" | "Paid";
   completedFileName?: string;
   status: SurveyStatus;
   date: string;
@@ -223,7 +252,9 @@ export interface DajemCompanyLink {
   productionUrl: string;
 }
 
-const sharedImageBase = "https://dajem-landing.netlify.app/images";
+const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
+const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
 
 export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   landing: {
@@ -233,8 +264,8 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
     shortName: "Dajem Group",
     startDate: "May 31, 2025",
     registrationNumber: "RC:9581197",
-    email: "dajemgrouplimited@gmail.com",
-    address: "12 Abakiliki Crescent Street, GRA, Enugu, Enugu State, Nigeria",
+    email: "group@dajemgroup.com",
+    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
       "Dajem Group Limited owns and controls the subsidiary companies of Dajem Group and facilitates strategic management across the group.",
     services: [
@@ -249,17 +280,20 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
     legalName: "Dajem Farms Limited",
     displayName: "Dajem Farms Limited",
     shortName: "Dajem Farms",
-    startDate: "June 5, 2025",
+    startDate: "June 7, 2025",
     registrationNumber: "RC:8539786",
-    email: "cyrilprecious28@gmail.com",
-    address: "12 Abakiliki Crescent Street, GRA, Enugu, Enugu State, Nigeria",
+    email: "group@dajemgroup.com",
+    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
-      "Dajem Farms Limited handles farming generally, with the poultry storefront serving as the first digital commerce arm for farm products.",
+      "Dajem Farms Limited supplies livestock, grills, eggs, farm produce, farm equipment, agro-allied products, and farm consultancy services.",
     services: [
-      "General farming",
-      "Poultry and livestock operations",
-      "Farm produce supply",
-      "Agricultural equipment and feed coordination",
+      "Livestock supply",
+      "Chicken and fish grills",
+      "Egg supply",
+      "Farm consultancy",
+      "Farm produce",
+      "Farm equipment",
+      "Agro-allied products",
     ],
   },
   "real-estate": {
@@ -269,8 +303,8 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
     shortName: "Dajem Homes",
     startDate: "September 8, 2025",
     registrationNumber: "RC:8805120",
-    email: "cyrilprecious28@gmail.com",
-    address: "12 Abakiliki Crescent Street, GRA, Enugu, Enugu State, Nigeria",
+    email: "group@dajemgroup.com",
+    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
       "Dajem Homes Limited handles short-let apartments and suites, hotel management, hospitality management, real estate development, sales, marketing, consultancy, and property management.",
     services: [
@@ -290,7 +324,7 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
     startDate: "April 3, 2023",
     registrationNumber: "RC:6922761",
     email: "dajemorbitalresourceslimited@gmail.com",
-    address: "Suite 1, First Floor, Squaremeters House, 15 Carter Street, Ogui, Enugu, Enugu State",
+    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
       "Dajem Orbital Resources Limited provides land surveying, digital mapping, geoinformatics, development management, consultancy, architectural designs, civil engineering, construction, logistics, haulage, and general contracts.",
     services: [
@@ -316,6 +350,13 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
     productionUrl: "https://dajem-landing.netlify.app",
   },
   {
+    id: "survey",
+    name: dajemCompanyProfiles.survey.displayName,
+    envKey: "NEXT_PUBLIC_DAJEM_SURVEY_URL",
+    localUrl: "http://localhost:3003",
+    productionUrl: "https://dajem-survey.netlify.app",
+  },
+  {
     id: "poultry",
     name: dajemCompanyProfiles.poultry.displayName,
     envKey: "NEXT_PUBLIC_DAJEM_POULTRY_URL",
@@ -329,62 +370,135 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
     localUrl: "http://localhost:3002",
     productionUrl: "https://dajem-properties.netlify.app",
   },
-  {
-    id: "survey",
-    name: dajemCompanyProfiles.survey.displayName,
-    envKey: "NEXT_PUBLIC_DAJEM_SURVEY_URL",
-    localUrl: "http://localhost:3003",
-    productionUrl: "https://dajem-survey.netlify.app",
-  },
 ];
 
 export const seedInventory: InventoryItem[] = [
   {
-    productId: "farm-01",
-    name: "Day-Old Broiler Chicks",
+    productId: "livestock-poultry-01",
+    name: "Poultry",
     category: "livestock",
-    price: 850,
-    description: "Healthy day-old broiler chicks for commercial and small-scale poultry farming.",
+    price: 12500,
+    description: "Healthy poultry supplied for household, farm, and bulk purchase needs.",
     stockStatus: "In Stock",
     availableUnits: 340,
-    imageBg: "bg-amber-500/10 text-amber-700",
-    imageUrl: `${sharedImageBase}/farms-hero.svg`,
+    age: "Mature",
+    weight: "2.2kg average",
+    originalPrice: 14500,
+    promoPrice: 12500,
+    promoEndsAt: "2026-07-31T23:59:59.000Z",
+    promoLabel: "Farm promo",
+    imageBg: "bg-emerald-500/10 text-emerald-700",
+    imageUrl: farmsImageUrl,
   },
   {
-    productId: "farm-02",
-    name: "Layer Chicks",
+    productId: "livestock-fish-01",
+    name: "Catfish",
     category: "livestock",
-    price: 900,
-    description: "Layer chicks selected for egg production and resilient farm performance.",
+    price: 8500,
+    description: "Fresh farm-raised fish available for retail and bulk supply.",
     stockStatus: "Low Stock",
     availableUnits: 48,
-    imageBg: "bg-yellow-500/10 text-yellow-700",
-    imageUrl: `${sharedImageBase}/farms-hero.svg`,
+    age: "Table size",
+    weight: "1.5kg average",
+    imageBg: "bg-cyan-500/10 text-cyan-700",
+    imageUrl: farmsImageUrl,
   },
   {
-    productId: "feed-01",
-    name: "Dajem Broiler Starter Feed",
-    category: "feeds",
-    price: 18500,
-    description: "Balanced starter feed for early-stage poultry growth and better feed conversion.",
+    productId: "livestock-goat-01",
+    name: "Goat",
+    category: "livestock",
+    price: 95000,
+    description: "Healthy goat stock available for homes, events, and farm buyers.",
     stockStatus: "In Stock",
-    availableUnits: 120,
+    availableUnits: 32,
+    age: "Adult",
+    weight: "18kg average",
     imageBg: "bg-emerald-500/10 text-emerald-700",
-    imageUrl: `${sharedImageBase}/farms-hero.svg`,
+    imageUrl: farmsImageUrl,
   },
   {
-    productId: "produce-01",
+    productId: "livestock-sheep-01",
+    name: "Sheep",
+    category: "livestock",
+    price: 110000,
+    description: "Farm-managed sheep supplied for livestock buyers and special orders.",
+    stockStatus: "In Stock",
+    availableUnits: 22,
+    age: "Adult",
+    weight: "22kg average",
+    imageBg: "bg-green-500/10 text-green-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "livestock-turkey-01",
+    name: "Turkey",
+    category: "livestock",
+    price: 65000,
+    description: "Well-fed turkey stock for festive, retail, and bulk supply.",
+    stockStatus: "In Stock",
+    availableUnits: 40,
+    age: "Mature",
+    weight: "5kg average",
+    imageBg: "bg-lime-500/10 text-lime-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "grill-chicken-01",
+    name: "Chicken Grill",
+    category: "grills",
+    price: 15000,
+    description: "Prepared chicken grill for quick orders and event supply.",
+    stockStatus: "In Stock",
+    availableUnits: 65,
+    imageBg: "bg-orange-500/10 text-orange-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "grill-fish-01",
+    name: "Fish Grill",
+    category: "grills",
+    price: 18000,
+    description: "Prepared fish grill for direct purchase, events, and hospitality orders.",
+    stockStatus: "In Stock",
+    availableUnits: 55,
+    imageBg: "bg-sky-500/10 text-sky-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "eggs-crate-01",
     name: "Fresh Farm Eggs",
-    category: "produce",
+    category: "eggs",
     price: 5200,
     description: "Freshly packed eggs supplied from controlled farm operations.",
     stockStatus: "In Stock",
     availableUnits: 180,
-    imageBg: "bg-blue-500/10 text-blue-700",
-    imageUrl: `${sharedImageBase}/farms-hero.svg`,
+    imageBg: "bg-yellow-500/10 text-yellow-700",
+    imageUrl: farmsImageUrl,
   },
   {
-    productId: "equip-01",
+    productId: "consultancy-01",
+    name: "Farm Consultancy Session",
+    category: "consultancy",
+    price: 50000,
+    description: "Advisory session for farm setup, livestock planning, sourcing, and operations.",
+    stockStatus: "In Stock",
+    availableUnits: 20,
+    imageBg: "bg-teal-500/10 text-teal-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "produce-vegetables-01",
+    name: "Seasonal Farm Produce",
+    category: "produce",
+    price: 12000,
+    description: "Seasonal produce packs available for homes, kitchens, and bulk buyers.",
+    stockStatus: "In Stock",
+    availableUnits: 80,
+    imageBg: "bg-green-500/10 text-green-700",
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "equip-drinker-01",
     name: "Automatic Bell Drinkers",
     category: "equipment",
     price: 9800,
@@ -392,7 +506,18 @@ export const seedInventory: InventoryItem[] = [
     stockStatus: "In Stock",
     availableUnits: 65,
     imageBg: "bg-cyan-500/10 text-cyan-700",
-    imageUrl: `${sharedImageBase}/farms-hero.svg`,
+    imageUrl: farmsImageUrl,
+  },
+  {
+    productId: "agro-allied-01",
+    name: "Agro-Allied Starter Pack",
+    category: "agro-allied",
+    price: 28000,
+    description: "A starter pack of agro-allied supplies for farm support and small operations.",
+    stockStatus: "In Stock",
+    availableUnits: 45,
+    imageBg: "bg-lime-500/10 text-lime-700",
+    imageUrl: farmsImageUrl,
   },
 ];
 
@@ -409,7 +534,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 140,
     featured: true,
     imageBg: "from-emerald-700/25 to-slate-900/10",
-    imageUrl: `${sharedImageBase}/homes-hero.svg`,
+    imageUrl: homesImageUrl,
     summary: "A serviced short-let apartment positioned for business travellers and family stays in Enugu.",
     highlights: ["Managed hospitality support", "Flexible stay options", "Secure residential setting"],
     status: "Approved",
@@ -428,7 +553,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 75,
     featured: true,
     imageBg: "from-blue-700/25 to-emerald-700/10",
-    imageUrl: `${sharedImageBase}/homes-hero.svg`,
+    imageUrl: homesImageUrl,
     summary: "A premium suite concept for hospitality management, hotel operations, and managed stays.",
     highlights: ["Hotel operations ready", "Managed guest services", "Corporate stay friendly"],
     status: "Approved",
@@ -445,7 +570,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 1200,
     featured: false,
     imageBg: "from-amber-700/25 to-emerald-700/10",
-    imageUrl: `${sharedImageBase}/homes-hero.svg`,
+    imageUrl: homesImageUrl,
     summary: "Development land for investors seeking real estate development, marketing, and management support.",
     highlights: ["Development advisory", "Sales and marketing support", "Property management pathway"],
     status: "Approved",
@@ -457,41 +582,41 @@ export const seedPropertyListings: PropertyListing[] = [
 export const seedSurveyServices: SurveyService[] = [
   {
     id: "survey-01",
-    title: "Land Surveying",
-    description: "Boundary surveys, beacon setting, title support, and field documentation for land owners and developers.",
-    priceFrom: 150000,
-    timeline: "5-10 working days",
-    imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+    title: "Property Search",
+    description: "Property search lodgement for land owners, buyers, agents, and development teams.",
+    priceFrom: 20000,
+    timeline: "Maximum of 3 plots per search",
+    imageUrl: orbitalImageUrl,
     color: "text-cyan-600 bg-cyan-500/10",
     status: "Approved",
   },
   {
     id: "survey-02",
-    title: "Digital Mapping & Geoinformatics",
-    description: "Digital maps, GIS layouts, spatial intelligence, and geoinformatics support for planning and development.",
-    priceFrom: 300000,
-    timeline: "7-14 working days",
-    imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+    title: "Property Site Inspection",
+    description: "Site inspection support for land purchases, development checks, and property verification.",
+    priceFrom: 50000,
+    timeline: "Per plot",
+    imageUrl: orbitalImageUrl,
     color: "text-indigo-600 bg-indigo-500/10",
     status: "Approved",
   },
   {
     id: "survey-03",
-    title: "Architectural Design & Supervision",
-    description: "Architectural designs, supervision, real estate development management, and construction coordination.",
-    priceFrom: 450000,
-    timeline: "Project dependent",
-    imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+    title: "Survey Beacon Reestablishment & Capping",
+    description: "Reestablishment of survey beacons and capping for plots requiring boundary confirmation.",
+    priceFrom: 20000,
+    timeline: "Per plot",
+    imageUrl: orbitalImageUrl,
     color: "text-emerald-600 bg-emerald-500/10",
     status: "Approved",
   },
   {
     id: "survey-04",
-    title: "Civil Engineering, Logistics & Contracts",
-    description: "Civil engineering, constructions, logistics, haulage, consultancy, and general contracts.",
-    priceFrom: 500000,
-    timeline: "By scope",
-    imageUrl: `${sharedImageBase}/orbital-hero.svg`,
+    title: "Boundary, Topography, Layout & Design Services",
+    description: "Perimeter survey, boundary survey, topography, detail survey, estate survey, digital mapping, architectural designs, dispute surveys, and related services.",
+    priceFrom: 0,
+    timeline: "Scale of fees or official meeting",
+    imageUrl: orbitalImageUrl,
     color: "text-amber-600 bg-amber-500/10",
     status: "Approved",
   },

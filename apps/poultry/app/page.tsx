@@ -12,6 +12,7 @@ import {
   Dialog,
   Footer,
   Header,
+  HeroSlideshow,
   Input,
   Label,
   Select,
@@ -51,6 +52,7 @@ export default function PoultryPage() {
     cartCount,
     currentUser,
     isBusy,
+    navigateToUrl,
     openAuthModal,
     removeCartItem,
     requireAuth,
@@ -69,6 +71,11 @@ export default function PoultryPage() {
       || product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
+  });
+  const promoProducts = snapshot.inventory.filter((product) => {
+    const promoPrice = product.promoPrice ?? 0;
+    const originalPrice = product.originalPrice ?? product.price;
+    return promoPrice > 0 && promoPrice < originalPrice;
   });
 
   const cartTotal = snapshot.cart.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -104,31 +111,33 @@ export default function PoultryPage() {
       <Header activeApp="poultry" onCartClick={() => setCartOpen(true)} />
 
       <main className="flex-1">
-        <section
-          className="relative overflow-hidden bg-cover bg-center py-20"
-          style={{
-            backgroundImage: "linear-gradient(135deg, rgba(255,251,235,.72), rgba(255,251,235,.54), rgba(255,255,255,.86)), url('/images/farms-hero-generated.png'), url('/images/farms-hero.svg')",
-          }}
+        <HeroSlideshow
+          className="py-20"
+          overlayClassName="bg-[linear-gradient(135deg,rgba(236,253,245,0.3),rgba(236,253,245,0.52),rgba(255,255,255,0.84))] dark:bg-[linear-gradient(135deg,rgba(6,78,59,0.28),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
+          slides={[
+            { src: "/images/farms-hero-farm-v2.png", position: "center" },
+            { src: "/images/farms-hero-generated.png", position: "center" },
+          ]}
         >
-          <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-amber-500/5 blur-3xl -z-10" />
+          <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
           <div className="absolute bottom-10 left-10 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl -z-10" />
 
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 md:grid-cols-2">
             <div className="space-y-6">
-              <Badge variant="secondary" className="bg-amber-100 px-3 py-1 font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                {profile.registrationNumber} - Started {profile.startDate}
+              <Badge variant="secondary" className="bg-emerald-100 px-3 py-1 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                Started {profile.startDate}
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight text-primary dark:text-foreground sm:text-5xl">
-                {profile.displayName}: Farm Products, Live Inventory, and Flutterwave Test Checkout
+                {profile.displayName}: Livestock, Grills, Eggs, Produce, Equipment, and Agro-Allied Supplies
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
-                {profile.summary} Sign in, add farm products to your cart, and track orders from the shared Dajem Group Limited dashboard.
+                Shop livestock, poultry, fish, goats, sheep, turkey, chicken grills, fish grills, eggs, farm consultancy, farm produce, farm equipment, and agro-allied products from one shared Dajem cart.
               </p>
 
               <div className="flex flex-wrap gap-4 pt-2">
                 <Button
                   size="lg"
-                  className="bg-amber-600 text-white hover:bg-amber-700"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
                   onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <ShoppingCart className="h-5 w-5" />
@@ -144,13 +153,13 @@ export default function PoultryPage() {
               </div>
             </div>
 
-            <div className="mx-auto max-w-md space-y-6 rounded-2xl border bg-card p-8 shadow-xl">
+            <div className="mx-auto max-w-md space-y-6 rounded-2xl border bg-card/78 p-8 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operations Linkage</span>
-                  <h4 className="text-lg font-bold text-amber-600">Checkout Status</h4>
+                  <h4 className="text-lg font-bold text-emerald-600">Checkout Status</h4>
                 </div>
-                <Badge variant="default" className="bg-amber-600 text-white">
+                <Badge variant="default" className="bg-emerald-600 text-white">
                   {snapshot.integrations.flutterwaveConfigured ? "Flutterwave Ready" : "Simulation Mode"}
                 </Badge>
               </div>
@@ -177,7 +186,7 @@ export default function PoultryPage() {
               </div>
             </div>
           </div>
-        </section>
+        </HeroSlideshow>
 
         <section id="why-us" className="border-y border-border bg-muted/20 py-16">
           <div className="container mx-auto max-w-6xl px-4">
@@ -185,7 +194,7 @@ export default function PoultryPage() {
               {[
                 {
                   title: "General Farming Focus",
-                  desc: "Dajem Farms Limited is structured for farming generally, with poultry products currently powering the online catalog.",
+                  desc: "Dajem Farms Limited supports livestock, grills, eggs, produce, equipment, agro-allied products, and farm consultancy.",
                   icon: ShieldCheck,
                   color: "text-emerald-500 bg-emerald-500/10",
                 },
@@ -193,7 +202,7 @@ export default function PoultryPage() {
                   title: "Farm Product Management",
                   desc: "Products, images, stock, and pricing are controlled from the unified admin portal.",
                   icon: Sparkles,
-                  color: "text-amber-500 bg-amber-500/10",
+                  color: "text-emerald-500 bg-emerald-500/10",
                 },
                 {
                   title: "Order Coordination",
@@ -216,6 +225,43 @@ export default function PoultryPage() {
           </div>
         </section>
 
+        {promoProducts.length > 0 && (
+          <section id="flash-sales" className="border-y border-emerald-500/20 bg-emerald-500/10 py-12">
+            <div className="container mx-auto max-w-6xl px-4">
+              <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <Badge className="bg-emerald-600 text-white">Flash Sales</Badge>
+                  <h2 className="mt-2 text-2xl font-bold text-primary dark:text-foreground">Farm deals with admin-controlled timers</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">Promo prices and end dates are edited from the unified admin page.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {promoProducts.slice(0, 6).map((product) => (
+                  <Card key={product.productId} className="overflow-hidden border-emerald-500/20 bg-card/85">
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div
+                        className="h-20 w-20 shrink-0 rounded-2xl bg-cover bg-center"
+                        style={product.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.45), rgba(16,185,129,.2)), url(${product.imageUrl})` } : undefined}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-foreground">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.promoLabel || "Limited farm promo"}{product.promoEndsAt ? ` - Ends ${product.promoEndsAt}` : ""}</p>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-lg font-extrabold text-emerald-600">{formatCurrency(product.promoPrice ?? product.price)}</span>
+                          <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.originalPrice ?? product.price)}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void handleAddToCart(product.productId)}>
+                        Add
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         <section id="catalog" className="container mx-auto max-w-6xl px-4 py-20">
           <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
@@ -231,7 +277,6 @@ export default function PoultryPage() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground opacity-50" />
                 <Input
                   className="h-9 pl-9"
-                  placeholder="Search products..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
@@ -243,9 +288,12 @@ export default function PoultryPage() {
                   options={[
                     { value: "all", label: "All Categories" },
                     { value: "livestock", label: "Livestock" },
-                    { value: "feeds", label: "Feeds" },
+                    { value: "grills", label: "Grills" },
+                    { value: "eggs", label: "Eggs" },
+                    { value: "consultancy", label: "Farm Consultancy" },
                     { value: "produce", label: "Farm Produce" },
                     { value: "equipment", label: "Farm Equipment" },
+                    { value: "agro-allied", label: "Agro-Allied Products" },
                   ]}
                 />
               </div>
@@ -253,45 +301,57 @@ export default function PoultryPage() {
           </div>
 
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {filteredProducts.map((product) => (
-                <Card key={product.productId} className="flex h-full flex-col hover:-translate-y-1 duration-300">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {filteredProducts.map((product) => {
+                const displayPrice = product.promoPrice ?? product.price;
+                const hasPromo = Boolean(product.promoPrice && (product.originalPrice ?? product.price) > product.promoPrice);
+                return (
+                <Card key={product.productId} className="flex h-full flex-col overflow-hidden hover:-translate-y-1 duration-300">
                   <div
-                    className={`flex h-40 items-center justify-center rounded-t-xl border-b bg-cover bg-center ${product.imageBg}`}
+                    className={`flex h-32 items-center justify-center border-b bg-cover bg-center sm:h-40 ${product.imageBg}`}
                     style={product.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.28)), url(${product.imageUrl})` } : undefined}
                   >
                     {!product.imageUrl && <Egg className="h-12 w-12 opacity-80" />}
                   </div>
-                  <CardHeader className="flex-1 p-5">
+                  <CardHeader className="flex-1 p-3 sm:p-5">
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <Badge variant="outline" className="capitalize">{product.category}</Badge>
                       <span className={`text-xs font-semibold ${product.stockStatus === "In Stock" ? "text-emerald-500" : product.stockStatus === "Low Stock" ? "text-amber-500" : "text-destructive"}`}>
                         {product.stockStatus}
                       </span>
                     </div>
-                    <CardTitle className="text-lg font-bold leading-snug">{product.name}</CardTitle>
+                    <CardTitle className="text-base font-bold leading-snug sm:text-lg">{product.name}</CardTitle>
                     <CardDescription className="mt-1 line-clamp-3 text-xs">{product.description}</CardDescription>
+                    {(product.age || product.weight) && (
+                      <p className="text-[11px] font-semibold text-muted-foreground">{[product.age, product.weight].filter(Boolean).join(" - ")}</p>
+                    )}
                   </CardHeader>
-                  <CardContent className="flex items-center justify-between px-5 pb-4 pt-0">
-                    <span className="text-xl font-extrabold text-primary dark:text-foreground">
-                      {formatCurrency(product.price)}
-                    </span>
+                  <CardContent className="flex items-center justify-between gap-2 px-3 pb-4 pt-0 sm:px-5">
+                    <div>
+                      <span className="text-lg font-extrabold text-primary dark:text-foreground">
+                        {formatCurrency(displayPrice)}
+                      </span>
+                      {hasPromo && (
+                        <p className="text-xs text-muted-foreground line-through">{formatCurrency(product.originalPrice ?? product.price)}</p>
+                      )}
+                    </div>
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {product.availableUnits} left
                     </span>
                   </CardContent>
-                  <div className="border-t border-border/50 p-5">
+                  <div className="border-t border-border/50 p-3 sm:p-5">
                     <Button
-                      className="w-full bg-amber-600 font-semibold text-white hover:bg-amber-700"
+                      className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                       onClick={() => void handleAddToCart(product.productId)}
                       disabled={product.stockStatus === "Out of Stock" || isBusy}
                     >
                       <ShoppingCart className="h-4 w-4" />
-                      Add to shared cart
+                      Add
                     </Button>
                   </div>
                 </Card>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border bg-card py-16 text-center">
@@ -317,30 +377,33 @@ export default function PoultryPage() {
               <form onSubmit={(event) => { event.preventDefault(); setBulkSent(true); }} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="b-name">Contact Person</Label>
-                  <Input id="b-name" required placeholder="Farm Manager / Owner" />
+                  <Input id="b-name" required />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="b-email">Email Address</Label>
-                  <Input id="b-email" type="email" required placeholder="farm@example.com" />
+                  <Input id="b-email" type="email" required />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="b-phone">Phone Number</Label>
-                  <Input id="b-phone" type="tel" required placeholder="+234..." />
+                  <Input id="b-phone" type="tel" required />
                 </div>
                 <div className="space-y-1.5">
                   <Select
                     label="Desired Product Category"
                     options={[
-                      { value: "livestock-bulk", label: "Livestock / Poultry Supply" },
-                      { value: "feeds-bulk", label: "Commercial Feed Supply" },
+                      { value: "livestock-bulk", label: "Livestock Supply" },
+                      { value: "grills-bulk", label: "Chicken and Fish Grills" },
+                      { value: "eggs-bulk", label: "Eggs" },
                       { value: "produce-bulk", label: "Farm Produce Supply" },
                       { value: "equip-bulk", label: "Farm Equipment" },
+                      { value: "agro-allied-bulk", label: "Agro-Allied Products" },
+                      { value: "consultancy-bulk", label: "Farm Consultancy" },
                     ]}
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="b-notes">Delivery Location & Special Instructions</Label>
-                  <Textarea id="b-notes" required rows={4} placeholder="State exact delivery city and specify preferred vaccination schedule..." />
+                  <Textarea id="b-notes" required rows={4} />
                 </div>
                 <div className="mt-2 sm:col-span-2">
                   <Button type="submit" className="w-full bg-emerald-500 font-semibold text-white hover:bg-emerald-600">
@@ -354,6 +417,15 @@ export default function PoultryPage() {
       </main>
 
       <Footer />
+
+      <button
+        type="button"
+        className="fixed bottom-5 right-5 z-40 inline-flex h-14 min-w-14 items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 font-bold text-white shadow-2xl shadow-emerald-900/25 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+        onClick={() => setCartOpen(true)}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        <span>{cartCount}</span>
+      </button>
 
       <Sheet
         isOpen={cartOpen}
@@ -432,7 +504,7 @@ export default function PoultryPage() {
                 </div>
               )}
 
-              <Button className="w-full bg-amber-600 text-white hover:bg-amber-700" disabled={isBusy} onClick={() => void handleCheckout()}>
+              <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout()}>
                 <CreditCard className="h-4 w-4" />
                 {snapshot.integrations.flutterwaveConfigured ? "Proceed with Flutterwave" : "Complete simulated checkout"}
               </Button>
@@ -459,9 +531,12 @@ export default function PoultryPage() {
               <p><strong>Total:</strong> {formatCurrency(lastOrder.total)}</p>
             </div>
             <div className="flex gap-3">
-              <a href={`${getAppBaseUrl("landing")}/dashboard`} className="w-full">
-                <Button className="w-full bg-primary text-white">Open Dashboard</Button>
-              </a>
+              <Button
+                className="w-full bg-primary text-white"
+                onClick={() => void navigateToUrl(`${getAppBaseUrl("landing")}/dashboard`)}
+              >
+                Open Dashboard
+              </Button>
               <Button variant="outline" className="w-full" onClick={() => setLastOrder(null)}>
                 Stay Here
               </Button>

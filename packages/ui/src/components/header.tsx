@@ -35,7 +35,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   const [desktopMenu, setDesktopMenu] = React.useState<DesktopMenu>(null);
   const [mobileSection, setMobileSection] = React.useState<MobileSection>("nav");
   const desktopMenuRef = React.useRef<HTMLDivElement | null>(null);
-  const { currentUser, cartCount, openAuthModal, logout } = useDajem();
+  const { currentUser, cartCount, navigateToUrl, openAuthModal, logout } = useDajem();
 
   React.useEffect(() => {
     setCurrentOrigin(window.location.origin);
@@ -157,6 +157,27 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
     setMobileSection("nav");
   };
 
+  const handleNavigate = React.useCallback((
+    event: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+    afterNavigate?: () => void,
+  ) => {
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    afterNavigate?.();
+    void navigateToUrl(href);
+  }, [navigateToUrl]);
+
   const DesktopDropdown = ({
     menu,
     label,
@@ -203,6 +224,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
           )}
           <a
             href={currentApp?.url}
+            onClick={(event) => currentApp?.url ? handleNavigate(event, currentApp.url) : undefined}
             className="flex min-w-0 items-center gap-1.5 text-base font-semibold tracking-tight text-primary hover:opacity-90 dark:text-foreground sm:text-lg"
           >
             <span className="truncate">{currentApp?.name}</span>
@@ -250,12 +272,20 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                 </>
               )}
             >
-              <a href={dashboardHref} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors">
+              <a
+                href={dashboardHref}
+                onClick={(event) => handleNavigate(event, dashboardHref)}
+                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors"
+              >
                 <LayoutDashboard className="h-4 w-4 text-primary" />
                 Dashboard
               </a>
               {currentUser.role === "admin" && (
-                <a href={adminHref} className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors">
+                <a
+                  href={adminHref}
+                  onClick={(event) => handleNavigate(event, adminHref)}
+                  className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors"
+                >
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
                   Admin Portal
                 </a>
@@ -275,6 +305,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
               <a
                 key={app.id}
                 href={app.url}
+                onClick={(event) => handleNavigate(event, app.url)}
                 className={cn(
                   "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   app.id === activeApp && "bg-accent/60 font-semibold",
@@ -357,13 +388,13 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                           Cart ({cartCount})
                         </Button>
                       )}
-                      <a href={dashboardHref} onClick={closeMobileMenu}>
+                      <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref, closeMobileMenu)}>
                         <Button className="w-full justify-start" variant="outline">
                           Dashboard
                         </Button>
                       </a>
                       {currentUser.role === "admin" && (
-                        <a href={adminHref} onClick={closeMobileMenu}>
+                        <a href={adminHref} onClick={(event) => handleNavigate(event, adminHref, closeMobileMenu)}>
                           <Button className="w-full justify-start" variant="outline">
                             Admin Portal
                           </Button>
@@ -388,7 +419,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                     <a
                       key={app.id}
                       href={app.url}
-                      onClick={closeMobileMenu}
+                      onClick={(event) => handleNavigate(event, app.url, closeMobileMenu)}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl border border-white/30 bg-white/60 px-3 py-3 text-sm shadow-sm backdrop-blur-lg transition-colors hover:bg-white/85 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
                         app.id === activeApp && "border-primary/30 bg-primary/10 font-semibold",

@@ -1,11 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-const SESSION_COOKIE = "dajem_session";
+export const SESSION_COOKIE = "dajem_session";
 const SESSION_DOMAIN = process.env.DAJEM_COOKIE_DOMAIN;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const HANDOFF_MAX_AGE_SECONDS = 60 * 10;
 
-function getSessionSecret() {
+export function getSessionSecret() {
   const secret = process.env.DAJEM_SESSION_SECRET;
   if (secret) return secret;
 
@@ -47,6 +48,72 @@ function decode(token: string) {
     if (ageMs < 0 || ageMs > SESSION_MAX_AGE_SECONDS * 1000) return null;
 
     return payload.email?.toLowerCase() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeOrigin(origin: string) {
+  return new URL(origin).origin;
+}
+
+function normalizeNextPath(nextPath: string, targetOrigin: string) {
+  const resolved = new URL(nextPath, targetOrigin);
+  if (resolved.origin !== targetOrigin) {
+    throw new Error("Cross-site session handoff destination is invalid.");
+  }
+
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+}
+
+export function createSessionHandoffToken(payload: {
+  email: string;
+  targetOrigin: string;
+  nextPath: string;
+}) {
+  const targetOrigin = normalizeOrigin(payload.targetOrigin);
+  const nextPath = normalizeNextPath(payload.nextPath, targetOrigin);
+  const rawPayload = {
+    email: payload.email.toLowerCase(),
+    issuedAt: new Date().toISOString(),
+    targetOrigin,
+    nextPath,
+  };
+
+  const raw = Buffer.from(JSON.stringify(rawPayload), "utf8").toString("base64url");
+  return `${raw}.${sign(raw)}`;
+}
+
+export function readSessionHandoffToken(token: string, expectedOrigin: string) {
+  const [raw, signature] = token.split(".");
+  if (!raw || !signature) return null;
+
+  const expected = sign(raw);
+  if (signature.length !== expected.length) return null;
+  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as {
+      email: string;
+      issuedAt: string;
+      targetOrigin: string;
+      nextPath: string;
+    };
+
+    const issuedAt = Date.parse(payload.issuedAt);
+    if (!Number.isFinite(issuedAt)) return null;
+
+    const ageMs = Date.now() - issuedAt;
+    if (ageMs < 0 || ageMs > HANDOFF_MAX_AGE_SECONDS * 1000) return null;
+
+    const targetOrigin = normalizeOrigin(payload.targetOrigin);
+    const normalizedExpectedOrigin = normalizeOrigin(expectedOrigin);
+    if (targetOrigin !== normalizedExpectedOrigin) return null;
+
+    return {
+      email: payload.email?.toLowerCase() ?? null,
+      nextPath: normalizeNextPath(payload.nextPath, normalizedExpectedOrigin),
+    };
   } catch {
     return null;
   }

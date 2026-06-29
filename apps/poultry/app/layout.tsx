@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@repo/ui/styles/globals.css";
+import "./globals.css";
 import { DajemProvider, ThemeProvider } from "@repo/ui";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Dajem Farms Limited | Farming & Farm Products",
   description:
-    "Dajem Farms Limited handles farming generally, including farm products, livestock, feeds, and agricultural operations from Enugu, Nigeria.",
+    "Dajem Farms Limited handles farming generally, including livestock, grills, eggs, farm produce, farm equipment, agro-allied products, consultancy, and agricultural operations from Enugu, Nigeria.",
   keywords: ["Dajem Farms Limited", "Farming", "Farm Products", "Poultry", "Enugu", "Nigeria"],
 };
 

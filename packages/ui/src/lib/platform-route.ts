@@ -17,7 +17,12 @@ import {
   upsertPropertyListing,
   upsertSurveyService,
 } from "./server/platform-repository";
-import { clearSessionCookie, readSessionEmail, writeSessionCookie } from "./server/session";
+import {
+  clearSessionCookie,
+  createSessionHandoffToken,
+  readSessionEmail,
+  writeSessionCookie,
+} from "./server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +39,15 @@ function assertSameOrigin(request: NextRequest) {
 function jsonError(error: unknown, status = 400) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return NextResponse.json({ error: message }, { status });
+}
+
+function normalizeTargetOrigin(input: string) {
+  const parsed = new URL(input);
+  if (!/^https?:$/.test(parsed.protocol)) {
+    throw new Error("Unsupported navigation target.");
+  }
+
+  return parsed.origin;
 }
 
 export async function GET(request: NextRequest) {
@@ -81,6 +95,23 @@ export async function POST(request: NextRequest) {
         });
         clearSessionCookie(response);
         return response;
+      }
+      case "create-session-handoff": {
+        if (!sessionEmail) {
+          return jsonError(new Error("Please log in to continue."), 401);
+        }
+
+        const targetOrigin = normalizeTargetOrigin(String(payload?.targetOrigin ?? ""));
+        const nextPath = String(payload?.nextPath ?? "/").trim() || "/";
+        const token = createSessionHandoffToken({
+          email: sessionEmail,
+          targetOrigin,
+          nextPath,
+        });
+
+        return NextResponse.json({
+          redirectUrl: `${targetOrigin}/api/session/handoff?token=${encodeURIComponent(token)}`,
+        });
       }
       case "add-to-cart":
         return NextResponse.json(await addToCart(sessionEmail, payload));
