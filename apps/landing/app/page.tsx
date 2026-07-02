@@ -35,12 +35,17 @@ import {
   CheckCircle2
 } from "lucide-react";
 
+function getRegistrationYear(value: string) {
+  return value.match(/\b(19|20)\d{2}\b/)?.[0] ?? value;
+}
+
 export default function LandingPage() {
   const groupProfile = dajemCompanyProfiles.landing;
   const farmsProfile = dajemCompanyProfiles.poultry;
   const homesProfile = dajemCompanyProfiles["real-estate"];
   const orbitalProfile = dajemCompanyProfiles.survey;
   const { navigateToUrl } = useDajem();
+  const mapQuery = encodeURIComponent(groupProfile.address);
   const [inquirySent, setInquirySent] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: "",
@@ -63,7 +68,7 @@ export default function LandingPage() {
       description: orbitalProfile.summary,
       href: getAppBaseUrl("survey"),
       icon: Map,
-      themeColor: "from-cyan-500/20 to-blue-600/10 dark:from-cyan-500/10 dark:to-blue-600/5",
+      themeColor: "from-cyan-500/22 via-sky-500/12 to-blue-700/10 dark:from-cyan-500/14 dark:to-blue-700/8",
       iconColor: "text-cyan-500",
       stats: "Surveying, mapping, engineering, logistics, and contracts",
       cta: "Get Estimate",
@@ -75,7 +80,7 @@ export default function LandingPage() {
       description: farmsProfile.summary,
       href: getAppBaseUrl("poultry"),
       icon: Egg,
-      themeColor: "from-amber-500/20 to-yellow-600/10 dark:from-amber-500/10 dark:to-yellow-600/5",
+      themeColor: "from-amber-500/24 via-lime-500/10 to-yellow-600/10 dark:from-amber-500/12 dark:to-lime-500/8",
       iconColor: "text-amber-500",
       stats: "Livestock, grills, eggs, produce, equipment, and consultancy",
       cta: "Browse Farm Products",
@@ -87,7 +92,7 @@ export default function LandingPage() {
       description: homesProfile.summary,
       href: getAppBaseUrl("real-estate"),
       icon: Building2,
-      themeColor: "from-emerald-500/20 to-teal-600/10 dark:from-emerald-500/10 dark:to-teal-600/5",
+      themeColor: "from-emerald-500/22 via-blue-500/10 to-slate-700/10 dark:from-emerald-500/12 dark:to-blue-500/8",
       iconColor: "text-emerald-500",
       stats: "Short-let, hospitality, development, sales, and management",
       cta: "Find Properties",
@@ -100,33 +105,38 @@ export default function LandingPage() {
       <Header activeApp="landing" />
 
       <main className="flex-1">
-        {/* Hero Section */}
         <HeroSlideshow
-          className="py-24 md:py-32"
-          overlayClassName="bg-[linear-gradient(180deg,rgba(248,250,252,0.42),rgba(248,250,252,0.58),rgba(248,250,252,0.82))] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.3),rgba(2,6,23,0.58),rgba(2,6,23,0.84))]"
+          className="py-20 sm:py-24 md:py-32"
+          contentClassName="landing-hero-copy"
+          overlayClassName="bg-[linear-gradient(180deg,rgba(248,250,252,0.18),rgba(248,250,252,0.34),rgba(248,250,252,0.68))] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.18),rgba(2,6,23,0.4),rgba(2,6,23,0.74))]"
           slides={[
-            { src: "/images/group-hero-boardroom-v2.png", position: "center" },
-            { src: "/images/group-hero-generated.png", position: "center" },
+            { src: "/images/landing-boardroom-1.png", position: "center" },
+            { src: "/images/landing-boardroom-2.png", position: "center" },
+            { src: "/images/landing-boardroom-3.png", position: "center" },
+            { src: "/images/landing-boardroom-4.png", position: "center" },
           ]}
         >
-          {/* Decorative shapes */}
-          <div className="absolute top-1/4 left-1/10 w-72 h-72 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
-          <div className="absolute top-1/3 right-1/10 w-96 h-96 rounded-full bg-primary/10 blur-3xl -z-10" />
+          <div className="absolute left-[-4rem] top-12 h-44 w-44 rounded-full bg-emerald-500/14 blur-3xl -z-10 sm:h-64 sm:w-64" />
+          <div className="absolute right-[-5rem] top-20 h-56 w-56 rounded-full bg-primary/14 blur-3xl -z-10 sm:h-80 sm:w-80" />
+          <div className="absolute bottom-0 left-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-amber-400/12 blur-3xl -z-10 sm:h-48 sm:w-48" />
 
-          <div className="container mx-auto px-4 text-center max-w-4xl">
-            <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm rounded-full">
-              Strategic holding company for the Dajem subsidiaries
+          <div className="container mx-auto max-w-5xl px-4 text-center sm:px-6">
+            <Badge variant="secondary" className="landing-hero-chip mb-5 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] sm:mb-6 sm:text-sm">
+              DAJEM Group corporate leadership
             </Badge>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-primary via-slate-800 to-emerald-600 dark:from-blue-400 dark:via-white dark:to-emerald-400 bg-clip-text text-transparent leading-[1.15]">
-              {groupProfile.displayName}: Strategic Management for the Dajem Subsidiaries
+            <h1 className="mb-5 bg-gradient-to-r from-primary via-slate-900 to-emerald-600 bg-clip-text text-[2.6rem] font-extrabold leading-[1.02] text-transparent dark:from-blue-400 dark:via-white dark:to-emerald-400 sm:text-5xl md:mb-6 md:text-6xl">
+              <span className="block">DAJEM Group</span>
+              <span className="mt-2 block text-[1.1rem] leading-[1.3] text-slate-800 dark:text-slate-100 sm:text-[1.45rem] md:text-[1.7rem]">
+                Strategic direction and shared oversight for the DAJEM subsidiary companies
+              </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              {groupProfile.summary}
+            <p className="mx-auto mb-8 max-w-3xl text-base leading-relaxed text-slate-700/90 dark:text-slate-200/85 sm:text-lg md:mb-10 md:text-xl">
+              Ownership, governance, and operational coordination across {orbitalProfile.displayName}, {farmsProfile.displayName}, and {homesProfile.displayName} from the corporate base in Enugu.
             </p>
 
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
               <Button size="lg" className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90" onClick={() => {
                 const el = document.getElementById("companies");
                 el?.scrollIntoView({ behavior: "smooth" });
@@ -143,21 +153,20 @@ export default function LandingPage() {
           </div>
         </HeroSlideshow>
 
-        {/* Corporate Trust Banner */}
-        <section className="py-12 border-y border-border bg-card/40 backdrop-blur-sm">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <section className="border-y border-border bg-card/42 py-10 backdrop-blur-sm sm:py-12">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-2 gap-5 text-center sm:gap-8 lg:grid-cols-4">
               <div className="space-y-2">
                 <p className="text-3xl font-extrabold text-primary dark:text-blue-400">4</p>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Registered Companies</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-emerald-500">2023</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Oldest Subsidiary Start</p>
+                <p className="text-3xl font-extrabold text-emerald-500">2026</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Opened</p>
               </div>
               <div className="space-y-2">
-                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">HQ</p>
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group Coordination</p>
+                <p className="text-3xl font-extrabold text-primary dark:text-blue-400">2023</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Earliest Subsidiary Year</p>
               </div>
               <div className="space-y-2">
                 <p className="text-3xl font-extrabold text-emerald-500">Enugu</p>
@@ -167,40 +176,37 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* About Section */}
-        <section id="about" className="py-20 container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <section id="about" className="container mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:gap-12">
             <div>
               <Badge variant="secondary" className="mb-4">
                 Corporate Foundations
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold text-primary dark:text-foreground mb-6">
-                A Holding Company Built for Coordinated Growth
-              </h2>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                {groupProfile.displayName} was opened on {groupProfile.startDate} to own and control the subsidiary companies of Dajem Group and facilitate strategic management across the group.
+              <p className="text-muted-foreground mb-0 leading-relaxed">
+                DAJEM Group was opened in May, 2026 to own, direct, and coordinate the subsidiary companies within the DAJEM group structure.
               </p>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                The group houses {orbitalProfile.displayName}, {farmsProfile.displayName}, and {homesProfile.displayName}, bringing surveying, mapping, development management, construction support, logistics, consultancy, farming, homes, hospitality, and property services under one coordinated structure.
+              <p className="text-muted-foreground mb-8 mt-8 leading-relaxed">
+                DAJEM Group Owns and Controls all Subsidiary Companies and facilitates Strategic Management
               </p>
-              <div className="mb-8 grid grid-cols-1 gap-3 rounded-2xl border bg-card/60 p-4 text-sm text-muted-foreground">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Registration Details</p>
+              <div className="mb-8 grid grid-cols-1 gap-3 rounded-3xl border bg-card/72 p-4 text-sm text-muted-foreground shadow-sm sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Registration Details</p>
                 {[groupProfile, orbitalProfile, farmsProfile, homesProfile].map((company) => (
-                  <div key={company.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-background/60 px-3 py-2">
+                  <div key={company.id} className="grid gap-1 rounded-2xl border bg-background/70 px-4 py-3 sm:grid-cols-[1.2fr_auto_auto] sm:items-center sm:gap-3">
                     <span className="font-semibold text-foreground">{company.displayName}</span>
-                    <span>{company.registrationNumber} - {company.startDate}</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{company.registrationNumber}</span>
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Registered {getRegistrationYear(company.startDate)}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[
                   { title: "Strategic Management", icon: Cpu },
                   { title: "Subsidiary Governance", icon: ShieldCheck },
                   { title: "Registered Operations", icon: Award },
                   { title: "Shared Admin Team", icon: Users2 }
                 ].map((item) => (
-                  <div key={item.title} className="flex items-center gap-3 p-3 rounded-lg border bg-card/50">
+                  <div key={item.title} className="flex items-center gap-3 rounded-2xl border bg-card/55 p-4">
                     <item.icon className="h-5 w-5 text-emerald-500" />
                     <span className="text-sm font-semibold text-foreground/80">{item.title}</span>
                   </div>
@@ -208,36 +214,47 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Visual Decorative Grid */}
-            <div className="relative h-[400px] w-full rounded-2xl overflow-hidden border bg-gradient-to-tr from-primary/10 to-emerald-500/10 p-6 flex flex-col justify-between">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
-              
-              <div className="flex justify-between items-start">
-                <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30">
-                  <Landmark className="h-6 w-6 text-primary dark:text-blue-400" />
-                </div>
-                <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                  Corporate HQ
-                </Badge>
+            <div className="relative overflow-hidden rounded-[30px] border bg-card/78 shadow-2xl shadow-slate-900/8">
+              <div className="landing-map-frame relative min-h-[360px] sm:min-h-[420px] lg:min-h-[540px]">
+                <iframe
+                  title="Corporate HQ Map"
+                  src={`https://www.google.com/maps?q=${mapQuery}&z=16&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.16),rgba(15,23,42,0.28))]" />
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-xl font-bold text-primary dark:text-foreground">{groupProfile.displayName}</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Corporate address: {groupProfile.address}.
-                </p>
-                <div className="flex gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-xs text-emerald-500 font-semibold tracking-wider uppercase">Active & Operating</span>
+              <div className="absolute inset-x-4 bottom-4 rounded-[24px] border border-white/50 bg-background/88 p-4 shadow-xl backdrop-blur-xl dark:border-white/12 dark:bg-slate-950/78 sm:inset-x-6 sm:bottom-6 sm:p-5">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+                    <Landmark className="h-6 w-6 text-primary dark:text-blue-400" />
+                  </div>
+                  <Badge variant="default" className="bg-emerald-500 text-white hover:bg-emerald-600">
+                    Corporate HQ
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  <h4 className="text-xl font-bold text-primary dark:text-foreground">{groupProfile.shortName}</h4>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {groupProfile.address}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Google Maps pin preview is currently based on the corporate address and can be fine-tuned when you send the exact location.
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Active & operating</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Companies Section */}
-        <section id="companies" className="py-20 bg-muted/30 border-y border-border">
-          <div className="container mx-auto px-4 max-w-6xl">
+        <section id="companies" className="border-y border-border bg-muted/30 py-16 md:py-20">
+          <div className="container mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <Badge variant="secondary" className="mb-4">
                 Corporate Portfolio
@@ -246,24 +263,22 @@ export default function LandingPage() {
                 Our Subsidiaries
               </h2>
               <p className="text-muted-foreground">
-                Each subsidiary operates in its own sector while drawing strategic support from {groupProfile.displayName}.
+                Each subsidiary operates in its own sector while drawing strategic support from {groupProfile.shortName}.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {companies.map((company) => (
-                <Card key={company.id} className="relative overflow-hidden flex flex-col group h-full hover:-translate-y-1 duration-300">
-                  {/* Color strip / overlay */}
-                  <div className={`h-24 bg-gradient-to-br ${company.themeColor} flex items-center p-6 border-b border-border/50`} />
-                  
-                  {/* Icon floating */}
-                  <div className="absolute top-12 left-6 h-12 w-12 rounded-xl bg-background border shadow-md flex items-center justify-center">
+                <Card key={company.id} className="group relative flex h-full flex-col overflow-hidden rounded-[28px] border-white/40 bg-card/92 transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+                  <div className={`flex h-24 items-center border-b border-border/50 bg-gradient-to-br p-6 ${company.themeColor}`} />
+
+                  <div className="absolute left-6 top-12 flex h-12 w-12 items-center justify-center rounded-xl border bg-background shadow-md">
                     <company.icon className={`h-6 w-6 ${company.iconColor}`} />
                   </div>
 
                   <CardHeader className="pt-8">
-                    <div className="flex justify-between items-start mb-2">
-                      <CardTitle className="text-xl">{company.title}</CardTitle>
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <CardTitle className="text-xl leading-snug">{company.title}</CardTitle>
                       <Badge variant="outline">{company.badge}</Badge>
                     </div>
                     <CardDescription className="line-clamp-3 min-h-[60px] pt-1">
@@ -272,7 +287,7 @@ export default function LandingPage() {
                   </CardHeader>
 
                   <CardContent className="flex-1 flex flex-col justify-end pt-0">
-                    <div className="text-xs font-semibold text-muted-foreground bg-muted p-2 rounded-md flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 rounded-xl bg-muted p-3 text-xs font-semibold text-muted-foreground">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       <span>{company.stats}</span>
                     </div>
@@ -293,16 +308,14 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Contact Form Section */}
-        <section id="contact" className="py-20 container mx-auto px-4 max-w-4xl">
-          <Card className="shadow-xl border-border/70 overflow-hidden">
+        <section id="contact" className="container mx-auto max-w-4xl px-4 py-16 sm:px-6 md:py-20">
+          <Card className="overflow-hidden border-border/70 shadow-xl">
             <div className="grid grid-cols-1 md:grid-cols-5">
-              {/* Sidebar Info */}
-              <div className="bg-primary p-8 text-primary-foreground md:col-span-2 flex flex-col justify-between space-y-8">
+              <div className="flex flex-col justify-between space-y-8 bg-primary p-6 text-primary-foreground sm:p-8 md:col-span-2">
                 <div>
                   <h3 className="text-2xl font-bold mb-4">Corporate Office</h3>
                   <p className="text-primary-foreground/80 text-sm leading-relaxed">
-                    Have questions about {groupProfile.displayName} or interested in partnership opportunities? Drop us a line.
+                    Have questions about {groupProfile.shortName} or interested in partnership opportunities? Drop us a line.
                   </p>
                 </div>
 
@@ -322,8 +335,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Form Input */}
-              <div className="p-8 md:col-span-3">
+              <div className="p-6 sm:p-8 md:col-span-3">
                 <h3 className="text-xl font-bold text-primary dark:text-foreground mb-6">Send a Message</h3>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -412,7 +424,7 @@ export default function LandingPage() {
           <div className="space-y-2">
             <p className="font-semibold text-foreground text-lg">Thank you, {formData.name}!</p>
             <p className="text-sm text-muted-foreground">
-              Your inquiry has been successfully routed to the <strong className="text-emerald-500 uppercase">{formData.department}</strong> department. A Dajem representative will contact you at <strong>{formData.email}</strong> shortly.
+              Your inquiry has been successfully routed to the <strong className="text-emerald-500 uppercase">{formData.department}</strong> department. A DAJEM representative will contact you at <strong>{formData.email}</strong> shortly.
             </p>
           </div>
           <Button 

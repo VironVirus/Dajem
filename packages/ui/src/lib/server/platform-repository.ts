@@ -131,9 +131,23 @@ function deriveStockStatus(availableUnits: number): InventoryStockStatus {
   return "In Stock";
 }
 
-function cloneCartItem(item: InventoryItem, quantity: number): CartItem {
+function cartLineMatches(item: CartItem, productId: string, variantKey?: string) {
+  return item.productId === productId && (item.variantKey ?? "") === (variantKey ?? "");
+}
+
+function cleanVariant(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function cloneCartItem(
+  item: InventoryItem,
+  quantity: number,
+  variant?: { variantKey?: string; variantLabel?: string },
+): CartItem {
   return {
     productId: item.productId,
+    variantKey: variant?.variantKey,
+    variantLabel: variant?.variantLabel,
     name: item.name,
     category: item.category,
     price: item.promoPrice ?? item.price,
@@ -285,9 +299,11 @@ export async function loginUser(
 
 export async function addToCart(
   sessionEmail: string | null,
-  payload: { productId: string; quantity?: number },
+  payload: { productId: string; quantity?: number; variantKey?: string; variantLabel?: string },
 ) {
   const quantity = Math.max(1, payload.quantity ?? 1);
+  const variantKey = cleanVariant(payload.variantKey) || undefined;
+  const variantLabel = cleanVariant(payload.variantLabel) || undefined;
 
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
@@ -300,7 +316,7 @@ export async function addToCart(
     }
 
     const cart = draft.carts[user.email] ?? [];
-    const existing = cart.find((item) => item.productId === payload.productId);
+    const existing = cart.find((item) => cartLineMatches(item, payload.productId, variantKey));
     const nextQuantity = Math.min(
       inventoryItem.availableUnits,
       (existing?.quantity ?? 0) + quantity,
@@ -308,10 +324,11 @@ export async function addToCart(
 
     if (existing) {
       existing.quantity = nextQuantity;
-      existing.price = inventoryItem.price;
+      existing.price = inventoryItem.promoPrice ?? inventoryItem.price;
       existing.stockStatus = inventoryItem.stockStatus;
+      existing.variantLabel = variantLabel;
     } else {
-      cart.push(cloneCartItem(inventoryItem, nextQuantity));
+      cart.push(cloneCartItem(inventoryItem, nextQuantity, { variantKey, variantLabel }));
     }
 
     draft.carts[user.email] = cart;
@@ -325,27 +342,29 @@ export async function addToCart(
 
 export async function updateCartItem(
   sessionEmail: string | null,
-  payload: { productId: string; quantity: number },
+  payload: { productId: string; quantity: number; variantKey?: string },
 ) {
+  const variantKey = cleanVariant(payload.variantKey) || undefined;
+
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
     const cart = draft.carts[user.email] ?? [];
-    const existing = cart.find((item) => item.productId === payload.productId);
+    const existing = cart.find((item) => cartLineMatches(item, payload.productId, variantKey));
     if (!existing) return;
 
     if (payload.quantity <= 0) {
-      draft.carts[user.email] = cart.filter((item) => item.productId !== payload.productId);
+      draft.carts[user.email] = cart.filter((item) => !cartLineMatches(item, payload.productId, variantKey));
       return;
     }
 
     const inventoryItem = draft.inventory.find((item) => item.productId === payload.productId);
     if (!inventoryItem) {
-      draft.carts[user.email] = cart.filter((item) => item.productId !== payload.productId);
+      draft.carts[user.email] = cart.filter((item) => !cartLineMatches(item, payload.productId, variantKey));
       return;
     }
 
     existing.quantity = Math.min(payload.quantity, inventoryItem.availableUnits);
-    existing.price = inventoryItem.price;
+    existing.price = inventoryItem.promoPrice ?? inventoryItem.price;
     existing.stockStatus = inventoryItem.stockStatus;
   });
 
@@ -357,12 +376,14 @@ export async function updateCartItem(
 
 export async function removeCartItem(
   sessionEmail: string | null,
-  payload: { productId: string },
+  payload: { productId: string; variantKey?: string },
 ) {
+  const variantKey = cleanVariant(payload.variantKey) || undefined;
+
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
     draft.carts[user.email] = (draft.carts[user.email] ?? []).filter(
-      (item) => item.productId !== payload.productId,
+      (item) => !cartLineMatches(item, payload.productId, variantKey),
     );
   });
 
@@ -514,7 +535,7 @@ export async function submitSurvey(
     hasExistingSurveyPlan?: boolean;
     planNumber?: string;
     planYear?: string;
-    billingType?: "Change of Title" | "Full Survey" | "Service Request";
+    billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
     uploadedDocuments?: string[];
     missingDocuments?: string[];
     attested?: boolean;
@@ -563,7 +584,7 @@ export async function submitSurvey(
     draft.communicationLogs.unshift(buildEmailLog(
       user.email,
       "Survey request pending approval",
-      `Your ${serviceType} request for ${location} has been received by Dajem Orbital Resources Limited and is pending approval. Application number: ${request.applicationNumber}.`,
+      `Your ${serviceType} request for ${location} has been received by DAJEM Orbital Resources Limited and is pending approval. Application number: ${request.applicationNumber}.`,
     ));
   });
 

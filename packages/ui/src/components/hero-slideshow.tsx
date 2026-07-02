@@ -21,6 +21,9 @@ export function HeroSlideshow({
   overlayClassName,
   slides,
 }: HeroSlideshowProps) {
+  const slideIntervalSeconds = 7;
+  const cycleDurationSeconds = Math.max(slides.length * slideIntervalSeconds, slideIntervalSeconds);
+
   return (
     <section className={cn("relative isolate overflow-hidden", className)}>
       <div className="absolute inset-0 -z-30 bg-slate-950/12" />
@@ -28,7 +31,10 @@ export function HeroSlideshow({
         <div
           key={`${slide.src}-${index}`}
           className="dajem-hero-slide-frame absolute inset-0 -z-20 overflow-hidden"
-          style={{ animationDelay: `${index * 7}s` }}
+          style={{
+            animationDelay: `${index * slideIntervalSeconds}s`,
+            animationDuration: `${cycleDurationSeconds}s`,
+          }}
         >
           <img
             alt=""
@@ -37,7 +43,8 @@ export function HeroSlideshow({
             className="dajem-hero-slide-image h-full w-full object-cover"
             style={{
               objectPosition: slide.position ?? "center",
-              animationDelay: `${index * 7}s`,
+              animationDelay: `${index * slideIntervalSeconds}s`,
+              animationDuration: `${cycleDurationSeconds}s`,
             }}
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_36%),linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.2))]" />

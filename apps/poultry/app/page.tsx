@@ -44,6 +44,27 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
+type ChickenType = "live" | "processed" | "grilled";
+
+const chickenTypeOptions = [
+  { value: "live", label: "Live Chicken" },
+  { value: "processed", label: "Eviscerated/Processed Chicken" },
+  { value: "grilled", label: "Grilled Chicken" },
+];
+
+const processedChickenCuts = ["Whole", "Cut 8", "Cut 12", "Cut 15", "Cut 16", "Cut 20", "Cut 25", "Cut 30"];
+const grilledChickenCuts = ["Whole", "Cut 8", "Cut 12", "Cut 15", "Cut 16", "Cut 20"];
+
+function getChickenVariantLabel(type: ChickenType, cut: string) {
+  if (type === "live") return "Live Chicken";
+  if (type === "processed") return `Eviscerated/Processed Chicken - ${cut}`;
+  return `Grilled Chicken - ${cut}`;
+}
+
+function getChickenVariantKey(label: string) {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 export default function PoultryPage() {
   const profile = dajemCompanyProfiles.poultry;
   const {
@@ -65,6 +86,10 @@ export default function PoultryPage() {
   const [bulkSent, setBulkSent] = React.useState(false);
   const [lastOrder, setLastOrder] = React.useState<(typeof snapshot.orders)[number] | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = React.useState(false);
+  const [invoiceReference, setInvoiceReference] = React.useState("");
+  const [chickenType, setChickenType] = React.useState<ChickenType>("live");
+  const [chickenCut, setChickenCut] = React.useState("Whole");
 
   const filteredProducts = snapshot.inventory.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -78,6 +103,9 @@ export default function PoultryPage() {
     return promoPrice > 0 && promoPrice < originalPrice;
   });
 
+  const poultryProduct = snapshot.inventory.find((product) => product.productId === "livestock-poultry-01");
+  const chickenCutOptions = chickenType === "processed" ? processedChickenCuts : chickenType === "grilled" ? grilledChickenCuts : [];
+  const selectedChickenVariantLabel = getChickenVariantLabel(chickenType, chickenCut);
   const cartTotal = snapshot.cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
   const handleAddToCart = async (productId: string) => {
@@ -86,9 +114,29 @@ export default function PoultryPage() {
     setCartOpen(true);
   };
 
+  const handleAddChickenToCart = async () => {
+    if (!poultryProduct) return;
+    if (!requireAuth("signup")) return;
+
+    await addToCart(poultryProduct.productId, 1, {
+      variantKey: getChickenVariantKey(selectedChickenVariantLabel),
+      variantLabel: selectedChickenVariantLabel,
+    });
+    setCartOpen(true);
+  };
+
+  const openInvoiceReview = () => {
+    if (!requireAuth("login")) return;
+    if (snapshot.cart.length === 0) return;
+    setCheckoutError(null);
+    setInvoiceReference(`DAJEM-FARM-${Date.now().toString(36).toUpperCase()}`);
+    setInvoiceOpen(true);
+  };
+
   const handleCheckout = async () => {
     if (!requireAuth("login")) return;
     setCheckoutError(null);
+    setInvoiceOpen(false);
 
     try {
       const result = await startFlutterwaveCheckout();
@@ -104,6 +152,10 @@ export default function PoultryPage() {
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Checkout failed.");
     }
+  };
+
+  const printInvoice = () => {
+    if (typeof window !== "undefined") window.print();
   };
 
   return (
@@ -128,10 +180,10 @@ export default function PoultryPage() {
                 Started {profile.startDate}
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight text-primary dark:text-foreground sm:text-5xl">
-                {profile.displayName}: Livestock, Grills, Eggs, Produce, Equipment, and Agro-Allied Supplies
+                {profile.displayName}: Livestock, Grills (Fish/Chicken), Eggs, Produce, Equipment, and Agro-Allied Supplies
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
-                Shop livestock, poultry, fish, goats, sheep, turkey, chicken grills, fish grills, eggs, farm consultancy, farm produce, farm equipment, and agro-allied products from one shared Dajem cart.
+                Shop Livestock, Poultry, Fish, Goats, Sheep, Turkey, Chicken Grills, Fish Grills, Eggs, Farm Consultancy, Farm Produce, Farm Equipment, And Agro-Allied Products From One Shared DAJEM Cart.
               </p>
 
               <div className="flex flex-wrap gap-4 pt-2">
@@ -164,7 +216,7 @@ export default function PoultryPage() {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your cart and order history are tied to the shared Dajem account layer. The current payment setup is ready for Flutterwave test keys before live keys are added later.
+                Your cart and order history are tied to the shared DAJEM account layer. The current payment setup is ready for Flutterwave test keys before live keys are added later.
               </p>
               <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-xs font-semibold text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -194,7 +246,7 @@ export default function PoultryPage() {
               {[
                 {
                   title: "General Farming Focus",
-                  desc: "Dajem Farms Limited supports livestock, grills, eggs, produce, equipment, agro-allied products, and farm consultancy.",
+                  desc: "DAJEM Farms Limited supports livestock, grills, eggs, produce, equipment, agro-allied products, and farm consultancy.",
                   icon: ShieldCheck,
                   color: "text-emerald-500 bg-emerald-500/10",
                 },
@@ -225,6 +277,64 @@ export default function PoultryPage() {
           </div>
         </section>
 
+        <section id="chicken-selection" className="border-b border-emerald-500/20 bg-emerald-500/5 py-14">
+          <div className="container mx-auto max-w-6xl px-4">
+            <Card className="overflow-hidden border-emerald-500/20 bg-card/92 shadow-lg">
+              <CardContent className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.9fr_1.1fr] lg:p-8">
+                <div className="space-y-3">
+                  <Badge className="bg-emerald-600 text-white">Chicken Selection</Badge>
+                  <h2 className="text-2xl font-bold text-primary dark:text-foreground">Choose Your Chicken Order Style</h2>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Select live chicken, processed chicken, or grilled chicken before adding it to your shared DAJEM cart.
+                  </p>
+                  {poultryProduct && (
+                    <div className="rounded-2xl border bg-emerald-500/10 p-4 text-sm">
+                      <p className="font-semibold text-foreground">{poultryProduct.name}</p>
+                      <p className="text-muted-foreground">{formatCurrency(poultryProduct.promoPrice ?? poultryProduct.price)} each</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Chicken Type"
+                    value={chickenType}
+                    onChange={(event) => {
+                      setChickenType(event.target.value as ChickenType);
+                      setChickenCut("Whole");
+                    }}
+                    options={chickenTypeOptions}
+                  />
+                  {chickenCutOptions.length > 0 ? (
+                    <Select
+                      label="Cut Option"
+                      value={chickenCut}
+                      onChange={(event) => setChickenCut(event.target.value)}
+                      options={chickenCutOptions.map((cut) => ({ value: cut, label: cut }))}
+                    />
+                  ) : (
+                    <div className="rounded-xl border bg-background/70 p-4 text-sm text-muted-foreground">
+                      Live chicken is added whole with no cut selection.
+                    </div>
+                  )}
+                  <div className="rounded-xl border bg-background/70 p-4 text-sm sm:col-span-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected Order</p>
+                    <p className="mt-1 font-bold text-foreground">{selectedChickenVariantLabel}</p>
+                  </div>
+                  <Button
+                    className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700 sm:col-span-2"
+                    onClick={() => void handleAddChickenToCart()}
+                    disabled={!poultryProduct || poultryProduct.stockStatus === "Out of Stock" || isBusy}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Add Selected Chicken To Cart
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
         {promoProducts.length > 0 && (
           <section id="flash-sales" className="border-y border-emerald-500/20 bg-emerald-500/10 py-12">
             <div className="container mx-auto max-w-6xl px-4">
@@ -251,7 +361,11 @@ export default function PoultryPage() {
                           <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.originalPrice ?? product.price)}</span>
                         </div>
                       </div>
-                      <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void handleAddToCart(product.productId)}>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={() => void (product.productId === "livestock-poultry-01" ? handleAddChickenToCart() : handleAddToCart(product.productId))}
+                      >
                         Add
                       </Button>
                     </CardContent>
@@ -342,7 +456,7 @@ export default function PoultryPage() {
                   <div className="border-t border-border/50 p-3 sm:p-5">
                     <Button
                       className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
-                      onClick={() => void handleAddToCart(product.productId)}
+                      onClick={() => void (product.productId === "livestock-poultry-01" ? handleAddChickenToCart() : handleAddToCart(product.productId))}
                       disabled={product.stockStatus === "Out of Stock" || isBusy}
                     >
                       <ShoppingCart className="h-4 w-4" />
@@ -435,7 +549,7 @@ export default function PoultryPage() {
         <div className="space-y-5">
           {!currentUser ? (
             <div className="space-y-4 rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-              <p>Sign in to keep your Dajem Farms cart synced with the shared dashboard.</p>
+              <p>Sign in to keep your DAJEM Farms cart synced with the shared dashboard.</p>
               <div className="flex flex-wrap gap-3">
                 <Button onClick={() => openAuthModal("login")}>Login</Button>
                 <Button variant="outline" onClick={() => openAuthModal("signup")}>
@@ -452,15 +566,18 @@ export default function PoultryPage() {
             <>
               <div className="space-y-3">
                 {snapshot.cart.map((item) => (
-                  <div key={item.productId} className="rounded-xl border p-4">
+                  <div key={`${item.productId}-${item.variantKey ?? "base"}`} className="rounded-xl border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-foreground">{item.name}</p>
+                        {item.variantLabel && (
+                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{item.variantLabel}</p>
+                        )}
                         <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
                       </div>
                       <button
                         className="rounded-md border p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => void removeCartItem(item.productId)}
+                        onClick={() => void removeCartItem(item.productId, { variantKey: item.variantKey })}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -469,14 +586,14 @@ export default function PoultryPage() {
                       <div className="flex items-center gap-2">
                         <button
                           className="rounded-md border p-2 hover:bg-accent"
-                          onClick={() => void updateCartItem(item.productId, item.quantity - 1)}
+                          onClick={() => void updateCartItem(item.productId, item.quantity - 1, { variantKey: item.variantKey })}
                         >
                           <Minus className="h-4 w-4" />
                         </button>
                         <span className="w-8 text-center font-semibold">{item.quantity}</span>
                         <button
                           className="rounded-md border p-2 hover:bg-accent"
-                          onClick={() => void updateCartItem(item.productId, item.quantity + 1)}
+                          onClick={() => void updateCartItem(item.productId, item.quantity + 1, { variantKey: item.variantKey })}
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -504,14 +621,81 @@ export default function PoultryPage() {
                 </div>
               )}
 
-              <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout()}>
+              <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={openInvoiceReview}>
                 <CreditCard className="h-4 w-4" />
-                {snapshot.integrations.flutterwaveConfigured ? "Proceed with Flutterwave" : "Complete simulated checkout"}
+                {snapshot.integrations.flutterwaveConfigured ? "Review Invoice & Pay With Flutterwave" : "Review Invoice & Complete Checkout"}
               </Button>
             </>
           )}
         </div>
       </Sheet>
+
+      <Dialog isOpen={invoiceOpen} onClose={() => setInvoiceOpen(false)} title="Invoice Review">
+        <div className="space-y-5 py-2">
+          <div className="rounded-2xl border bg-emerald-500/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoice Reference</p>
+            <p className="mt-1 font-mono text-sm font-bold text-foreground">{invoiceReference || "DAJEM-FARM"}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Review your order summary before continuing to the current Flutterwave test checkout or simulated checkout.
+            </p>
+          </div>
+
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer</p>
+              <p className="mt-1 font-semibold text-foreground">{currentUser?.name ?? "Guest"}</p>
+            </div>
+            <div className="rounded-xl border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</p>
+              <p className="mt-1 font-semibold text-foreground">{currentUser?.email ?? "Sign in required"}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {snapshot.cart.map((item) => (
+              <div key={`invoice-${item.productId}-${item.variantKey ?? "base"}`} className="rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-foreground">{item.name}</p>
+                    {item.variantLabel && (
+                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{item.variantLabel}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Qty {item.quantity} x {formatCurrency(item.price)}</p>
+                  </div>
+                  <p className="shrink-0 font-bold text-foreground">{formatCurrency(item.quantity * item.price)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border bg-muted/30 p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Total Items</span>
+              <span className="font-semibold">{cartCount}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-lg font-bold text-foreground">
+              <span>Amount Due</span>
+              <span>{formatCurrency(cartTotal)}</span>
+            </div>
+          </div>
+
+          {checkoutError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {checkoutError}
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button variant="outline" onClick={printInvoice}>
+              Print Invoice
+            </Button>
+            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout()}>
+              <CreditCard className="h-4 w-4" />
+              Proceed To Payment
+            </Button>
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog isOpen={Boolean(lastOrder)} onClose={() => setLastOrder(null)} title="Order Confirmed">
         {lastOrder && (
@@ -522,7 +706,7 @@ export default function PoultryPage() {
             <div className="space-y-2">
               <p className="text-lg font-semibold text-foreground">Checkout completed</p>
               <p className="text-sm text-muted-foreground">
-                Your shared Dajem order has been saved and is now visible in the dashboard.
+                Your shared DAJEM order has been saved and is now visible in the dashboard.
               </p>
             </div>
             <div className="rounded-lg bg-muted p-4 text-left text-xs font-mono">
@@ -530,12 +714,27 @@ export default function PoultryPage() {
               <p><strong>Provider:</strong> {lastOrder.provider}</p>
               <p><strong>Total:</strong> {formatCurrency(lastOrder.total)}</p>
             </div>
-            <div className="flex gap-3">
+            <div className="space-y-2 rounded-lg border p-4 text-left text-xs">
+              {lastOrder.items.map((item) => (
+                <div key={`order-${item.productId}-${item.variantKey ?? "base"}`} className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{item.name}</p>
+                    {item.variantLabel && <p className="text-emerald-600 dark:text-emerald-400">{item.variantLabel}</p>}
+                    <p className="text-muted-foreground">Qty {item.quantity} x {formatCurrency(item.price)}</p>
+                  </div>
+                  <p className="font-bold text-foreground">{formatCurrency(item.quantity * item.price)}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
                 className="w-full bg-primary text-white"
                 onClick={() => void navigateToUrl(`${getAppBaseUrl("landing")}/dashboard`)}
               >
                 Open Dashboard
+              </Button>
+              <Button variant="outline" className="w-full" onClick={printInvoice}>
+                Print Invoice
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setLastOrder(null)}>
                 Stay Here
@@ -553,7 +752,7 @@ export default function PoultryPage() {
           <div className="space-y-2">
             <p className="text-lg font-semibold text-foreground">Request Logged</p>
             <p className="text-sm text-muted-foreground">
-              Our Dajem Farms desk has received your request and will respond with a customized quote.
+              Our DAJEM Farms desk has received your request and will respond with a customized quote.
             </p>
           </div>
           <Button className="bg-primary text-white" onClick={() => setBulkSent(false)}>

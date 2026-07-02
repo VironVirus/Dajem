@@ -47,6 +47,8 @@ export interface InventoryItem {
 
 export interface CartItem {
   productId: string;
+  variantKey?: string;
+  variantLabel?: string;
   name: string;
   category: InventoryCategory;
   price: number;
@@ -140,7 +142,7 @@ export interface SurveyRequest {
   hasExistingSurveyPlan?: boolean;
   planNumber?: string;
   planYear?: string;
-  billingType?: "Change of Title" | "Full Survey" | "Service Request";
+  billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
   uploadedDocuments?: string[];
   missingDocuments?: string[];
   attested?: boolean;
@@ -259,15 +261,15 @@ const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-fi
 export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   landing: {
     id: "landing",
-    legalName: "Dajem Group Limited",
-    displayName: "Dajem Group Limited",
-    shortName: "Dajem Group",
-    startDate: "May 31, 2025",
+    legalName: "DAJEM Group Limited",
+    displayName: "DAJEM Group Limited",
+    shortName: "DAJEM Group",
+    startDate: "May, 2026",
     registrationNumber: "RC:9581197",
     email: "group@dajemgroup.com",
-    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
+    address: "First Floor, 1B Niger Close, Uwani Enugu, Enugu South Local Government Area, Enugu state",
     summary:
-      "Dajem Group Limited owns and controls the subsidiary companies of Dajem Group and facilitates strategic management across the group.",
+      "DAJEM Group Limited owns and coordinates the subsidiary companies within the DAJEM group structure through shared strategy, governance, and oversight.",
     services: [
       "Ownership and control of subsidiary companies",
       "Strategic management",
@@ -277,15 +279,15 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   },
   poultry: {
     id: "poultry",
-    legalName: "Dajem Farms Limited",
-    displayName: "Dajem Farms Limited",
-    shortName: "Dajem Farms",
+    legalName: "DAJEM Farms Limited",
+    displayName: "DAJEM Farms Limited",
+    shortName: "DAJEM Farms",
     startDate: "June 7, 2025",
     registrationNumber: "RC:8539786",
     email: "group@dajemgroup.com",
     address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
-      "Dajem Farms Limited supplies livestock, grills, eggs, farm produce, farm equipment, agro-allied products, and farm consultancy services.",
+      "DAJEM Farms Limited supplies livestock, grills, eggs, farm produce, farm equipment, agro-allied products, and farm consultancy services.",
     services: [
       "Livestock supply",
       "Chicken and fish grills",
@@ -298,15 +300,15 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   },
   "real-estate": {
     id: "real-estate",
-    legalName: "Dajem Homes Limited",
-    displayName: "Dajem Homes Limited",
-    shortName: "Dajem Homes",
+    legalName: "DAJEM Homes Limited",
+    displayName: "DAJEM Homes Limited",
+    shortName: "DAJEM Homes",
     startDate: "September 8, 2025",
     registrationNumber: "RC:8805120",
     email: "group@dajemgroup.com",
     address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
     summary:
-      "Dajem Homes Limited handles short-let apartments and suites, hotel management, hospitality management, real estate development, sales, marketing, consultancy, and property management.",
+      "DAJEM Homes Limited handles short-let apartments and suites, hotel management, hospitality management, real estate development, sales, marketing, consultancy, and property management.",
     services: [
       "Short-let apartments and suites",
       "Hotel and hospitality management",
@@ -318,15 +320,15 @@ export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   },
   survey: {
     id: "survey",
-    legalName: "Dajem Orbital Resources Limited",
-    displayName: "Dajem Orbital Resources Limited",
-    shortName: "Dajem Orbital",
+    legalName: "DAJEM Orbital Resources Limited",
+    displayName: "DAJEM Orbital Resources Limited",
+    shortName: "DAJEM Orbital",
     startDate: "April 3, 2023",
     registrationNumber: "RC:6922761",
     email: "dajemorbitalresourceslimited@gmail.com",
-    address: "First Floor, 1B, Niger Close, Uwani, Enugu, Enugu State, Nigeria",
+    address: "First Floor, 1B Niger Close, Uwani Enugu, Enugu South Local Government Area, Enugu state",
     summary:
-      "Dajem Orbital Resources Limited provides land surveying, digital mapping, geoinformatics, development management, consultancy, architectural designs, civil engineering, construction, logistics, haulage, and general contracts.",
+      "DAJEM Orbital Resources Limited provides land surveying, digital mapping, geoinformatics, development management, consultancy, architectural designs, civil engineering, construction, logistics, haulage, and general contracts.",
     services: [
       "Land surveying",
       "Digital mapping",
@@ -603,9 +605,9 @@ export const seedSurveyServices: SurveyService[] = [
   {
     id: "survey-03",
     title: "Survey Beacon Reestablishment & Capping",
-    description: "Reestablishment of survey beacons and capping for plots requiring boundary confirmation.",
+    description: "Reestablishment of survey beacons and capping for beacons requiring boundary confirmation.",
     priceFrom: 20000,
-    timeline: "Per plot",
+    timeline: "Per beacon",
     imageUrl: orbitalImageUrl,
     color: "text-emerald-600 bg-emerald-500/10",
     status: "Approved",

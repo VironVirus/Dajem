@@ -87,11 +87,11 @@ export function Footer() {
               Our Vision
             </h4>
             <p className="text-sm text-muted-foreground">
-              Coordinating Dajem Orbital Resources Limited, Dajem Farms Limited, and Dajem Homes Limited through shared strategic management.
+              Coordinating DAJEM Orbital Resources Limited, DAJEM Farms Limited, and DAJEM Homes Limited through shared strategic management.
             </p>
             <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
               <Globe className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Unified Dajem web portal</span>
+              <span>Unified DAJEM web portal</span>
             </div>
           </div>
         </div>

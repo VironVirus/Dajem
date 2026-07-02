@@ -45,9 +45,9 @@ interface DajemContextValue {
   login: (payload: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   navigateToUrl: (targetUrl: string) => Promise<void>;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
-  updateCartItem: (productId: string, quantity: number) => Promise<void>;
-  removeCartItem: (productId: string) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, variant?: { variantKey?: string; variantLabel?: string }) => Promise<void>;
+  updateCartItem: (productId: string, quantity: number, variant?: { variantKey?: string }) => Promise<void>;
+  removeCartItem: (productId: string, variant?: { variantKey?: string }) => Promise<void>;
   clearCart: () => Promise<void>;
   submitBid: (payload: {
     propertyId: string;
@@ -82,7 +82,7 @@ interface DajemContextValue {
     hasExistingSurveyPlan?: boolean;
     planNumber?: string;
     planYear?: string;
-    billingType?: "Change of Title" | "Full Survey" | "Service Request";
+    billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
     uploadedDocuments?: string[];
     missingDocuments?: string[];
     attested?: boolean;
@@ -385,14 +385,14 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     navigateToUrl,
-    addToCart: async (productId, quantity) => {
-      await postAction("add-to-cart", { productId, quantity });
+    addToCart: async (productId, quantity, variant) => {
+      await postAction("add-to-cart", { productId, quantity, ...variant });
     },
-    updateCartItem: async (productId, quantity) => {
-      await postAction("update-cart-item", { productId, quantity });
+    updateCartItem: async (productId, quantity, variant) => {
+      await postAction("update-cart-item", { productId, quantity, ...variant });
     },
-    removeCartItem: async (productId) => {
-      await postAction("remove-cart-item", { productId });
+    removeCartItem: async (productId, variant) => {
+      await postAction("remove-cart-item", { productId, ...variant });
     },
     clearCart: async () => {
       await postAction("clear-cart");

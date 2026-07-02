@@ -66,7 +66,7 @@ function CallbackContent() {
         </div>
         <div className="flex flex-wrap justify-center gap-3">
           <Button variant="outline" onClick={() => void navigateToUrl(getAppBaseUrl("poultry"))}>
-            Back to Dajem Farms
+            Back to DAJEM Farms
           </Button>
           <Button className="bg-primary text-white" onClick={() => void navigateToUrl(`${getAppBaseUrl("landing")}/dashboard`)}>
             Open Dashboard

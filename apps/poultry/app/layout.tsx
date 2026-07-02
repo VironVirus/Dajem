@@ -6,10 +6,10 @@ import { DajemProvider, ThemeProvider } from "@repo/ui";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dajem Farms Limited | Farming & Farm Products",
+  title: "DAJEM Farms Limited | Farming & Farm Products",
   description:
-    "Dajem Farms Limited handles farming generally, including livestock, grills, eggs, farm produce, farm equipment, agro-allied products, consultancy, and agricultural operations from Enugu, Nigeria.",
-  keywords: ["Dajem Farms Limited", "Farming", "Farm Products", "Poultry", "Enugu", "Nigeria"],
+    "DAJEM Farms Limited handles farming generally, including livestock, grills, eggs, farm produce, farm equipment, agro-allied products, consultancy, and agricultural operations from Enugu, Nigeria.",
+  keywords: ["DAJEM Farms Limited", "Farming", "Farm Products", "Poultry", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

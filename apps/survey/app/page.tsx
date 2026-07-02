@@ -20,6 +20,7 @@ import {
   useDajem,
 } from "@repo/ui";
 import {
+  ArrowLeftRight,
   Calculator,
   CheckCircle2,
   Clock,
@@ -41,37 +42,301 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-const serviceFeeOptions = [
-  "Property Search - N20,000 per lodgement, maximum of 3 plots per search",
-  "Property Site Inspection - N50,000 per plot",
-  "Reestablishment of Survey Beacons and Capping - N20,000 per plot",
-  "Perimeter Survey / Boundary Survey - Based on scale of fees",
-  "Topography / Detail Survey - Based on scale of fees booklet",
-  "Estate / Layout Survey - Based on scale of fees booklet",
-  "Estate / Layout Designs - Based on official meeting",
-  "Digital Mapping and Geoinformatics - Based on official meeting",
-  "Architectural Designs - Based on official meeting",
-  "Dispute Surveys and Others - Based on official meeting",
+function formatMeasurement(amount: number) {
+  return new Intl.NumberFormat("en-NG", {
+    maximumFractionDigits: 4,
+  }).format(amount);
+}
+
+type CalculatorService = "perimeter" | "parcellation" | "topography" | "control" | "detail" | "engineering" | "litigation" | "reestablishment";
+type ClientType = "private" | "corporate";
+type DetailDensity = "low" | "medium" | "high";
+type TopographyTerrain = "open-savannah" | "deciduous" | "swamp";
+
+const technicalServiceOptions: { value: CalculatorService; label: string }[] = [
+  { value: "perimeter", label: "Perimeter Surveys" },
+  { value: "parcellation", label: "Estate Parcellation Surveys" },
+  { value: "topography", label: "Topography Surveys (Contouring)" },
+  { value: "control", label: "Control Surveys" },
+  { value: "detail", label: "Detail Surveys" },
+  { value: "engineering", label: "Engineering Surveys" },
+  { value: "litigation", label: "Litigation (Dispute) Surveys" },
+  { value: "reestablishment", label: "Re-establishment Surveys" },
 ];
+
+const serviceFeeOptions = technicalServiceOptions.map((service) => service.label);
+const defaultTechnicalService = technicalServiceOptions[0].label;
+
+const areaUnitOptions = [
+  { value: "sqm", label: "Square Metres (sqm)" },
+  { value: "hectare", label: "Hectares (Ha)" },
+  { value: "acre", label: "Acres" },
+  { value: "plot", label: "Plots (600sqm)" },
+  { value: "sqft", label: "Square Feet" },
+  { value: "sqyd", label: "Square Yards" },
+  { value: "sqkm", label: "Square Kilometres" },
+  { value: "sqmi", label: "Square Miles" },
+  { value: "rood", label: "Roods" },
+];
+
+const areaUnitFactorsToSqm: Record<string, number> = {
+  sqm: 1,
+  hectare: 10000,
+  acre: 4046.8564224,
+  plot: 600,
+  sqft: 0.09290304,
+  sqyd: 0.83612736,
+  sqkm: 1000000,
+  sqmi: 2589988.110336,
+  rood: 1011.7141056,
+};
+
+const perimeterFeeTable = [
+  { min: 0.1, max: 600, private: 250000, corporate: 400500, label: "0.100 - 600 sq.m" },
+  { min: 601, max: 1000, private: 300000, corporate: 500500, label: "601 - 1000 sq.m" },
+  { min: 1001, max: 2000, private: 390000, corporate: 557700, label: "1001 - 2000 sq.m" },
+  { min: 2001, max: 3000, private: 440000, corporate: 629200, label: "2001 - 3000 sq.m" },
+  { min: 3001, max: 4000, private: 480000, corporate: 686400, label: "3001 - 4000 sq.m" },
+  { min: 4001, max: 5000, private: 510000, corporate: 729300, label: "4001 - 5000 sq.m" },
+  { min: 5001, max: 9999, private: 712338, corporate: 1018643.34, label: "5001 - 9999 sq.m" },
+  { min: 10000, max: 59990, private: 1250926, corporate: 1788824.18, label: "1Ha - 5.999Ha" },
+  { min: 60000, max: 109990, private: 1527184, corporate: 2183873.12, label: "6Ha - 10.999Ha" },
+  { min: 110000, max: 159990, private: 1754691, corporate: 2509208.13, label: "11Ha - 15.999Ha" },
+  { min: 160000, max: 209990, private: 1940411, corporate: 2774787.73, label: "16Ha - 20.999Ha" },
+  { min: 210000, max: 259990, private: 2091309, corporate: 2990571.87, label: "21Ha - 25.999Ha" },
+  { min: 260000, max: 309990, private: 2237563, corporate: 3199715.09, label: "26Ha - 30.999Ha" },
+  { min: 310000, max: 359990, private: 2354799, corporate: 3367362.57, label: "31Ha - 35.999Ha" },
+  { min: 360000, max: 409990, private: 2466927, corporate: 3527705.61, label: "36Ha - 40.999Ha" },
+  { min: 410000, max: 459990, private: 2560948, corporate: 3662155.64, label: "41Ha - 45.999Ha" },
+  { min: 460000, max: 500000, private: 2642200, corporate: 3778346, label: "46Ha - 50Ha" },
+];
+
+const litigationFeeTable = [
+  { min: 0.1, max: 1000, private: 500000, corporate: 650500, label: "0.10 - 1000 sq.m" },
+  { min: 1001, max: 2000, private: 540000, corporate: 707700, label: "1001 - 2000 sq.m" },
+  { min: 2001, max: 3000, private: 590000, corporate: 779200, label: "2001 - 3000 sq.m" },
+  { min: 3001, max: 4000, private: 630000, corporate: 836400, label: "3001 - 4000 sq.m" },
+  { min: 4001, max: 5000, private: 660000, corporate: 879300, label: "4001 - 5000 sq.m" },
+  { min: 5001, max: 9999, private: 862338, corporate: 1168643.34, label: "5001 - 9999 sq.m" },
+  { min: 10000, max: 59990, private: 1450926, corporate: 1988824.18, label: "1Ha - 5.999Ha" },
+  { min: 60000, max: 109990, private: 1727184, corporate: 2383873.12, label: "6Ha - 10.999Ha" },
+  { min: 110000, max: 159990, private: 1954691, corporate: 2709208.13, label: "11Ha - 15.999Ha" },
+  { min: 160000, max: 209990, private: 2140411, corporate: 2974787.73, label: "16Ha - 20.999Ha" },
+  { min: 210000, max: 259990, private: 2291309, corporate: 3190571.87, label: "21Ha - 25.999Ha" },
+  { min: 260000, max: 309990, private: 2437563, corporate: 3399715.09, label: "26Ha - 30.999Ha" },
+  { min: 310000, max: 359990, private: 2554799, corporate: 3567362.57, label: "31Ha - 35.999Ha" },
+  { min: 360000, max: 409990, private: 2666927, corporate: 3727705.61, label: "36Ha - 40.999Ha" },
+  { min: 410000, max: 459990, private: 2760948, corporate: 3862155.64, label: "41Ha - 45.999Ha" },
+  { min: 460000, max: 500000, private: 2842200, corporate: 3978346.003, label: "46Ha - 50Ha" },
+];
+
+const parcellationFeeBands = [
+  { max: 5, rate: 250000 },
+  { max: 10, rate: 240000 },
+  { max: 15, rate: 230000 },
+  { max: 20, rate: 220000 },
+  { max: 25, rate: 210000 },
+  { max: 30, rate: 200000 },
+  { max: 35, rate: 190000 },
+  { max: 40, rate: 180000 },
+  { max: 45, rate: 170000 },
+  { max: 50, rate: 160000 },
+  { max: 55, rate: 150000 },
+  { max: 60, rate: 140000 },
+  { max: 65, rate: 130000 },
+  { max: 70, rate: 125000 },
+  { max: 75, rate: 120000 },
+  { max: 80, rate: 115000 },
+  { max: 85, rate: 110000 },
+  { max: 90, rate: 105000 },
+  { max: 100, rate: 100000 },
+];
+
+const topographyFeeTable = [
+  { min: 0.1, max: 1000, amount: 290188, label: "0.1 sq.m - 1000 sq.m" },
+  { min: 1001, max: 10000, amount: 696450, label: "1001 sq.m - 1Ha" },
+  { min: 10001, max: 50000, amount: 1857200, label: "1.1Ha - 5Ha" },
+  { min: 50001, max: 100000, amount: 3308138, label: "5.1Ha - 10Ha" },
+  { min: 100001, max: 150000, amount: 4759075, label: "10.1Ha - 15Ha" },
+  { min: 150001, max: 200000, amount: 6210013, label: "15.1Ha - 20Ha" },
+  { min: 200001, max: 250000, amount: 7660950, label: "20.10Ha - 25Ha" },
+  { min: 250001, max: 300000, amount: 9111888, label: "25.10Ha - 30Ha" },
+  { min: 300001, max: 350000, amount: 10562825, label: "30.10Ha - 35Ha" },
+  { min: 350001, max: 400000, amount: 12013763, label: "35.10Ha - 40Ha" },
+  { min: 400001, max: 450000, amount: 13464700, label: "40.10Ha - 45Ha" },
+  { min: 450001, max: 500000, amount: 14915638, label: "45.10Ha - 50Ha" },
+];
+
+const detailLowDensityTable = [
+  { max: 1000, amount: 32501 },
+  { max: 2000, amount: 65002 },
+  { max: 3000, amount: 97503 },
+  { max: 4000, amount: 130004 },
+  { max: 5000, amount: 162505 },
+  { max: 6000, amount: 195006 },
+  { max: 7000, amount: 227507 },
+  { max: 8000, amount: 260008 },
+  { max: 9000, amount: 292509 },
+  { max: 10000, amount: 325010 },
+];
+
+function parsePositiveNumber(value: string) {
+  const numberValue = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : 0;
+}
+
+function toSquareMetres(value: string, unit: string) {
+  const factor = areaUnitFactorsToSqm[unit] ?? 1;
+  return parsePositiveNumber(value) * factor;
+}
+
+function fromSquareMetres(squareMetres: number, unit: string) {
+  const factor = areaUnitFactorsToSqm[unit] ?? 1;
+  return squareMetres / factor;
+}
+
+function findFeeRow<T extends { min?: number; max: number }>(rows: T[], squareMetres: number) {
+  return rows.find((row) => squareMetres >= (row.min ?? 0) && squareMetres <= row.max);
+}
+
+function calculatePerimeterEstimate(squareMetres: number, clientType: ClientType) {
+  const row = findFeeRow(perimeterFeeTable, squareMetres);
+  if (row) return { amount: row[clientType], detail: `${row.label} ${clientType === "private" ? "Private/Individual" : "Corporate"} rate` };
+
+  if (squareMetres > 500000) {
+    const base = perimeterFeeTable[perimeterFeeTable.length - 1][clientType];
+    const extraHectares = Math.ceil(squareMetres / 10000 - 50);
+    const extraRate = clientType === "private" ? 50000 : 70000;
+    return { amount: base + extraHectares * extraRate, detail: `46Ha - 50Ha base plus ${extraHectares} additional hectare(s)` };
+  }
+
+  return null;
+}
+
+function calculateParcellationEstimate(plotCount: number) {
+  const plots = Math.ceil(plotCount);
+  const band = parcellationFeeBands.find((entry) => plots <= entry.max);
+  if (band) return { amount: plots * band.rate, detail: `${plots} plot(s) at ${formatCurrency(band.rate)} per plot` };
+
+  const amount = 100 * 100000 + (plots - 100) * 50000;
+  return { amount, detail: "100 plots at N100,000 per plot plus N50,000 for each additional plot" };
+}
+
+function calculateTopographyEstimate(squareMetres: number, terrain: TopographyTerrain) {
+  const terrainFactor = terrain === "deciduous" ? 1.5 : terrain === "swamp" ? 2 : 1;
+  const row = findFeeRow(topographyFeeTable, squareMetres);
+  const base = row
+    ? row.amount
+    : squareMetres > 500000
+      ? topographyFeeTable[topographyFeeTable.length - 1].amount + Math.ceil(squareMetres / 10000 - 50) * 100000
+      : 0;
+  if (!base) return null;
+
+  const terrainLabel = terrain === "open-savannah" ? "Open Savannah" : terrain === "deciduous" ? "Deciduous x1.5" : "Swamp Area x2";
+  return { amount: Math.round(base * terrainFactor), detail: `${row?.label ?? "Above 50Ha"} ${terrainLabel}` };
+}
+
+function calculateDetailEstimate(squareMetres: number, density: DetailDensity) {
+  const factor = density === "medium" ? 1.5 : density === "high" ? 2 : 1;
+  const row = detailLowDensityTable.find((entry) => squareMetres <= entry.max);
+  const lowDensityBase = row
+    ? row.amount
+    : detailLowDensityTable[detailLowDensityTable.length - 1].amount + Math.ceil((squareMetres - 10000) / 10000) * 100000;
+  const densityLabel = density === "low" ? "Low Density" : density === "medium" ? "Medium Density x1.5" : "High Density x2";
+  return { amount: Math.round(lowDensityBase * factor), detail: densityLabel };
+}
+
+function calculateLitigationEstimate(squareMetres: number, clientType: ClientType, courtAppearance: string) {
+  const row = findFeeRow(litigationFeeTable, squareMetres);
+  const base = row
+    ? row[clientType]
+    : squareMetres > 500000
+      ? litigationFeeTable[litigationFeeTable.length - 1][clientType] + Math.ceil(squareMetres / 10000 - 50) * 100000
+      : 0;
+  if (!base) return null;
+
+  const courtFee = courtAppearance === "yes" ? clientType === "private" ? 150000 : 200000 : 0;
+  return {
+    amount: base + courtFee,
+    detail: `${row?.label ?? "Above 50Ha"}${courtFee ? ` plus ${formatCurrency(courtFee)} court appearance minimum` : ""}`,
+  };
+}
+
+function calculateSurveyEstimate(inputs: {
+  serviceType: CalculatorService;
+  clientType: ClientType;
+  parcelSize: string;
+  parcelUnit: string;
+  plotCount: string;
+  topographyTerrain: TopographyTerrain;
+  detailDensity: DetailDensity;
+  courtAppearance: string;
+}) {
+  if (inputs.serviceType === "parcellation") {
+    const plots = parsePositiveNumber(inputs.plotCount);
+    if (!plots) return { amount: null, detail: "Enter number of plots to calculate the estimate." };
+    return calculateParcellationEstimate(plots);
+  }
+
+  const squareMetres = toSquareMetres(inputs.parcelSize, inputs.parcelUnit);
+  if (!squareMetres && ["perimeter", "topography", "detail", "litigation"].includes(inputs.serviceType)) {
+    return { amount: null, detail: "Enter parcel size to calculate the estimate." };
+  }
+
+  if (inputs.serviceType === "perimeter") {
+    return calculatePerimeterEstimate(squareMetres, inputs.clientType) ?? { amount: null, detail: "Enter a parcel size within the supported perimeter survey table." };
+  }
+
+  if (inputs.serviceType === "topography") {
+    return calculateTopographyEstimate(squareMetres, inputs.topographyTerrain) ?? { amount: null, detail: "Enter a parcel size within the supported topography survey table." };
+  }
+
+  if (inputs.serviceType === "detail") {
+    return calculateDetailEstimate(squareMetres, inputs.detailDensity);
+  }
+
+  if (inputs.serviceType === "litigation") {
+    return calculateLitigationEstimate(squareMetres, inputs.clientType, inputs.courtAppearance) ?? { amount: null, detail: "Enter a parcel size within the supported litigation survey table." };
+  }
+
+  return { amount: null, detail: "Formal assessment is required for this selected service." };
+}
 
 const newSurveyDocuments = ["C of O", "Deed of Assignment", "Power of Attorney", "Allocation Letter"];
 const existingSurveyDocuments = ["Old Survey Plan", "Deed of Assignment", "Deed of Lease", "Power of Attorney"];
+const surveyDeliveryFees = {
+  enugu: 10000,
+  southeast: 15000,
+  other: 20000,
+};
 
 export default function SurveyPage() {
   const profile = dajemCompanyProfiles.survey;
   const { currentUser, openAuthModal, requireAuth, snapshot, submitSurvey } = useDajem();
   const [calculatorInputs, setCalculatorInputs] = React.useState({
-    serviceType: "boundary",
-    size: "1-plot",
+    serviceType: "perimeter" as CalculatorService,
+    clientType: "private" as ClientType,
+    parcelSize: "600",
+    parcelUnit: "sqm",
+    plotCount: "5",
+    topographyTerrain: "open-savannah" as TopographyTerrain,
+    detailDensity: "low" as DetailDensity,
+    courtAppearance: "no",
     terrain: "flat",
+    deliveryZone: "enugu",
+  });
+  const [unitConverter, setUnitConverter] = React.useState({
+    fromUnit: "sqm",
+    toUnit: "hectare",
+    quantity: "1000",
   });
   const [quoteForm, setQuoteForm] = React.useState({
     location: "",
-    serviceType: serviceFeeOptions[0],
+    serviceType: defaultTechnicalService,
     description: "",
     acquisitionSource: "former-owner",
-    acquisitionCompany: "Dajem Orbital Resources Limited",
-    hasExistingSurveyPlan: "no",
+    acquisitionCompany: "DAJEM Orbital Resources Limited",
+    hasExistingSurveyPlan: "yes",
     planNumber: "",
     planYear: "",
     uploadedDocuments: [] as string[],
@@ -80,29 +345,7 @@ export default function SurveyPage() {
   const [uploadedFile, setUploadedFile] = React.useState<{ name: string; sizeKb: number } | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
   const [quoteSent, setQuoteSent] = React.useState(false);
-  const [calculatedEstimate, setCalculatedEstimate] = React.useState({ min: 150000, max: 180000 });
-
-  React.useEffect(() => {
-    let basePrice = 150000;
-    if (calculatorInputs.serviceType === "topo") basePrice = 250000;
-    if (calculatorInputs.serviceType === "architectural") basePrice = 450000;
-    if (calculatorInputs.serviceType === "gis") basePrice = 300000;
-
-    let sizeMultiplier = 1;
-    if (calculatorInputs.size === "1-acre") sizeMultiplier = 3.5;
-    if (calculatorInputs.size === "5-acres") sizeMultiplier = 12;
-    if (calculatorInputs.size === "10-acres-plus") sizeMultiplier = 20;
-
-    let terrainMultiplier = 1;
-    if (calculatorInputs.terrain === "hilly") terrainMultiplier = 1.25;
-    if (calculatorInputs.terrain === "swampy") terrainMultiplier = 1.45;
-
-    const finalBase = basePrice * sizeMultiplier * terrainMultiplier;
-    setCalculatedEstimate({
-      min: Math.round(finalBase * 0.95),
-      max: Math.round(finalBase * 1.1),
-    });
-  }, [calculatorInputs]);
+  const calculatedEstimate = calculateSurveyEstimate(calculatorInputs);
 
   const serviceIcons = [Ruler, Compass, Map, Layers];
   const services = snapshot.surveyServices
@@ -115,7 +358,12 @@ export default function SurveyPage() {
   const userSurveys = currentUser ? snapshot.surveys.filter((survey) => survey.userEmail === currentUser.email) : [];
   const requiredDocuments = quoteForm.hasExistingSurveyPlan === "yes" ? existingSurveyDocuments : newSurveyDocuments;
   const missingDocuments = requiredDocuments.filter((documentName) => !quoteForm.uploadedDocuments.includes(documentName));
-  const billingType = quoteForm.hasExistingSurveyPlan === "yes" ? "Change of Title" : "Full Survey";
+  const billingType = quoteForm.hasExistingSurveyPlan === "yes" ? "Change of Title" : "New Survey";
+  const selectedDeliveryFee = surveyDeliveryFees[calculatorInputs.deliveryZone as keyof typeof surveyDeliveryFees];
+  const convertedQuantity = fromSquareMetres(
+    toSquareMetres(unitConverter.quantity, unitConverter.fromUnit),
+    unitConverter.toUnit,
+  );
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -150,11 +398,11 @@ export default function SurveyPage() {
     setQuoteSent(true);
     setQuoteForm({
       location: "",
-      serviceType: serviceFeeOptions[0],
+      serviceType: defaultTechnicalService,
       description: "",
       acquisitionSource: "former-owner",
-      acquisitionCompany: "Dajem Orbital Resources Limited",
-      hasExistingSurveyPlan: "no",
+      acquisitionCompany: "DAJEM Orbital Resources Limited",
+      hasExistingSurveyPlan: "yes",
       planNumber: "",
       planYear: "",
       uploadedDocuments: [],
@@ -170,8 +418,10 @@ export default function SurveyPage() {
       <main className="flex-1">
         <HeroSlideshow
           className="py-24"
-          overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.3),rgba(236,254,255,0.54),rgba(255,255,255,0.84))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.24),rgba(2,6,23,0.58),rgba(2,6,23,0.84))]"
+          overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
           slides={[
+            { src: "/images/orbital-field-survey-1.jpg", position: "center" },
+            { src: "/images/orbital-field-survey-2.jpg", position: "center" },
             { src: "/images/orbital-hero-field-v2.png", position: "center" },
             { src: "/images/orbital-hero-generated.png", position: "center" },
           ]}
@@ -180,14 +430,15 @@ export default function SurveyPage() {
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-7">
               <Badge variant="secondary" className="bg-cyan-100 px-3 py-1 font-semibold text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
-                Started {profile.startDate}
+                est. April, 2003
               </Badge>
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
                 {profile.displayName}: Surveying, Mapping, Design, Construction, Logistics, and Contracts
               </h1>
-              <p className="text-base leading-relaxed text-muted-foreground">
-                {profile.summary} Submit a request, receive pending approval, and track admin updates from your shared dashboard.
-              </p>
+              <div className="text-base leading-relaxed text-muted-foreground">
+                <p>{profile.summary}</p>
+                <p className="mt-8 pt-2">Submit a request, receive pending approval, and track admin updates from your shared dashboard.</p>
+              </div>
               <div className="flex gap-4 pt-2">
                 <Button size="lg" className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
                   Start Verification Portal
@@ -206,7 +457,6 @@ export default function SurveyPage() {
               <div className="space-y-4 text-sm text-muted-foreground">
                 <div className="rounded-xl border p-4">{profile.address}</div>
                 <div className="rounded-xl border p-4">{profile.email}</div>
-                <div className="rounded-xl border p-4">Requests are saved as pending approval and email previews are logged for later delivery.</div>
               </div>
             </div>
           </div>
@@ -214,7 +464,7 @@ export default function SurveyPage() {
 
         <section id="services" className="container mx-auto max-w-6xl px-4 py-20">
           <div className="mx-auto mb-16 max-w-2xl text-center">
-            <Badge variant="secondary" className="mb-2">Dajem Orbital Catalog</Badge>
+            <Badge variant="secondary" className="mb-2">DAJEM Orbital Catalog</Badge>
             <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Services</h2>
             <p className="mt-1 text-sm text-muted-foreground">Services are managed from the unified admin portal and displayed here after approval.</p>
           </div>
@@ -247,48 +497,133 @@ export default function SurveyPage() {
               </h3>
               <div className="space-y-4">
                 <Select
-                  label="Select Geomatics Service"
+                  label="Select Geomatics Survey"
                   value={calculatorInputs.serviceType}
-                  onChange={(event) => setCalculatorInputs((current) => ({ ...current, serviceType: event.target.value }))}
-                  options={[
-                    { value: "boundary", label: "Boundary Survey & Beacon Setting" },
-                    { value: "topo", label: "Topographical & Contour Layout" },
-                    { value: "architectural", label: "Architectural Design & Supervision" },
-                    { value: "gis", label: "Digital Mapping & Geoinformatics" },
-                  ]}
+                  onChange={(event) => setCalculatorInputs((current) => ({ ...current, serviceType: event.target.value as CalculatorService }))}
+                  options={technicalServiceOptions}
                 />
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {(calculatorInputs.serviceType === "perimeter" || calculatorInputs.serviceType === "litigation") && (
                   <Select
-                    label="Land Size"
-                    value={calculatorInputs.size}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, size: event.target.value }))}
+                    label="Client Type"
+                    value={calculatorInputs.clientType}
+                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, clientType: event.target.value as ClientType }))}
                     options={[
-                      { value: "1-plot", label: "1 Plot (Approx 600 sqm)" },
-                      { value: "1-acre", label: "1 Acre (Approx 6 Plots)" },
-                      { value: "5-acres", label: "5 Acres" },
-                      { value: "10-acres-plus", label: "10+ Acres" },
+                      { value: "private", label: "Private/Individual" },
+                      { value: "corporate", label: "Corporate" },
                     ]}
                   />
+                )}
+
+                {calculatorInputs.serviceType === "topography" && (
+                  <Select
+                    label="Topography Area Type"
+                    value={calculatorInputs.topographyTerrain}
+                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, topographyTerrain: event.target.value as TopographyTerrain }))}
+                    options={[
+                      { value: "open-savannah", label: "Open Savannah" },
+                      { value: "deciduous", label: "Deciduous" },
+                      { value: "swamp", label: "Swamp Area" },
+                    ]}
+                  />
+                )}
+
+                {calculatorInputs.serviceType === "detail" && (
+                  <Select
+                    label="Density"
+                    value={calculatorInputs.detailDensity}
+                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, detailDensity: event.target.value as DetailDensity }))}
+                    options={[
+                      { value: "low", label: "Low Density" },
+                      { value: "medium", label: "Medium Density" },
+                      { value: "high", label: "High Density" },
+                    ]}
+                  />
+                )}
+
+                {calculatorInputs.serviceType === "litigation" && (
+                  <Select
+                    label="Court Appearance"
+                    value={calculatorInputs.courtAppearance}
+                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, courtAppearance: event.target.value }))}
+                    options={[
+                      { value: "no", label: "No" },
+                      { value: "yes", label: "Yes" },
+                    ]}
+                  />
+                )}
+
+                {calculatorInputs.serviceType === "parcellation" ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plot-count">Number Of Plots</Label>
+                    <Input
+                      id="plot-count"
+                      inputMode="numeric"
+                      min="1"
+                      type="number"
+                      value={calculatorInputs.plotCount}
+                      onChange={(event) => setCalculatorInputs((current) => ({ ...current, plotCount: event.target.value }))}
+                    />
+                  </div>
+                ) : ["perimeter", "topography", "detail", "litigation"].includes(calculatorInputs.serviceType) && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_0.85fr]">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="parcel-size">Land Size</Label>
+                      <Input
+                        id="parcel-size"
+                        inputMode="decimal"
+                        placeholder="600"
+                        value={calculatorInputs.parcelSize}
+                        onChange={(event) => setCalculatorInputs((current) => ({ ...current, parcelSize: event.target.value }))}
+                      />
+                    </div>
+                    <Select
+                      label="Unit"
+                      value={calculatorInputs.parcelUnit}
+                      onChange={(event) => setCalculatorInputs((current) => ({ ...current, parcelUnit: event.target.value }))}
+                      options={areaUnitOptions}
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Select
                     label="Terrain Profile"
                     value={calculatorInputs.terrain}
                     onChange={(event) => setCalculatorInputs((current) => ({ ...current, terrain: event.target.value }))}
                     options={[
-                      { value: "flat", label: "Flat / Developed" },
+                      { value: "flat", label: "Flat/table land" },
                       { value: "hilly", label: "Hilly / Mountainous" },
                       { value: "swampy", label: "Swamp / Waterlogged" },
+                    ]}
+                  />
+                  <Select
+                    label="Survey Plan Delivery"
+                    value={calculatorInputs.deliveryZone}
+                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, deliveryZone: event.target.value }))}
+                    options={[
+                      { value: "enugu", label: "Within Enugu State - N10,000" },
+                      { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi - N15,000" },
+                      { value: "other", label: "Other States - N20,000" },
                     ]}
                   />
                 </div>
                 <div className="mt-8 space-y-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-6 text-center">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estimated Project Budget</p>
-                  <p className="text-3xl font-extrabold text-cyan-600 dark:text-cyan-400">
-                    {formatCurrency(calculatedEstimate.min)} - {formatCurrency(calculatedEstimate.max)}
-                  </p>
+                  {calculatedEstimate.amount ? (
+                    <p className="text-3xl font-extrabold text-cyan-600 dark:text-cyan-400">
+                      {formatCurrency(calculatedEstimate.amount)}
+                    </p>
+                  ) : (
+                    <p className="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">Official Assessment Required</p>
+                  )}
                   <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
                     <Info className="h-3 w-3 shrink-0 text-cyan-500" />
-                    Includes standard regulatory registration fees. Subject to physical inspection.
+                    {calculatedEstimate.detail}
                   </p>
+                  <div className="mt-4 rounded-lg border border-cyan-500/20 bg-background/70 p-3 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Survey Plan Delivery Available</p>
+                    <p className="mt-1 font-bold text-cyan-600 dark:text-cyan-400">{formatCurrency(selectedDeliveryFee)}</p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -307,6 +642,55 @@ export default function SurveyPage() {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   <span>Registry-ready outputs</span>
+                </div>
+              </div>
+              <div className="space-y-4 border-t pt-6">
+                <div>
+                  <Badge variant="secondary">Unit Converter</Badge>
+                  <h4 className="mt-2 text-xl font-bold text-primary dark:text-foreground">Convert Survey Units</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+                  <Select
+                    label="From"
+                    value={unitConverter.fromUnit}
+                    onChange={(event) => setUnitConverter((current) => ({ ...current, fromUnit: event.target.value }))}
+                    options={areaUnitOptions}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 px-3"
+                    onClick={() => setUnitConverter((current) => ({
+                      ...current,
+                      fromUnit: current.toUnit,
+                      toUnit: current.fromUnit,
+                    }))}
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                  </Button>
+                  <Select
+                    label="To"
+                    value={unitConverter.toUnit}
+                    onChange={(event) => setUnitConverter((current) => ({ ...current, toUnit: event.target.value }))}
+                    options={areaUnitOptions}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="converter-quantity">Quantity</Label>
+                    <Input
+                      id="converter-quantity"
+                      inputMode="decimal"
+                      value={unitConverter.quantity}
+                      onChange={(event) => setUnitConverter((current) => ({ ...current, quantity: event.target.value }))}
+                    />
+                  </div>
+                  <div className="rounded-lg border bg-card/70 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Converted Value</p>
+                    <p className="mt-1 text-lg font-extrabold text-cyan-600 dark:text-cyan-400">
+                      {formatMeasurement(convertedQuantity)}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -336,6 +720,13 @@ export default function SurveyPage() {
                 </div>
               )}
 
+              <Select
+                label="Desired Technical Service"
+                value={quoteForm.serviceType}
+                onChange={(event) => setQuoteForm((current) => ({ ...current, serviceType: event.target.value }))}
+                options={serviceFeeOptions.map((service) => ({ value: service, label: service }))}
+              />
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="q-loc">Land Location / City</Label>
@@ -346,14 +737,6 @@ export default function SurveyPage() {
                     onChange={(event) => setQuoteForm((current) => ({ ...current, location: event.target.value }))}
                   />
                 </div>
-                <Select
-                  label="Desired Technical Service"
-                  value={quoteForm.serviceType}
-                  onChange={(event) => setQuoteForm((current) => ({ ...current, serviceType: event.target.value }))}
-                  options={services.length > 0
-                    ? [...serviceFeeOptions.map((service) => ({ value: service, label: service })), ...services.map((service) => ({ value: service.title, label: service.title }))]
-                    : serviceFeeOptions.map((service) => ({ value: service, label: service }))}
-                />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -374,8 +757,8 @@ export default function SurveyPage() {
                     value={quoteForm.acquisitionCompany}
                     onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionCompany: event.target.value }))}
                     options={[
-                      { value: "Dajem Orbital Resources Limited", label: "Dajem Orbital Resources Limited" },
-                      { value: "Dajem Homes Limited", label: "Dajem Homes Limited" },
+                      { value: "DAJEM Orbital Resources Limited", label: "DAJEM Orbital Resources Limited" },
+                      { value: "DAJEM Homes Limited", label: "DAJEM Homes Limited" },
                       { value: "Others", label: "Others" },
                     ]}
                   />
@@ -385,8 +768,8 @@ export default function SurveyPage() {
                   value={quoteForm.hasExistingSurveyPlan}
                   onChange={(event) => setQuoteForm((current) => ({ ...current, hasExistingSurveyPlan: event.target.value, uploadedDocuments: [] }))}
                   options={[
-                    { value: "no", label: "No - Full Survey" },
                     { value: "yes", label: "Yes - Change of Title" },
+                    { value: "no", label: "No - New Survey" },
                   ]}
                 />
               </div>
@@ -397,6 +780,7 @@ export default function SurveyPage() {
                     <Label htmlFor="plan-number">Survey Plan Number</Label>
                     <Input
                       id="plan-number"
+                      placeholder="CEE/EN/123/1234"
                       value={quoteForm.planNumber}
                       onChange={(event) => setQuoteForm((current) => ({ ...current, planNumber: event.target.value }))}
                     />
@@ -414,7 +798,7 @@ export default function SurveyPage() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="q-desc">Project Details & Location Landmark</Label>
+                <Label htmlFor="q-desc">Other Details</Label>
                 <Textarea
                   id="q-desc"
                   rows={4}
@@ -503,7 +887,7 @@ export default function SurveyPage() {
                   onChange={(event) => setQuoteForm((current) => ({ ...current, attested: event.target.checked }))}
                   required
                 />
-                <span>I attest that every information submitted is true, accurate, and legally provided. I understand that processing may take 24 hours before payment instructions are issued.</span>
+                <span>I attest that every information submitted is true , accurate and legally binding , I understand that processing may take 24hrs for research reports to come out</span>
               </label>
 
               <Button type="submit" className="w-full bg-cyan-600 text-white hover:bg-cyan-700" disabled={!quoteForm.attested}>

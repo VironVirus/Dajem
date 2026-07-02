@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Dajem Farms background">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="DAJEM Farms background">
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#713f12"/><stop offset=".55" stop-color="#d97706"/><stop offset="1" stop-color="#15803d"/></linearGradient>
   </defs>
@@ -15,5 +15,5 @@
     <ellipse cx="430" cy="390" rx="55" ry="72"/>
     <ellipse cx="505" cy="375" rx="60" ry="78"/>
   </g>
-  <text x="84" y="118" fill="#fff7ed" font-family="Arial, sans-serif" font-size="54" font-weight="700">Dajem Farms Limited</text>
+  <text x="84" y="118" fill="#fff7ed" font-family="Arial, sans-serif" font-size="54" font-weight="700">DAJEM Farms Limited</text>
 </svg>
