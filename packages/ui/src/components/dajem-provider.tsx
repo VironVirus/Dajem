@@ -84,6 +84,11 @@ interface DajemContextValue {
     planYear?: string;
     billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
     uploadedDocuments?: string[];
+    documentAttachments?: {
+      documentName: string;
+      fileName: string;
+      fileSizeKb: number;
+    }[];
     missingDocuments?: string[];
     attested?: boolean;
   }) => Promise<void>;

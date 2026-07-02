@@ -537,6 +537,11 @@ export async function submitSurvey(
     planYear?: string;
     billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
     uploadedDocuments?: string[];
+    documentAttachments?: {
+      documentName: string;
+      fileName: string;
+      fileSizeKb: number;
+    }[];
     missingDocuments?: string[];
     attested?: boolean;
   },
@@ -563,7 +568,7 @@ export async function submitSurvey(
       description,
       fileName: payload.fileName?.slice(0, 140),
       fileSizeKb: Math.max(0, Number(payload.fileSizeKb ?? 0)) || undefined,
-      acquisitionSource: acquisitionSource === "company" || acquisitionSource === "agent" || acquisitionSource === "former-owner" || acquisitionSource === "other"
+      acquisitionSource: acquisitionSource === "community" || acquisitionSource === "estate-developer" || acquisitionSource === "dajem" || acquisitionSource === "other"
         ? acquisitionSource
         : undefined,
       acquisitionCompany: payload.acquisitionCompany?.trim() || undefined,
@@ -572,6 +577,13 @@ export async function submitSurvey(
       planYear: payload.planYear?.trim() || undefined,
       billingType: payload.billingType ?? "Service Request",
       uploadedDocuments: payload.uploadedDocuments ?? [],
+      documentAttachments: (payload.documentAttachments ?? [])
+        .map((attachment) => ({
+          documentName: String(attachment.documentName ?? "").trim(),
+          fileName: String(attachment.fileName ?? "").trim().slice(0, 140),
+          fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)) || 0,
+        }))
+        .filter((attachment) => attachment.documentName && attachment.fileName),
       missingDocuments: payload.missingDocuments ?? [],
       attested: Boolean(payload.attested),
       paymentStatus: "Awaiting Review",

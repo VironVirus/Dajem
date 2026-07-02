@@ -137,13 +137,18 @@ export interface SurveyRequest {
   fileName?: string;
   fileSizeKb?: number;
   applicationNumber?: string;
-  acquisitionSource?: "company" | "agent" | "former-owner" | "other";
+  acquisitionSource?: "community" | "estate-developer" | "dajem" | "other";
   acquisitionCompany?: string;
   hasExistingSurveyPlan?: boolean;
   planNumber?: string;
   planYear?: string;
   billingType?: "Change of Title" | "New Survey" | "Full Survey" | "Service Request";
   uploadedDocuments?: string[];
+  documentAttachments?: {
+    documentName: string;
+    fileName: string;
+    fileSizeKb: number;
+  }[];
   missingDocuments?: string[];
   attested?: boolean;
   processingNote?: string;

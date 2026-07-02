@@ -48,12 +48,50 @@ function formatMeasurement(amount: number) {
   }).format(amount);
 }
 
-type CalculatorService = "perimeter" | "parcellation" | "topography" | "control" | "detail" | "engineering" | "litigation" | "reestablishment";
+type CalculatorService =
+  | "perimeter"
+  | "parcellation"
+  | "topography"
+  | "control"
+  | "detail"
+  | "engineering"
+  | "litigation"
+  | "reestablishment"
+  | "lifting"
+  | "change-of-title";
 type ClientType = "private" | "corporate";
 type DetailDensity = "low" | "medium" | "high";
 type TopographyTerrain = "open-savannah" | "deciduous" | "swamp";
+type ReestablishmentMode =
+  | "identification-plot"
+  | "recover-beacon"
+  | "uncover-beacon"
+  | "detect-unfound-beacon"
+  | "reestablish-destroyed-beacon";
+type ChangeOfTitleState = "undeveloped" | "developed";
+type AcquisitionSource = "community" | "estate-developer" | "dajem" | "other";
+type UploadedDocumentAttachment = {
+  documentName: string;
+  fileName: string;
+  fileSizeKb: number;
+};
 
-const technicalServiceOptions: { value: CalculatorService; label: string }[] = [
+interface EstimateLineItem {
+  label: string;
+  amount: number;
+}
+
+interface SurveyEstimate {
+  serviceType: CalculatorService;
+  serviceLabel: string;
+  amount: number | null;
+  detail: string;
+  lineItems: EstimateLineItem[];
+  selections: string[];
+  notes: string[];
+}
+
+const calculatorServiceOptions: { value: CalculatorService; label: string }[] = [
   { value: "perimeter", label: "Perimeter Surveys" },
   { value: "parcellation", label: "Estate Parcellation Surveys" },
   { value: "topography", label: "Topography Surveys (Contouring)" },
@@ -62,10 +100,14 @@ const technicalServiceOptions: { value: CalculatorService; label: string }[] = [
   { value: "engineering", label: "Engineering Surveys" },
   { value: "litigation", label: "Litigation (Dispute) Surveys" },
   { value: "reestablishment", label: "Re-establishment Surveys" },
+  { value: "lifting", label: "Lifting (Extraction from Layout)" },
+  { value: "change-of-title", label: "Change of Title" },
 ];
 
-const serviceFeeOptions = technicalServiceOptions.map((service) => service.label);
-const defaultTechnicalService = technicalServiceOptions[0].label;
+const inquiryServiceOptions = [
+  { value: "property-search", label: "Property Search" },
+  ...calculatorServiceOptions,
+];
 
 const areaUnitOptions = [
   { value: "sqm", label: "Square Metres (sqm)" },
@@ -180,6 +222,86 @@ const detailLowDensityTable = [
   { max: 10000, amount: 325010 },
 ];
 
+const perimeterExtraItems: EstimateLineItem[] = [
+  { label: "Transportation", amount: 30000 },
+  { label: "Security (4 persons)", amount: 100000 },
+  { label: "Casual labourers (3 persons)", amount: 30000 },
+  { label: "Skilled labourer (1 person)", amount: 15000 },
+  { label: "Beacons", amount: 5000 },
+];
+
+const documentSubmissionOptions = [
+  "Land Purchase Receipt",
+  "Allocation Letter",
+  "Deed of Lease/Assignment/Conveyance/Gift",
+  "Irrevocable Power Of Attorney",
+  "Old Survey Plan",
+  "Others",
+];
+
+const propertySearchLayouts = [
+  "Capitol Hills Villa & Resort",
+  "CLIC Estate",
+  "Hephzibah & Beulah City Estate (Block A)",
+  "Hephzibah & Beulah City Estate (Block B)",
+  "Magical Tower County Homes",
+  "Majestic City Estate",
+  "Star Residence",
+];
+
+const surveyDeliveryFees = {
+  enugu: 10000,
+  southeast: 15000,
+  other: 20000,
+};
+
+function getCalculatorServiceLabel(serviceType: CalculatorService) {
+  return calculatorServiceOptions.find((service) => service.value === serviceType)?.label ?? "Survey Service";
+}
+
+function getInquiryServiceLabel(serviceType: string) {
+  return inquiryServiceOptions.find((service) => service.value === serviceType)?.label ?? "Survey Service";
+}
+
+function getClientTypeLabel(clientType: ClientType) {
+  return clientType === "private" ? "Private/Individual" : "Corporate";
+}
+
+function getTerrainLabel(terrain: string) {
+  if (terrain === "hilly") return "Hilly / Mountainous";
+  if (terrain === "swampy") return "Swamp / Waterlogged";
+  return "Flat / Table land";
+}
+
+function getDeliveryZoneLabel(deliveryZone: keyof typeof surveyDeliveryFees) {
+  if (deliveryZone === "southeast") return "Abia, Imo, Anambra or Ebonyi";
+  if (deliveryZone === "other") return "Other States";
+  return "Within Enugu State";
+}
+
+function getReestablishmentModeLabel(mode: ReestablishmentMode) {
+  switch (mode) {
+    case "identification-plot":
+      return "Identification of Plot";
+    case "recover-beacon":
+      return "Recovering a Beacon";
+    case "uncover-beacon":
+      return "Uncovering a Beacon";
+    case "detect-unfound-beacon":
+      return "Detecting / Identifying Lost or Unfound Beacon";
+    default:
+      return "Re-establishment of Lost / Destroyed Beacons";
+  }
+}
+
+function getReestablishmentUnitLabel(mode: ReestablishmentMode) {
+  return mode === "identification-plot" ? "plots" : "beacons";
+}
+
+function getChangeOfTitleStateLabel(state: ChangeOfTitleState) {
+  return state === "developed" ? "Developed plot" : "Undeveloped plot";
+}
+
 function parsePositiveNumber(value: string) {
   const numberValue = Number(value.replace(/,/g, "").trim());
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : 0;
@@ -199,30 +321,65 @@ function findFeeRow<T extends { min?: number; max: number }>(rows: T[], squareMe
   return rows.find((row) => squareMetres >= (row.min ?? 0) && squareMetres <= row.max);
 }
 
-function calculatePerimeterEstimate(squareMetres: number, clientType: ClientType) {
+function sumLineItems(items: EstimateLineItem[]) {
+  return items.reduce((total, item) => total + item.amount, 0);
+}
+
+function formatAreaSelection(parcelSize: string, parcelUnit: string) {
+  const value = parsePositiveNumber(parcelSize);
+  if (!value) return "Not entered";
+  const unitLabel = areaUnitOptions.find((option) => option.value === parcelUnit)?.label ?? parcelUnit;
+  return `${formatMeasurement(value)} ${unitLabel}`;
+}
+
+function addDeliveryLineItem(items: EstimateLineItem[], deliveryZone: keyof typeof surveyDeliveryFees) {
+  items.push({
+    label: `Survey plan delivery (${getDeliveryZoneLabel(deliveryZone)})`,
+    amount: surveyDeliveryFees[deliveryZone],
+  });
+}
+
+function calculatePerimeterBaseEstimate(squareMetres: number, clientType: ClientType) {
   const row = findFeeRow(perimeterFeeTable, squareMetres);
-  if (row) return { amount: row[clientType], detail: `${row.label} ${clientType === "private" ? "Private/Individual" : "Corporate"} rate` };
+  if (row) {
+    return {
+      amount: Math.round(row[clientType]),
+      detail: row.label,
+    };
+  }
 
   if (squareMetres > 500000) {
     const base = perimeterFeeTable[perimeterFeeTable.length - 1][clientType];
     const extraHectares = Math.ceil(squareMetres / 10000 - 50);
     const extraRate = clientType === "private" ? 50000 : 70000;
-    return { amount: base + extraHectares * extraRate, detail: `46Ha - 50Ha base plus ${extraHectares} additional hectare(s)` };
+    return {
+      amount: Math.round(base + extraHectares * extraRate),
+      detail: `46Ha - 50Ha base plus ${extraHectares} additional hectare(s)`,
+    };
   }
 
   return null;
 }
 
-function calculateParcellationEstimate(plotCount: number) {
+function calculateParcellationBaseEstimate(plotCount: number) {
   const plots = Math.ceil(plotCount);
   const band = parcellationFeeBands.find((entry) => plots <= entry.max);
-  if (band) return { amount: plots * band.rate, detail: `${plots} plot(s) at ${formatCurrency(band.rate)} per plot` };
+
+  if (band) {
+    return {
+      amount: plots * band.rate,
+      detail: `${plots} plot(s) at ${formatCurrency(band.rate)} per plot`,
+    };
+  }
 
   const amount = 100 * 100000 + (plots - 100) * 50000;
-  return { amount, detail: "100 plots at N100,000 per plot plus N50,000 for each additional plot" };
+  return {
+    amount,
+    detail: "100 plots at N100,000 per plot plus N50,000 for each additional plot",
+  };
 }
 
-function calculateTopographyEstimate(squareMetres: number, terrain: TopographyTerrain) {
+function calculateTopographyBaseEstimate(squareMetres: number, terrain: TopographyTerrain) {
   const terrainFactor = terrain === "deciduous" ? 1.5 : terrain === "swamp" ? 2 : 1;
   const row = findFeeRow(topographyFeeTable, squareMetres);
   const base = row
@@ -233,32 +390,50 @@ function calculateTopographyEstimate(squareMetres: number, terrain: TopographyTe
   if (!base) return null;
 
   const terrainLabel = terrain === "open-savannah" ? "Open Savannah" : terrain === "deciduous" ? "Deciduous x1.5" : "Swamp Area x2";
-  return { amount: Math.round(base * terrainFactor), detail: `${row?.label ?? "Above 50Ha"} ${terrainLabel}` };
+  return {
+    amount: Math.round(base * terrainFactor),
+    detail: `${row?.label ?? "Above 50Ha"} ${terrainLabel}`,
+  };
 }
 
-function calculateDetailEstimate(squareMetres: number, density: DetailDensity) {
+function calculateDetailBaseEstimate(squareMetres: number, density: DetailDensity) {
   const factor = density === "medium" ? 1.5 : density === "high" ? 2 : 1;
   const row = detailLowDensityTable.find((entry) => squareMetres <= entry.max);
   const lowDensityBase = row
     ? row.amount
     : detailLowDensityTable[detailLowDensityTable.length - 1].amount + Math.ceil((squareMetres - 10000) / 10000) * 100000;
   const densityLabel = density === "low" ? "Low Density" : density === "medium" ? "Medium Density x1.5" : "High Density x2";
-  return { amount: Math.round(lowDensityBase * factor), detail: densityLabel };
+  return {
+    amount: Math.round(lowDensityBase * factor),
+    detail: densityLabel,
+  };
 }
 
-function calculateLitigationEstimate(squareMetres: number, clientType: ClientType, courtAppearance: string) {
+function calculateLitigationBaseEstimate(squareMetres: number, clientType: ClientType) {
   const row = findFeeRow(litigationFeeTable, squareMetres);
   const base = row
     ? row[clientType]
     : squareMetres > 500000
       ? litigationFeeTable[litigationFeeTable.length - 1][clientType] + Math.ceil(squareMetres / 10000 - 50) * 100000
       : 0;
+
   if (!base) return null;
 
-  const courtFee = courtAppearance === "yes" ? clientType === "private" ? 150000 : 200000 : 0;
   return {
-    amount: base + courtFee,
-    detail: `${row?.label ?? "Above 50Ha"}${courtFee ? ` plus ${formatCurrency(courtFee)} court appearance minimum` : ""}`,
+    amount: Math.round(base),
+    detail: row?.label ?? "Above 50Ha",
+  };
+}
+
+function buildEmptyEstimate(serviceType: CalculatorService, detail: string, notes: string[] = []): SurveyEstimate {
+  return {
+    serviceType,
+    serviceLabel: getCalculatorServiceLabel(serviceType),
+    amount: null,
+    detail,
+    lineItems: [],
+    selections: [`Service: ${getCalculatorServiceLabel(serviceType)}`],
+    notes,
   };
 }
 
@@ -271,44 +446,343 @@ function calculateSurveyEstimate(inputs: {
   topographyTerrain: TopographyTerrain;
   detailDensity: DetailDensity;
   courtAppearance: string;
+  terrain: string;
+  deliveryZone: keyof typeof surveyDeliveryFees;
+  reestablishmentMode: ReestablishmentMode;
+  reestablishmentCount: string;
+  changeOfTitleState: ChangeOfTitleState;
 }) {
+  const serviceLabel = getCalculatorServiceLabel(inputs.serviceType);
+  const areaSelection = formatAreaSelection(inputs.parcelSize, inputs.parcelUnit);
+  const selections = [
+    `Service: ${serviceLabel}`,
+    `Terrain profile: ${getTerrainLabel(inputs.terrain)}`,
+    `Survey plan delivery: ${getDeliveryZoneLabel(inputs.deliveryZone)} (${formatCurrency(surveyDeliveryFees[inputs.deliveryZone])})`,
+  ];
+
+  const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[]) => ({
+    serviceType: inputs.serviceType,
+    serviceLabel,
+    amount: sumLineItems(items),
+    detail,
+    lineItems: items,
+    selections: [...selections, ...extraSelections],
+    notes,
+  });
+
   if (inputs.serviceType === "parcellation") {
     const plots = parsePositiveNumber(inputs.plotCount);
-    if (!plots) return { amount: null, detail: "Enter number of plots to calculate the estimate." };
-    return calculateParcellationEstimate(plots);
+    if (!plots) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+    }
+
+    const base = calculateParcellationBaseEstimate(plots);
+    const items: EstimateLineItem[] = [
+      { label: `Parcellation survey base (${base.detail})`, amount: base.amount },
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [`Number of plots: ${Math.ceil(plots)}`],
+      base.detail,
+      [
+        "Parcellation totals include the selected delivery fee.",
+        "Registry or site-specific requirements can still adjust the final operational bill.",
+      ],
+    );
+  }
+
+  if (inputs.serviceType === "control" || inputs.serviceType === "engineering") {
+    return buildEmptyEstimate(
+      inputs.serviceType,
+      "Formal assessment is required for this selected service.",
+      [
+        "Control and engineering surveys vary with scope, control points, design requirements, and field access.",
+        `Selected delivery option: ${getDeliveryZoneLabel(inputs.deliveryZone)} (${formatCurrency(surveyDeliveryFees[inputs.deliveryZone])}).`,
+      ],
+    );
+  }
+
+  if (inputs.serviceType === "reestablishment") {
+    const quantity = parsePositiveNumber(inputs.reestablishmentCount);
+    if (!quantity) {
+      return buildEmptyEstimate(inputs.serviceType, `Enter number of ${getReestablishmentUnitLabel(inputs.reestablishmentMode)} to calculate the estimate.`);
+    }
+
+    const count = Math.ceil(quantity);
+    const baseRate = inputs.reestablishmentMode === "reestablish-destroyed-beacon" ? 70000 : 50000;
+    const baseAmount = count * baseRate;
+    const contingency = Math.round(baseAmount * 0.05);
+    const items: EstimateLineItem[] = [
+      {
+        label: `${getReestablishmentModeLabel(inputs.reestablishmentMode)} (${count} ${getReestablishmentUnitLabel(inputs.reestablishmentMode)})`,
+        amount: baseAmount,
+      },
+      {
+        label: "Contingency (5% of survey cost)",
+        amount: contingency,
+      },
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    const notes = [
+      "Contingency has been added automatically at 5% of the survey cost.",
+      "Identification of plot does not include transportation, recovery or detection costs beyond the selected option.",
+      "Final field conditions can still affect operational scheduling and access costs.",
+    ];
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Re-establishment option: ${getReestablishmentModeLabel(inputs.reestablishmentMode)}`,
+        `Quantity: ${count} ${getReestablishmentUnitLabel(inputs.reestablishmentMode)}`,
+      ],
+      `${getReestablishmentModeLabel(inputs.reestablishmentMode)} with contingency added.`,
+      notes,
+    );
+  }
+
+  if (inputs.serviceType === "change-of-title") {
+    const plots = parsePositiveNumber(inputs.plotCount);
+    if (!plots) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+    }
+
+    const count = Math.ceil(plots);
+    const rate = inputs.changeOfTitleState === "developed" ? 455000 : 350000;
+    const items: EstimateLineItem[] = [
+      {
+        label: `Site re-inspection for ${getChangeOfTitleStateLabel(inputs.changeOfTitleState).toLowerCase()} (${count} plot(s))`,
+        amount: count * rate,
+      },
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Site condition: ${getChangeOfTitleStateLabel(inputs.changeOfTitleState)}`,
+        `Number of plots: ${count}`,
+      ],
+      `Site re-inspection at ${formatCurrency(rate)} per plot.`,
+      [
+        "Undeveloped plots are charged at N350,000 per plot.",
+        "Developed plots are charged at N455,000 per plot for updating.",
+      ],
+    );
+  }
+
+  if (inputs.serviceType === "lifting") {
+    const plots = parsePositiveNumber(inputs.plotCount);
+    const squareMetres = toSquareMetres(inputs.parcelSize, inputs.parcelUnit);
+    if (!plots) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+    }
+    if (!squareMetres) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter parcel size to calculate the estimate.");
+    }
+
+    const count = Math.ceil(plots);
+    const items: EstimateLineItem[] = [];
+    const notes = [
+      "Lifting under 1,000 sq.m is charged at a minimum of N350,000 per plot.",
+      "Parcels from 1,000 sq.m upward are priced as perimeter survey.",
+    ];
+
+    let detail = "";
+    if (squareMetres < 1000) {
+      items.push({
+        label: `Lifting minimum for parcels below 1,000 sq.m (${count} plot(s))`,
+        amount: count * 350000,
+      });
+      detail = "Minimum N350,000 per plot applied.";
+    } else {
+      const perimeterBase = calculatePerimeterBaseEstimate(Math.max(squareMetres, 1000), inputs.clientType);
+      if (!perimeterBase) {
+        return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported perimeter survey table.");
+      }
+
+      const perimeterExtrasTotal = sumLineItems(perimeterExtraItems);
+      items.push({
+        label: `Perimeter-based lifting base (${perimeterBase.detail}) x ${count} plot(s)`,
+        amount: perimeterBase.amount * count,
+      });
+      items.push({
+        label: `Perimeter survey field operations x ${count} plot(s)`,
+        amount: perimeterExtrasTotal * count,
+      });
+      detail = `${perimeterBase.detail} perimeter pricing applied to lifting.`;
+    }
+
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Client type: ${getClientTypeLabel(inputs.clientType)}`,
+        `Parcel size: ${areaSelection}`,
+        `Number of plots: ${count}`,
+      ],
+      detail,
+      notes,
+    );
   }
 
   const squareMetres = toSquareMetres(inputs.parcelSize, inputs.parcelUnit);
-  if (!squareMetres && ["perimeter", "topography", "detail", "litigation"].includes(inputs.serviceType)) {
-    return { amount: null, detail: "Enter parcel size to calculate the estimate." };
+  if (!squareMetres) {
+    return buildEmptyEstimate(inputs.serviceType, "Enter parcel size to calculate the estimate.");
   }
 
   if (inputs.serviceType === "perimeter") {
-    return calculatePerimeterEstimate(squareMetres, inputs.clientType) ?? { amount: null, detail: "Enter a parcel size within the supported perimeter survey table." };
+    const base = calculatePerimeterBaseEstimate(squareMetres, inputs.clientType);
+    if (!base) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported perimeter survey table.");
+    }
+
+    const items: EstimateLineItem[] = [
+      { label: `Perimeter survey base (${base.detail})`, amount: base.amount },
+      ...perimeterExtraItems,
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Client type: ${getClientTypeLabel(inputs.clientType)}`,
+        `Parcel size: ${areaSelection}`,
+      ],
+      `${base.detail} plus perimeter field operations.`,
+      [
+        "Perimeter summary includes transportation, security, casual labourers, skilled labourer, and beacons.",
+        "These posted perimeter extras have been added to the total automatically.",
+      ],
+    );
   }
 
   if (inputs.serviceType === "topography") {
-    return calculateTopographyEstimate(squareMetres, inputs.topographyTerrain) ?? { amount: null, detail: "Enter a parcel size within the supported topography survey table." };
+    const base = calculateTopographyBaseEstimate(squareMetres, inputs.topographyTerrain);
+    if (!base) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported topography survey table.");
+    }
+
+    const items: EstimateLineItem[] = [
+      { label: `Topography survey base (${base.detail})`, amount: base.amount },
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Parcel size: ${areaSelection}`,
+        `Topography area type: ${base.detail.split(" ").slice(-2).join(" ")}`,
+      ],
+      base.detail,
+      [
+        "Topography estimate already reflects the selected terrain multiplier.",
+        "Field access, vegetation density, and control requirements can still shift the final bill.",
+      ],
+    );
   }
 
   if (inputs.serviceType === "detail") {
-    return calculateDetailEstimate(squareMetres, inputs.detailDensity);
+    const base = calculateDetailBaseEstimate(squareMetres, inputs.detailDensity);
+    const items: EstimateLineItem[] = [
+      { label: `Detail survey base (${base.detail})`, amount: base.amount },
+    ];
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Parcel size: ${areaSelection}`,
+        `Detail density: ${base.detail}`,
+      ],
+      base.detail,
+      [
+        "Detail survey estimate reflects the selected density multiplier.",
+        "Site accessibility and registry-ready output requirements can still affect the final field quote.",
+      ],
+    );
   }
 
   if (inputs.serviceType === "litigation") {
-    return calculateLitigationEstimate(squareMetres, inputs.clientType, inputs.courtAppearance) ?? { amount: null, detail: "Enter a parcel size within the supported litigation survey table." };
+    const base = calculateLitigationBaseEstimate(squareMetres, inputs.clientType);
+    if (!base) {
+      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported litigation survey table.");
+    }
+
+    const planCompilationRate = inputs.clientType === "private" ? 0.35 : 0.4;
+    const planCompilation = Math.round(base.amount * planCompilationRate);
+    const courtFee = inputs.courtAppearance === "yes"
+      ? inputs.clientType === "private" ? 150000 : 200000
+      : 0;
+
+    const items: EstimateLineItem[] = [
+      { label: `Litigation survey base (${base.detail})`, amount: base.amount },
+      {
+        label: `Plan compilation (${inputs.clientType === "private" ? "35%" : "40%"} of survey cost)`,
+        amount: planCompilation,
+      },
+    ];
+
+    if (courtFee) {
+      items.push({
+        label: "Court appearance minimum",
+        amount: courtFee,
+      });
+    }
+
+    addDeliveryLineItem(items, inputs.deliveryZone);
+
+    return addAmountAndSelections(
+      items,
+      [
+        `Client type: ${getClientTypeLabel(inputs.clientType)}`,
+        `Parcel size: ${areaSelection}`,
+        `Court appearance: ${inputs.courtAppearance === "yes" ? "Yes" : "No"}`,
+      ],
+      `${base.detail} with plan compilation added.`,
+      [
+        "Plan compilation for litigation has been added as 35% for private or 40% for corporate work.",
+        courtFee
+          ? "Court appearance minimum has been included in the total."
+          : "Court appearance minimum was not added because it was not selected.",
+      ],
+    );
   }
 
-  return { amount: null, detail: "Formal assessment is required for this selected service." };
+  return buildEmptyEstimate(inputs.serviceType, "Formal assessment is required for this selected service.");
 }
 
-const newSurveyDocuments = ["C of O", "Deed of Assignment", "Power of Attorney", "Allocation Letter"];
-const existingSurveyDocuments = ["Old Survey Plan", "Deed of Assignment", "Deed of Lease", "Power of Attorney"];
-const surveyDeliveryFees = {
-  enugu: 10000,
-  southeast: 15000,
-  other: 20000,
-};
+function buildEstimateNarrative(estimate: SurveyEstimate) {
+  const sections: string[] = [];
+
+  sections.push(`Estimator service: ${estimate.serviceLabel}`);
+  sections.push(`Estimator detail: ${estimate.detail}`);
+
+  if (estimate.amount !== null) {
+    sections.push(`Estimated total: ${formatCurrency(estimate.amount)}`);
+  }
+
+  if (estimate.selections.length > 0) {
+    sections.push(`Selections: ${estimate.selections.join(" | ")}`);
+  }
+
+  if (estimate.lineItems.length > 0) {
+    sections.push(`Transactions summary: ${estimate.lineItems.map((item) => `${item.label} - ${formatCurrency(item.amount)}`).join(" | ")}`);
+  }
+
+  if (estimate.notes.length > 0) {
+    sections.push(`Side notes: ${estimate.notes.join(" | ")}`);
+  }
+
+  return sections.join("\n");
+}
+
+function isCalculatorService(value: string): value is CalculatorService {
+  return calculatorServiceOptions.some((service) => service.value === value);
+}
 
 export default function SurveyPage() {
   const profile = dajemCompanyProfiles.survey;
@@ -318,12 +792,15 @@ export default function SurveyPage() {
     clientType: "private" as ClientType,
     parcelSize: "600",
     parcelUnit: "sqm",
-    plotCount: "5",
+    plotCount: "1",
     topographyTerrain: "open-savannah" as TopographyTerrain,
     detailDensity: "low" as DetailDensity,
     courtAppearance: "no",
     terrain: "flat",
-    deliveryZone: "enugu",
+    deliveryZone: "enugu" as keyof typeof surveyDeliveryFees,
+    reestablishmentMode: "identification-plot" as ReestablishmentMode,
+    reestablishmentCount: "1",
+    changeOfTitleState: "undeveloped" as ChangeOfTitleState,
   });
   const [unitConverter, setUnitConverter] = React.useState({
     fromUnit: "sqm",
@@ -332,20 +809,26 @@ export default function SurveyPage() {
   });
   const [quoteForm, setQuoteForm] = React.useState({
     location: "",
-    serviceType: defaultTechnicalService,
+    serviceType: "perimeter",
     description: "",
-    acquisitionSource: "former-owner",
-    acquisitionCompany: "DAJEM Orbital Resources Limited",
+    acquisitionSource: "dajem" as AcquisitionSource,
+    acquisitionCompany: "",
     hasExistingSurveyPlan: "yes",
     planNumber: "",
     planYear: "",
     uploadedDocuments: [] as string[],
     attested: false,
+    propertySearchLayout: "",
   });
-  const [uploadedFile, setUploadedFile] = React.useState<{ name: string; sizeKb: number } | null>(null);
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedDocumentAttachment[]>([]);
   const [dragActive, setDragActive] = React.useState(false);
   const [quoteSent, setQuoteSent] = React.useState(false);
+  const [quoteError, setQuoteError] = React.useState<string | null>(null);
+
   const calculatedEstimate = calculateSurveyEstimate(calculatorInputs);
+  const linkedInquiryEstimate = isCalculatorService(quoteForm.serviceType)
+    ? calculateSurveyEstimate({ ...calculatorInputs, serviceType: quoteForm.serviceType })
+    : null;
 
   const serviceIcons = [Ruler, Compass, Map, Layers];
   const services = snapshot.surveyServices
@@ -356,59 +839,325 @@ export default function SurveyPage() {
     }));
 
   const userSurveys = currentUser ? snapshot.surveys.filter((survey) => survey.userEmail === currentUser.email) : [];
-  const requiredDocuments = quoteForm.hasExistingSurveyPlan === "yes" ? existingSurveyDocuments : newSurveyDocuments;
-  const missingDocuments = requiredDocuments.filter((documentName) => !quoteForm.uploadedDocuments.includes(documentName));
-  const billingType = quoteForm.hasExistingSurveyPlan === "yes" ? "Change of Title" : "New Survey";
-  const selectedDeliveryFee = surveyDeliveryFees[calculatorInputs.deliveryZone as keyof typeof surveyDeliveryFees];
+  const billingType = quoteForm.serviceType === "change-of-title"
+    ? "Change of Title"
+    : quoteForm.hasExistingSurveyPlan === "no"
+      ? "New Survey"
+      : "Service Request";
   const convertedQuantity = fromSquareMetres(
     toSquareMetres(unitConverter.quantity, unitConverter.fromUnit),
     unitConverter.toUnit,
   );
 
+  const setCalculatorValue = <K extends keyof typeof calculatorInputs>(key: K, value: (typeof calculatorInputs)[K]) => {
+    setCalculatorInputs((current) => ({ ...current, [key]: value }));
+  };
+
+  const buildFilesFromList = (files: FileList | null, documentNames = quoteForm.uploadedDocuments) => {
+    if (!files) return [];
+    return Array.from(files).slice(0, documentNames.length).map((file, index) => ({
+      documentName: documentNames[index],
+      fileName: file.name,
+      fileSizeKb: Math.round(file.size / 1024),
+    }));
+  };
+
+  const setDocumentAttachment = (documentName: string, file: File | undefined) => {
+    setQuoteError(null);
+    setUploadedFiles((current) => {
+      const withoutCurrent = current.filter((attachment) => attachment.documentName !== documentName);
+      if (!file) return withoutCurrent;
+
+      return [
+        ...withoutCurrent,
+        {
+          documentName,
+          fileName: file.name,
+          fileSizeKb: Math.round(file.size / 1024),
+        },
+      ];
+    });
+  };
+
+  const toggleSubmittedDocument = (documentName: string, selected: boolean) => {
+    setQuoteForm((current) => ({
+      ...current,
+      uploadedDocuments: selected
+        ? [...current.uploadedDocuments, documentName]
+        : current.uploadedDocuments.filter((item) => item !== documentName),
+    }));
+
+    if (!selected) {
+      setUploadedFiles((current) => current.filter((attachment) => attachment.documentName !== documentName));
+    }
+  };
+
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragActive(false);
-    const file = event.dataTransfer.files?.[0];
-    if (!file) return;
-    setUploadedFile({ name: file.name, sizeKb: Math.round(file.size / 1024) });
+    setUploadedFiles(buildFilesFromList(event.dataTransfer.files));
   };
+
+  const handleInquiryServiceChange = (value: string) => {
+    setQuoteError(null);
+    setQuoteForm((current) => ({
+      ...current,
+      serviceType: value,
+      propertySearchLayout: value === "property-search" ? current.propertySearchLayout : "",
+      hasExistingSurveyPlan: value === "change-of-title" ? "yes" : current.hasExistingSurveyPlan,
+    }));
+
+    if (isCalculatorService(value)) {
+      setCalculatorInputs((current) => ({ ...current, serviceType: value }));
+    }
+  };
+
+  const renderSharedEstimatorFields = (serviceType: CalculatorService, idPrefix: string) => (
+    <>
+      {(serviceType === "perimeter" || serviceType === "litigation" || serviceType === "lifting") && (
+        <Select
+          label="Client Type"
+          value={calculatorInputs.clientType}
+          onChange={(event) => setCalculatorValue("clientType", event.target.value as ClientType)}
+          options={[
+            { value: "private", label: "Private/Individual" },
+            { value: "corporate", label: "Corporate" },
+          ]}
+        />
+      )}
+
+      {serviceType === "topography" && (
+        <Select
+          label="Topography Area Type"
+          value={calculatorInputs.topographyTerrain}
+          onChange={(event) => setCalculatorValue("topographyTerrain", event.target.value as TopographyTerrain)}
+          options={[
+            { value: "open-savannah", label: "Open Savannah" },
+            { value: "deciduous", label: "Deciduous" },
+            { value: "swamp", label: "Swamp Area" },
+          ]}
+        />
+      )}
+
+      {serviceType === "detail" && (
+        <Select
+          label="Density"
+          value={calculatorInputs.detailDensity}
+          onChange={(event) => setCalculatorValue("detailDensity", event.target.value as DetailDensity)}
+          options={[
+            { value: "low", label: "Low Density" },
+            { value: "medium", label: "Medium Density" },
+            { value: "high", label: "High Density" },
+          ]}
+        />
+      )}
+
+      {serviceType === "litigation" && (
+        <Select
+          label="Court Appearance"
+          value={calculatorInputs.courtAppearance}
+          onChange={(event) => setCalculatorValue("courtAppearance", event.target.value)}
+          options={[
+            { value: "no", label: "No" },
+            { value: "yes", label: "Yes" },
+          ]}
+        />
+      )}
+
+      {serviceType === "reestablishment" && (
+        <>
+          <Select
+            label="Re-establishment Option"
+            value={calculatorInputs.reestablishmentMode}
+            onChange={(event) => setCalculatorValue("reestablishmentMode", event.target.value as ReestablishmentMode)}
+            options={[
+              { value: "identification-plot", label: "Identification of Plot" },
+              { value: "recover-beacon", label: "Recovering a Beacon" },
+              { value: "uncover-beacon", label: "Uncovering a Beacon" },
+              { value: "detect-unfound-beacon", label: "Detecting / Identifying Lost or Unfound Beacon" },
+              { value: "reestablish-destroyed-beacon", label: "Re-establishment of Lost / Destroyed Beacons" },
+            ]}
+          />
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-reestablishment-count`}>
+              {calculatorInputs.reestablishmentMode === "identification-plot" ? "Number of Plots" : "Number of Beacons"}
+            </Label>
+            <Input
+              id={`${idPrefix}-reestablishment-count`}
+              inputMode="numeric"
+              min="1"
+              type="number"
+              value={calculatorInputs.reestablishmentCount}
+              onChange={(event) => setCalculatorValue("reestablishmentCount", event.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {serviceType === "change-of-title" && (
+        <>
+          <Select
+            label="Site Re-inspection Type"
+            value={calculatorInputs.changeOfTitleState}
+            onChange={(event) => setCalculatorValue("changeOfTitleState", event.target.value as ChangeOfTitleState)}
+            options={[
+              { value: "undeveloped", label: "Undeveloped Plot" },
+              { value: "developed", label: "Developed Plot" },
+            ]}
+          />
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-change-title-plots`}>Number of Plots</Label>
+            <Input
+              id={`${idPrefix}-change-title-plots`}
+              inputMode="numeric"
+              min="1"
+              type="number"
+              value={calculatorInputs.plotCount}
+              onChange={(event) => setCalculatorValue("plotCount", event.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      {(serviceType === "parcellation" || serviceType === "lifting") && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-plot-count`}>Number of Plots</Label>
+          <Input
+            id={`${idPrefix}-plot-count`}
+            inputMode="numeric"
+            min="1"
+            type="number"
+            value={calculatorInputs.plotCount}
+            onChange={(event) => setCalculatorValue("plotCount", event.target.value)}
+          />
+        </div>
+      )}
+
+      {["perimeter", "topography", "detail", "litigation", "lifting"].includes(serviceType) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_0.85fr]">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-parcel-size`}>Land Size</Label>
+            <Input
+              id={`${idPrefix}-parcel-size`}
+              inputMode="decimal"
+              placeholder="600"
+              value={calculatorInputs.parcelSize}
+              onChange={(event) => setCalculatorValue("parcelSize", event.target.value)}
+            />
+          </div>
+          <Select
+            label="Unit"
+            value={calculatorInputs.parcelUnit}
+            onChange={(event) => setCalculatorValue("parcelUnit", event.target.value)}
+            options={areaUnitOptions}
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Select
+          label="Terrain Profile"
+          value={calculatorInputs.terrain}
+          onChange={(event) => setCalculatorValue("terrain", event.target.value)}
+          options={[
+            { value: "flat", label: "Flat / Table land" },
+            { value: "hilly", label: "Hilly / Mountainous" },
+            { value: "swampy", label: "Swamp / Waterlogged" },
+          ]}
+        />
+        <Select
+          label="Survey Plan Delivery"
+          value={calculatorInputs.deliveryZone}
+          onChange={(event) => setCalculatorValue("deliveryZone", event.target.value as keyof typeof surveyDeliveryFees)}
+          options={[
+            { value: "enugu", label: "Within Enugu State - N10,000" },
+            { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi - N15,000" },
+            { value: "other", label: "Other States - N20,000" },
+          ]}
+        />
+      </div>
+    </>
+  );
 
   const handleQuoteSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setQuoteError(null);
+
     if (!requireAuth("signup")) return;
     if (!quoteForm.attested) return;
 
+    if (quoteForm.serviceType === "property-search" && !quoteForm.propertySearchLayout) {
+      setQuoteError("Please select the LANDS/ESTATE/LAYOUT item for this property search request.");
+      return;
+    }
+
+    const missingAttachments = quoteForm.uploadedDocuments.filter((documentName) => (
+      !uploadedFiles.some((attachment) => attachment.documentName === documentName)
+    ));
+
+    if (missingAttachments.length > 0) {
+      setQuoteError(`Attach the selected document before submitting: ${missingAttachments.join(", ")}.`);
+      return;
+    }
+
+    const estimateNarrative = linkedInquiryEstimate ? buildEstimateNarrative(linkedInquiryEstimate) : null;
+    const propertySourceName = quoteForm.acquisitionCompany.trim();
+    const narrativeBlocks = [
+      quoteForm.description.trim(),
+      `Requested service: ${getInquiryServiceLabel(quoteForm.serviceType)}`,
+      quoteForm.propertySearchLayout ? `Property search selection: ${quoteForm.propertySearchLayout}` : "",
+      `Property acquired from: ${
+        quoteForm.acquisitionSource === "community"
+          ? "Community"
+          : quoteForm.acquisitionSource === "estate-developer"
+            ? `Estate Developer${propertySourceName ? ` - ${propertySourceName}` : ""}`
+            : quoteForm.acquisitionSource === "dajem"
+              ? "Dajem"
+              : `Others${propertySourceName ? ` - ${propertySourceName}` : ""}`
+      }`,
+      `Document submission checklist: ${quoteForm.uploadedDocuments.length > 0 ? quoteForm.uploadedDocuments.join(", ") : "No document selected"}`,
+      uploadedFiles.length > 0 ? `Attached files: ${uploadedFiles.map((file) => `${file.documentName}: ${file.fileName} (${file.fileSizeKb} KB)`).join(", ")}` : "",
+      estimateNarrative ?? "",
+    ].filter(Boolean);
+
+    const attachmentSummary = uploadedFiles.length > 0
+      ? `${uploadedFiles.length} file(s): ${uploadedFiles.map((file) => `${file.documentName} - ${file.fileName}`).join(", ")}`
+      : undefined;
+    const totalAttachmentSize = uploadedFiles.reduce((total, file) => total + file.fileSizeKb, 0);
+
     await submitSurvey({
       location: quoteForm.location,
-      serviceType: quoteForm.serviceType,
-      description: quoteForm.description,
-      fileName: uploadedFile?.name,
-      fileSizeKb: uploadedFile?.sizeKb,
+      serviceType: getInquiryServiceLabel(quoteForm.serviceType),
+      description: narrativeBlocks.join("\n\n"),
+      fileName: attachmentSummary,
+      fileSizeKb: totalAttachmentSize || undefined,
       acquisitionSource: quoteForm.acquisitionSource,
-      acquisitionCompany: quoteForm.acquisitionSource === "company" ? quoteForm.acquisitionCompany : undefined,
-      hasExistingSurveyPlan: quoteForm.hasExistingSurveyPlan === "yes",
+      acquisitionCompany: propertySourceName || undefined,
+      hasExistingSurveyPlan: quoteForm.serviceType === "change-of-title" || quoteForm.hasExistingSurveyPlan === "yes",
       planNumber: quoteForm.planNumber,
       planYear: quoteForm.planYear,
       billingType,
       uploadedDocuments: quoteForm.uploadedDocuments,
-      missingDocuments,
+      documentAttachments: uploadedFiles,
       attested: quoteForm.attested,
     });
 
     setQuoteSent(true);
     setQuoteForm({
       location: "",
-      serviceType: defaultTechnicalService,
+      serviceType: "perimeter",
       description: "",
-      acquisitionSource: "former-owner",
-      acquisitionCompany: "DAJEM Orbital Resources Limited",
+      acquisitionSource: "dajem",
+      acquisitionCompany: "",
       hasExistingSurveyPlan: "yes",
       planNumber: "",
       planYear: "",
       uploadedDocuments: [],
       attested: false,
+      propertySearchLayout: "",
     });
-    setUploadedFile(null);
+    setUploadedFiles([]);
+    setQuoteError(null);
   };
 
   return (
@@ -489,7 +1238,7 @@ export default function SurveyPage() {
         </section>
 
         <section id="calculator" className="border-y border-border bg-muted/30 py-20">
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 lg:grid-cols-2">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-4 lg:grid-cols-2">
             <Card className="border bg-card p-8 shadow-lg">
               <h3 className="mb-6 flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">
                 <Calculator className="h-5 w-5 text-cyan-500" />
@@ -499,131 +1248,73 @@ export default function SurveyPage() {
                 <Select
                   label="Select Geomatics Survey"
                   value={calculatorInputs.serviceType}
-                  onChange={(event) => setCalculatorInputs((current) => ({ ...current, serviceType: event.target.value as CalculatorService }))}
-                  options={technicalServiceOptions}
+                  onChange={(event) => setCalculatorValue("serviceType", event.target.value as CalculatorService)}
+                  options={calculatorServiceOptions}
                 />
-                {(calculatorInputs.serviceType === "perimeter" || calculatorInputs.serviceType === "litigation") && (
-                  <Select
-                    label="Client Type"
-                    value={calculatorInputs.clientType}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, clientType: event.target.value as ClientType }))}
-                    options={[
-                      { value: "private", label: "Private/Individual" },
-                      { value: "corporate", label: "Corporate" },
-                    ]}
-                  />
-                )}
 
-                {calculatorInputs.serviceType === "topography" && (
-                  <Select
-                    label="Topography Area Type"
-                    value={calculatorInputs.topographyTerrain}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, topographyTerrain: event.target.value as TopographyTerrain }))}
-                    options={[
-                      { value: "open-savannah", label: "Open Savannah" },
-                      { value: "deciduous", label: "Deciduous" },
-                      { value: "swamp", label: "Swamp Area" },
-                    ]}
-                  />
-                )}
+                {renderSharedEstimatorFields(calculatorInputs.serviceType, "calculator")}
 
-                {calculatorInputs.serviceType === "detail" && (
-                  <Select
-                    label="Density"
-                    value={calculatorInputs.detailDensity}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, detailDensity: event.target.value as DetailDensity }))}
-                    options={[
-                      { value: "low", label: "Low Density" },
-                      { value: "medium", label: "Medium Density" },
-                      { value: "high", label: "High Density" },
-                    ]}
-                  />
-                )}
-
-                {calculatorInputs.serviceType === "litigation" && (
-                  <Select
-                    label="Court Appearance"
-                    value={calculatorInputs.courtAppearance}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, courtAppearance: event.target.value }))}
-                    options={[
-                      { value: "no", label: "No" },
-                      { value: "yes", label: "Yes" },
-                    ]}
-                  />
-                )}
-
-                {calculatorInputs.serviceType === "parcellation" ? (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="plot-count">Number Of Plots</Label>
-                    <Input
-                      id="plot-count"
-                      inputMode="numeric"
-                      min="1"
-                      type="number"
-                      value={calculatorInputs.plotCount}
-                      onChange={(event) => setCalculatorInputs((current) => ({ ...current, plotCount: event.target.value }))}
-                    />
-                  </div>
-                ) : ["perimeter", "topography", "detail", "litigation"].includes(calculatorInputs.serviceType) && (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_0.85fr]">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="parcel-size">Land Size</Label>
-                      <Input
-                        id="parcel-size"
-                        inputMode="decimal"
-                        placeholder="600"
-                        value={calculatorInputs.parcelSize}
-                        onChange={(event) => setCalculatorInputs((current) => ({ ...current, parcelSize: event.target.value }))}
-                      />
-                    </div>
-                    <Select
-                      label="Unit"
-                      value={calculatorInputs.parcelUnit}
-                      onChange={(event) => setCalculatorInputs((current) => ({ ...current, parcelUnit: event.target.value }))}
-                      options={areaUnitOptions}
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Select
-                    label="Terrain Profile"
-                    value={calculatorInputs.terrain}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, terrain: event.target.value }))}
-                    options={[
-                      { value: "flat", label: "Flat/table land" },
-                      { value: "hilly", label: "Hilly / Mountainous" },
-                      { value: "swampy", label: "Swamp / Waterlogged" },
-                    ]}
-                  />
-                  <Select
-                    label="Survey Plan Delivery"
-                    value={calculatorInputs.deliveryZone}
-                    onChange={(event) => setCalculatorInputs((current) => ({ ...current, deliveryZone: event.target.value }))}
-                    options={[
-                      { value: "enugu", label: "Within Enugu State - N10,000" },
-                      { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi - N15,000" },
-                      { value: "other", label: "Other States - N20,000" },
-                    ]}
-                  />
-                </div>
-                <div className="mt-8 space-y-2 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-6 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estimated Project Budget</p>
-                  {calculatedEstimate.amount ? (
-                    <p className="text-3xl font-extrabold text-cyan-600 dark:text-cyan-400">
-                      {formatCurrency(calculatedEstimate.amount)}
+                <div className="mt-8 space-y-4 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-6">
+                  <div className="text-center">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estimated Project Budget</p>
+                    {calculatedEstimate.amount ? (
+                      <p className="text-3xl font-extrabold text-cyan-600 dark:text-cyan-400">
+                        {formatCurrency(calculatedEstimate.amount)}
+                      </p>
+                    ) : (
+                      <p className="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">Official Assessment Required</p>
+                    )}
+                    <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
+                      <Info className="h-3 w-3 shrink-0 text-cyan-500" />
+                      {calculatedEstimate.detail}
                     </p>
-                  ) : (
-                    <p className="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">Official Assessment Required</p>
-                  )}
-                  <p className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
-                    <Info className="h-3 w-3 shrink-0 text-cyan-500" />
-                    {calculatedEstimate.detail}
-                  </p>
-                  <div className="mt-4 rounded-lg border border-cyan-500/20 bg-background/70 p-3 text-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Survey Plan Delivery Available</p>
-                    <p className="mt-1 font-bold text-cyan-600 dark:text-cyan-400">{formatCurrency(selectedDeliveryFee)}</p>
                   </div>
+
+                  {calculatedEstimate.lineItems.length > 0 && (
+                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transaction Summary</p>
+                      <div className="mt-3 space-y-2">
+                        {calculatedEstimate.lineItems.map((item) => (
+                          <div key={item.label} className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">{item.label}</span>
+                            <span className="font-semibold text-foreground">{formatCurrency(item.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected Details</p>
+                      <div className="mt-3 space-y-2">
+                        {calculatedEstimate.selections.map((selection) => (
+                          <p key={selection} className="text-muted-foreground">{selection}</p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Side Notes</p>
+                      <div className="mt-3 space-y-2">
+                        {calculatedEstimate.notes.length > 0 ? calculatedEstimate.notes.map((note) => (
+                          <p key={note} className="text-muted-foreground">{note}</p>
+                        )) : (
+                          <p className="text-muted-foreground">Formal field assessment may still be required for the final operational quote.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="w-full bg-cyan-600 text-white hover:bg-cyan-700"
+                    onClick={() => {
+                      handleInquiryServiceChange(calculatorInputs.serviceType);
+                      document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    Use This Estimate In Inquiry Desk
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -632,7 +1323,7 @@ export default function SurveyPage() {
               <Badge variant="secondary">Cost Parameters</Badge>
               <h3 className="text-3xl font-bold text-primary dark:text-foreground">Transparent Survey Fees</h3>
               <p className="leading-relaxed text-muted-foreground">
-                Costs change with terrain difficulty, accessibility, vegetation density, and registry requirements. The estimator gives a close operational range before field inspection.
+                Costs change with terrain difficulty, accessibility, vegetation density, and registry requirements. The estimator now rolls the posted extras into the total and keeps the same summary ready for the inquiry desk.
               </p>
               <div className="grid grid-cols-2 gap-4 border-t pt-6 text-xs font-bold text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -703,11 +1394,11 @@ export default function SurveyPage() {
               <Badge variant="secondary" className="mb-2">Inquiry Desk</Badge>
               <h3 className="text-2xl font-bold text-primary dark:text-foreground">Request Formal Survey Proposal</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Attach any old allocation letters or layouts and follow the request from your shared dashboard.
+                The inquiry desk now carries the same estimator details, transaction summary, and side notes into the request record.
               </p>
             </div>
 
-            <form onSubmit={handleQuoteSubmit} className="space-y-4">
+            <form onSubmit={handleQuoteSubmit} className="space-y-5">
               {!currentUser && (
                 <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                   <p className="mb-3">Sign in first so we can attach this request to your shared dashboard and tracker.</p>
@@ -723,13 +1414,25 @@ export default function SurveyPage() {
               <Select
                 label="Desired Technical Service"
                 value={quoteForm.serviceType}
-                onChange={(event) => setQuoteForm((current) => ({ ...current, serviceType: event.target.value }))}
-                options={serviceFeeOptions.map((service) => ({ value: service, label: service }))}
+                onChange={(event) => handleInquiryServiceChange(event.target.value)}
+                options={inquiryServiceOptions}
               />
+
+              {quoteForm.serviceType === "property-search" && (
+                <Select
+                  label="LANDS/ESTATE/LAYOUT"
+                  value={quoteForm.propertySearchLayout}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, propertySearchLayout: event.target.value }))}
+                  options={[
+                    { value: "", label: "Select a property search target" },
+                    ...propertySearchLayouts.map((layout) => ({ value: layout, label: layout })),
+                  ]}
+                />
+              )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="q-loc">Land Location / City</Label>
+                  <Label htmlFor="q-loc">Property Location / City</Label>
                   <Input
                     id="q-loc"
                     required
@@ -741,38 +1444,59 @@ export default function SurveyPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Select
-                  label="Land Acquired From"
+                  label="Property Acquired From"
                   value={quoteForm.acquisitionSource}
-                  onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionSource: event.target.value }))}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionSource: event.target.value as AcquisitionSource, acquisitionCompany: "" }))}
                   options={[
-                    { value: "former-owner", label: "Former Owner" },
-                    { value: "agent", label: "Agent" },
-                    { value: "company", label: "Company" },
-                    { value: "other", label: "Other" },
+                    { value: "community", label: "Community" },
+                    { value: "estate-developer", label: "Estate Developer" },
+                    { value: "dajem", label: "Dajem" },
+                    { value: "other", label: "Others" },
                   ]}
                 />
-                {quoteForm.acquisitionSource === "company" && (
+                {(quoteForm.acquisitionSource === "estate-developer" || quoteForm.acquisitionSource === "other") && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="source-name">
+                      {quoteForm.acquisitionSource === "estate-developer" ? "Estate Developer Name" : "Person / Source Name"}
+                    </Label>
+                    <Input
+                      id="source-name"
+                      required={quoteForm.acquisitionSource === "other"}
+                      value={quoteForm.acquisitionCompany}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionCompany: event.target.value }))}
+                    />
+                  </div>
+                )}
+                {quoteForm.serviceType !== "change-of-title" && quoteForm.acquisitionSource !== "estate-developer" && quoteForm.acquisitionSource !== "other" && (
                   <Select
-                    label="Company"
-                    value={quoteForm.acquisitionCompany}
-                    onChange={(event) => setQuoteForm((current) => ({ ...current, acquisitionCompany: event.target.value }))}
+                    label="Existing Survey Plan"
+                    value={quoteForm.hasExistingSurveyPlan}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, hasExistingSurveyPlan: event.target.value }))}
                     options={[
-                      { value: "DAJEM Orbital Resources Limited", label: "DAJEM Orbital Resources Limited" },
-                      { value: "DAJEM Homes Limited", label: "DAJEM Homes Limited" },
-                      { value: "Others", label: "Others" },
+                      { value: "yes", label: "Yes - Existing survey plan available" },
+                      { value: "no", label: "No - No existing survey plan" },
                     ]}
                   />
                 )}
+              </div>
+
+              {quoteForm.serviceType !== "change-of-title" && (quoteForm.acquisitionSource === "estate-developer" || quoteForm.acquisitionSource === "other") && (
                 <Select
                   label="Existing Survey Plan"
                   value={quoteForm.hasExistingSurveyPlan}
-                  onChange={(event) => setQuoteForm((current) => ({ ...current, hasExistingSurveyPlan: event.target.value, uploadedDocuments: [] }))}
+                  onChange={(event) => setQuoteForm((current) => ({ ...current, hasExistingSurveyPlan: event.target.value }))}
                   options={[
-                    { value: "yes", label: "Yes - Change of Title" },
-                    { value: "no", label: "No - New Survey" },
+                    { value: "yes", label: "Yes - Existing survey plan available" },
+                    { value: "no", label: "No - No existing survey plan" },
                   ]}
                 />
-              </div>
+              )}
+
+              {quoteForm.serviceType === "change-of-title" && (
+                <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Change of Title requires an existing survey plan. Add the plan number and year below when available.
+                </div>
+              )}
 
               {quoteForm.hasExistingSurveyPlan === "yes" && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -797,6 +1521,73 @@ export default function SurveyPage() {
                 </div>
               )}
 
+              {isCalculatorService(quoteForm.serviceType) && (
+                <div className="rounded-xl border bg-muted/30 p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">Linked Estimate Details</p>
+                      <p className="text-xs text-muted-foreground">These selections stay connected to the main estimator.</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
+                      Review Main Estimator
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {renderSharedEstimatorFields(quoteForm.serviceType, "quote")}
+
+                    {linkedInquiryEstimate && (
+                      <div className="space-y-4 rounded-lg border bg-background/70 p-4 text-sm">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estimator Detail</p>
+                          <p className="mt-2 font-semibold text-foreground">{linkedInquiryEstimate.detail}</p>
+                          {linkedInquiryEstimate.amount !== null && (
+                            <p className="mt-2 text-lg font-extrabold text-cyan-600 dark:text-cyan-400">
+                              {formatCurrency(linkedInquiryEstimate.amount)}
+                            </p>
+                          )}
+                        </div>
+
+                        {linkedInquiryEstimate.lineItems.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transactions Summary</p>
+                            <div className="mt-2 space-y-2">
+                              {linkedInquiryEstimate.lineItems.map((item) => (
+                                <div key={item.label} className="flex items-center justify-between gap-4">
+                                  <span className="text-muted-foreground">{item.label}</span>
+                                  <span className="font-semibold text-foreground">{formatCurrency(item.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected Details</p>
+                            <div className="mt-2 space-y-2">
+                              {linkedInquiryEstimate.selections.map((selection) => (
+                                <p key={selection} className="text-muted-foreground">{selection}</p>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Side Notes</p>
+                            <div className="mt-2 space-y-2">
+                              {linkedInquiryEstimate.notes.length > 0 ? linkedInquiryEstimate.notes.map((note) => (
+                                <p key={note} className="text-muted-foreground">{note}</p>
+                              )) : (
+                                <p className="text-muted-foreground">Formal field assessment may still be required.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="q-desc">Other Details</Label>
                 <Textarea
@@ -809,37 +1600,37 @@ export default function SurveyPage() {
               </div>
 
               <div className="rounded-xl border bg-muted/30 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="mb-3">
                   <div>
-                    <p className="font-semibold text-foreground">Document Checklist</p>
-                    <p className="text-xs text-muted-foreground">Missing documents are saved in your profile and request tracker.</p>
+                    <p className="font-semibold text-foreground">Document Submission Checklist</p>
+                    <p className="text-xs text-muted-foreground">Select the document you are adding for this device.</p>
                   </div>
-                  <Badge variant="outline">{billingType}</Badge>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {requiredDocuments.map((documentName) => (
+                  {documentSubmissionOptions.map((documentName) => (
                     <label key={documentName} className="flex items-center gap-3 rounded-lg border bg-background/70 p-3 text-sm">
                       <input
                         type="checkbox"
                         checked={quoteForm.uploadedDocuments.includes(documentName)}
-                        onChange={(event) => setQuoteForm((current) => ({
-                          ...current,
-                          uploadedDocuments: event.target.checked
-                            ? [...current.uploadedDocuments, documentName]
-                            : current.uploadedDocuments.filter((item) => item !== documentName),
-                        }))}
+                        onChange={(event) => toggleSubmittedDocument(documentName, event.target.checked)}
                       />
                       <span>{documentName}</span>
                     </label>
                   ))}
                 </div>
-                {missingDocuments.length > 0 && (
-                  <p className="mt-3 text-xs text-muted-foreground">Not yet uploaded: {missingDocuments.join(", ")}</p>
-                )}
+                <div className="mt-3 text-xs text-muted-foreground">
+                  <p>Summary</p>
+                  <p>1. Land Purchase Receipt.</p>
+                  <p>2. Allocation Letter.</p>
+                  <p>3. Deed of Lease/Assignment/Conveyance/Gift.</p>
+                  <p>4. Irrevocable Power Of Attorney.</p>
+                  <p>5. Old Survey Plan.</p>
+                  <p>6. Others.</p>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label>Attach Allocation Letter / Old Survey (Optional)</Label>
+                <Label>Attach All Selected Documents</Label>
                 <div
                   onDragOver={(event) => {
                     event.preventDefault();
@@ -851,34 +1642,69 @@ export default function SurveyPage() {
                 >
                   <div className="flex flex-col items-center justify-center gap-3 text-center">
                     <div className="rounded-full bg-background p-3 shadow-sm">
-                      {uploadedFile ? <FileUp className="h-5 w-5 text-cyan-600" /> : <UploadCloud className="h-5 w-5 text-cyan-600" />}
+                      {uploadedFiles.length > 0 ? <FileUp className="h-5 w-5 text-cyan-600" /> : <UploadCloud className="h-5 w-5 text-cyan-600" />}
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">
-                        {uploadedFile ? uploadedFile.name : "Drop a document here or simulate an upload"}
+                        {uploadedFiles.length > 0 ? `${uploadedFiles.length} file(s) attached` : "Drop documents here or simulate an upload"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {uploadedFile ? `${uploadedFile.sizeKb} KB attached` : "PDF, JPG, or PNG up to 5MB"}
+                        {uploadedFiles.length > 0 ? "Each selected document should have a matching attachment." : "PDF, JPG, or PNG up to 5MB each"}
                       </p>
                     </div>
+                    {uploadedFiles.length > 0 && (
+                      <div className="w-full rounded-lg border bg-background/70 p-3 text-left text-xs text-muted-foreground">
+                        {uploadedFiles.map((file) => (
+                          <p key={`${file.documentName}-${file.fileName}`}>{file.documentName}: {file.fileName} - {file.fileSizeKb} KB</p>
+                        ))}
+                      </div>
+                    )}
+                    {quoteForm.uploadedDocuments.length > 0 && (
+                      <div className="grid w-full gap-3 text-left sm:grid-cols-2">
+                        {quoteForm.uploadedDocuments.map((documentName) => {
+                          const attachment = uploadedFiles.find((file) => file.documentName === documentName);
+
+                          return (
+                            <div key={documentName} className="rounded-lg border bg-background/70 p-3">
+                              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{documentName}</p>
+                              <Input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(event) => setDocumentAttachment(documentName, event.target.files?.[0])}
+                              />
+                              {attachment && (
+                                <p className="mt-2 text-xs text-muted-foreground">{attachment.fileName} - {attachment.fileSizeKb} KB</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-3">
                       <Input
                         type="file"
+                        multiple
                         accept=".pdf,.jpg,.jpeg,.png"
                         onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          if (file) setUploadedFile({ name: file.name, sizeKb: Math.round(file.size / 1024) });
+                          setUploadedFiles(buildFilesFromList(event.target.files));
+                          setQuoteError(null);
                         }}
                       />
-                      {uploadedFile && (
-                        <Button type="button" variant="ghost" onClick={() => setUploadedFile(null)}>
-                          Remove File
+                      {uploadedFiles.length > 0 && (
+                        <Button type="button" variant="ghost" onClick={() => setUploadedFiles([])}>
+                          Remove Files
                         </Button>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {quoteError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                  {quoteError}
+                </div>
+              )}
 
               <label className="flex gap-3 rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                 <input
@@ -887,7 +1713,7 @@ export default function SurveyPage() {
                   onChange={(event) => setQuoteForm((current) => ({ ...current, attested: event.target.checked }))}
                   required
                 />
-                <span>I attest that every information submitted is true , accurate and legally binding , I understand that processing may take 24hrs for research reports to come out</span>
+                <span>I attest that every information submitted is true, accurate and legally binding. I understand that processing may take 24 hours for research reports to come out.</span>
               </label>
 
               <Button type="submit" className="w-full bg-cyan-600 text-white hover:bg-cyan-700" disabled={!quoteForm.attested}>
@@ -925,18 +1751,27 @@ export default function SurveyPage() {
                   <CardContent className="space-y-2">
                     <p className="text-xs font-semibold text-cyan-600">{survey.applicationNumber ?? survey.id}</p>
                     <p className="text-sm text-muted-foreground">{survey.serviceType}</p>
-                    <p className="text-sm text-muted-foreground">{survey.description}</p>
+                    <p className="whitespace-pre-line text-sm text-muted-foreground">{survey.description}</p>
                     {survey.billingType && (
                       <Badge variant="outline">{survey.billingType}</Badge>
+                    )}
+                    {survey.uploadedDocuments && survey.uploadedDocuments.length > 0 && (
+                      <p className="text-xs text-muted-foreground">Documents selected: {survey.uploadedDocuments.join(", ")}</p>
+                    )}
+                    {survey.documentAttachments && survey.documentAttachments.length > 0 && (
+                      <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                        {survey.documentAttachments.map((attachment) => (
+                          <p key={`${attachment.documentName}-${attachment.fileName}`}>
+                            {attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)
+                          </p>
+                        ))}
+                      </div>
                     )}
                     {survey.paymentStatus && (
                       <p className="text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
                     )}
                     {survey.processingNote && (
                       <p className="text-xs text-muted-foreground">{survey.processingNote}</p>
-                    )}
-                    {survey.missingDocuments && survey.missingDocuments.length > 0 && (
-                      <p className="text-xs text-muted-foreground">Missing documents: {survey.missingDocuments.join(", ")}</p>
                     )}
                     {survey.fileName && (
                       <p className="text-xs text-muted-foreground">Attached: {survey.fileName}</p>

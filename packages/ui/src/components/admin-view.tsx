@@ -855,7 +855,19 @@ export function AdminView() {
                   </div>
                   <Shield className="h-4 w-4 text-emerald-500" />
                 </div>
-                <p className="mb-3 text-sm text-muted-foreground">{survey.description}</p>
+                <p className="mb-3 whitespace-pre-line text-sm text-muted-foreground">{survey.description}</p>
+                {survey.uploadedDocuments && survey.uploadedDocuments.length > 0 && (
+                  <p className="mb-3 text-xs text-muted-foreground">Documents selected: {survey.uploadedDocuments.join(", ")}</p>
+                )}
+                {survey.documentAttachments && survey.documentAttachments.length > 0 && (
+                  <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    {survey.documentAttachments.map((attachment) => (
+                      <p key={`${attachment.documentName}-${attachment.fileName}`}>
+                        {attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <Select
                   value={survey.status}
                   onChange={(event) => void updateSurveyStatus(survey.id, event.target.value as typeof survey.status)}

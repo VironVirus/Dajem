@@ -239,12 +239,21 @@ export function DashboardView() {
                     {survey.status}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{survey.description}</p>
+                <p className="whitespace-pre-line text-sm text-muted-foreground">{survey.description}</p>
                 {survey.paymentStatus && (
                   <p className="mt-2 text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
                 )}
-                {survey.missingDocuments && survey.missingDocuments.length > 0 && (
-                  <p className="mt-2 text-xs text-muted-foreground">Missing documents: {survey.missingDocuments.join(", ")}</p>
+                {survey.uploadedDocuments && survey.uploadedDocuments.length > 0 && (
+                  <p className="mt-2 text-xs text-muted-foreground">Documents selected: {survey.uploadedDocuments.join(", ")}</p>
+                )}
+                {survey.documentAttachments && survey.documentAttachments.length > 0 && (
+                  <div className="mt-2 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    {survey.documentAttachments.map((attachment) => (
+                      <p key={`${attachment.documentName}-${attachment.fileName}`}>
+                        {attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)
+                      </p>
+                    ))}
+                  </div>
                 )}
                 {survey.status === "Completed & Sent" && survey.completedFileName && (
                   <a
