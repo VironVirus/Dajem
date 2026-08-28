@@ -14,7 +14,7 @@
   "scripts": {
     "build": "npm run build --workspace landing",
     "dev": "npm run dev --workspace landing",
-    "start": "npm run start --workspace landing",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "npm run lint --workspace landing",
     "deploy:check": "npm run build"
   }

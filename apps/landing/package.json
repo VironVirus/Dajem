@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "postbuild": "mkdir -p .next/standalone/apps/landing/public .next/standalone/apps/landing/.next ../../.next/standalone && cp -R public/. .next/standalone/apps/landing/public/ && cp -R .next/static .next/standalone/apps/landing/.next/static && cp -R .next/standalone/. ../../.next/standalone/ && cp scripts/hostinger-standalone-server.cjs ../../.next/standalone/server.js",
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/landing/server.js",
     "lint": "next lint"
   },
   "dependencies": {

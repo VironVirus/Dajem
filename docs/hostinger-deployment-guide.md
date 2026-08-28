@@ -101,14 +101,42 @@ Install command: npm install --include=dev
 Build command: npm run build
 Start command: npm run start
 Project/root path: repository root
-Output directory if requested: apps/landing/.next
+Output directory if requested: .next
 ```
 
 If Hostinger asks for an entry file, leave it blank for Next.js when possible. The `npm run start` command starts the app.
 
+If the framework is shown as `Other`, use these values because this repository is a workspace with the actual Next.js app in `apps/landing`:
+
+```text
+Node.js version: 20.x
+Project/root path: repository root
+Install command: npm install --include=dev
+Build command: npm run build
+Start command: npm run start
+Output directory: .next
+Entry file: leave blank
+```
+
+If Hostinger offers a separate frontend/backend choice, choose the backend/server-side option. This app has Next.js API routes, so it must run as a Node.js server rather than as a static frontend.
+
 If the build log shows `turbo run build` or `sh: turbo: command not found`, Hostinger is deploying an older version of the repository. Push the latest commit, then redeploy. The current root `build` script should run `npm run build --workspace landing`.
 
-If Hostinger skips build-time packages because production env variables are active during install, keep the install command as `npm install --include=dev`. The runtime still starts in production through `next start`.
+If Hostinger skips build-time packages because production env variables are active during install, keep the install command as `npm install --include=dev`. The runtime starts in production through the generated standalone Next.js server.
+
+### If the domain shows 403 Forbidden
+
+A successful build does not by itself connect the domain to the Next.js process. If the domain shows Hostinger's `403 Forbidden` page:
+
+1. Open the DAJEM Node.js website dashboard, not a separate PHP/HTML website dashboard.
+2. If Hostinger provides a frontend/backend application type, confirm it is the backend/server-side option. If the only framework value available is `Other`, keep `Other` and use the server commands above.
+3. Confirm `dajem.consolish.com` is connected to this Node.js website using `Connect domain`.
+4. Confirm the Node.js application status is `Running`, then use `Restart`.
+5. Redeploy once more so Hostinger regenerates the routing file at `public_html/.htaccess`.
+
+Do not copy the Next.js build into `public_html` or create a static `index.html` as a workaround. The Node.js website must own the domain and route requests to the application. If the domain was first created as a normal website, it may need to be removed from that website (after taking a backup) before connecting it to the Node.js website.
+
+To check each item in hPanel, open `Websites` and click `Dashboard` beside the Node.js website. Use `Settings & Redeploy` for the framework, root path, commands, and output directory; `Environment Variables` for the Supabase and DAJEM values; `Deployments` for the build result; and the `Running` status or `Restart` control for the server process. In `File Manager`, open `domains/dajem.consolish.com/public_html`, enable hidden files if necessary, and confirm Hostinger created `.htaccess` there. Do not edit or replace that file before trying a redeploy.
 
 ## 6. Add Environment Variables In Hostinger
 
