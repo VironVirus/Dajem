@@ -3,17 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
   "workspaces": [
-    "apps/*",
+    "apps/landing",
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "lint": "turbo run lint",
-    "clean": "turbo run clean"
-  },
-  "devDependencies": {
-    "turbo": "^2.0.12"
+    "build": "npm run build --workspace landing",
+    "dev": "npm run dev --workspace landing",
+    "start": "npm run start --workspace landing",
+    "lint": "npm run lint --workspace landing",
+    "deploy:check": "npm run build"
   }
 }

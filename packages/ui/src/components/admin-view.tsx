@@ -90,9 +90,9 @@ const approvalStatuses: { value: ApprovalStatus; label: string }[] = [
   { value: "Rejected", label: "Rejected" },
 ];
 
-const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
-const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.png";
+const homesImageUrl = "/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
 
 const propertyTypes: { value: PropertyType; label: string }[] = [
   { value: "sale", label: "For Sale" },
@@ -862,9 +862,12 @@ export function AdminView() {
                 {survey.documentAttachments && survey.documentAttachments.length > 0 && (
                   <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
                     {survey.documentAttachments.map((attachment) => (
-                      <p key={`${attachment.documentName}-${attachment.fileName}`}>
-                        {attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)
-                      </p>
+                      <div key={`${attachment.documentName}-${attachment.fileName}`} className="space-y-0.5">
+                        <p>{attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)</p>
+                        {attachment.storagePath && (
+                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Stored: {attachment.storagePath}</p>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

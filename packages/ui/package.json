@@ -11,6 +11,7 @@
     "./lib/session-handoff-route": "./src/lib/session-handoff-route.ts",
     "./lib/flutterwave-checkout-route": "./src/lib/flutterwave-checkout-route.ts",
     "./lib/flutterwave-verify-route": "./src/lib/flutterwave-verify-route.ts",
+    "./lib/survey-document-upload-route": "./src/lib/survey-document-upload-route.ts",
     "./lib/*": "./src/lib/*",
     "./styles/*": "./src/styles/*"
   },

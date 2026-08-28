@@ -249,9 +249,12 @@ export function DashboardView() {
                 {survey.documentAttachments && survey.documentAttachments.length > 0 && (
                   <div className="mt-2 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
                     {survey.documentAttachments.map((attachment) => (
-                      <p key={`${attachment.documentName}-${attachment.fileName}`}>
-                        {attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)
-                      </p>
+                      <div key={`${attachment.documentName}-${attachment.fileName}`} className="space-y-0.5">
+                        <p>{attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)</p>
+                        {attachment.storagePath && (
+                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Stored: {attachment.storagePath}</p>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

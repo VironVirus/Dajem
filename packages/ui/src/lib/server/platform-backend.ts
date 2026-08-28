@@ -216,7 +216,7 @@ function getSupabaseConfig() {
   }
 }
 
-function getSupabaseAdminClient() {
+export function getSupabaseAdminClient() {
   const config = getSupabaseConfig();
   if (!config) return null;
 
@@ -226,6 +226,10 @@ function getSupabaseAdminClient() {
       autoRefreshToken: false,
     },
   });
+}
+
+export function getSupabaseStorageBucket() {
+  return process.env.SUPABASE_STORAGE_BUCKET?.trim() || "dajem-documents";
 }
 
 async function readFromFile() {
@@ -365,6 +369,6 @@ export function getIntegrationStatus(): IntegrationStatus {
     backend,
     supabaseConfigured,
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY),
-    netlifyConfigured: Boolean(process.env.NETLIFY || process.env.CONTEXT || process.env.DEPLOY_PRIME_URL || process.env.URL),
+    hostingConfigured: Boolean(process.env.NEXT_PUBLIC_DAJEM_SITE_URL || process.env.URL || process.env.HOSTINGER || process.env.NETLIFY),
   };
 }

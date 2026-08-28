@@ -148,6 +148,8 @@ export interface SurveyRequest {
     documentName: string;
     fileName: string;
     fileSizeKb: number;
+    storagePath?: string;
+    fileUrl?: string;
   }[];
   missingDocuments?: string[];
   attested?: boolean;
@@ -196,7 +198,7 @@ export interface IntegrationStatus {
   backend: "filesystem" | "supabase" | "unconfigured";
   supabaseConfigured: boolean;
   flutterwaveConfigured: boolean;
-  netlifyConfigured: boolean;
+  hostingConfigured: boolean;
 }
 
 export interface DashboardSnapshot {
@@ -254,14 +256,12 @@ export interface DajemCompanyProfile {
 export interface DajemCompanyLink {
   id: DajemApp;
   name: string;
-  envKey: string;
-  localUrl: string;
-  productionUrl: string;
+  path: string;
 }
 
-const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
-const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.png";
+const homesImageUrl = "/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
 
 export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   landing: {
@@ -352,30 +352,22 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
   {
     id: "landing",
     name: dajemCompanyProfiles.landing.displayName,
-    envKey: "NEXT_PUBLIC_DAJEM_LANDING_URL",
-    localUrl: "http://localhost:3000",
-    productionUrl: "https://dajem-landing.netlify.app",
+    path: "/",
   },
   {
     id: "survey",
     name: dajemCompanyProfiles.survey.displayName,
-    envKey: "NEXT_PUBLIC_DAJEM_SURVEY_URL",
-    localUrl: "http://localhost:3003",
-    productionUrl: "https://dajem-survey.netlify.app",
+    path: "/survey",
   },
   {
     id: "poultry",
     name: dajemCompanyProfiles.poultry.displayName,
-    envKey: "NEXT_PUBLIC_DAJEM_POULTRY_URL",
-    localUrl: "http://localhost:3001",
-    productionUrl: "https://dajem-poultry.netlify.app",
+    path: "/farms",
   },
   {
     id: "real-estate",
     name: dajemCompanyProfiles["real-estate"].displayName,
-    envKey: "NEXT_PUBLIC_DAJEM_REAL_ESTATE_URL",
-    localUrl: "http://localhost:3002",
-    productionUrl: "https://dajem-properties.netlify.app",
+    path: "/properties",
   },
 ];
 
@@ -644,37 +636,25 @@ export const emptySnapshot: DashboardSnapshot = {
     backend: "filesystem",
     supabaseConfigured: false,
     flutterwaveConfigured: false,
-    netlifyConfigured: false,
+    hostingConfigured: false,
   },
 };
 
-function getConfiguredUrl(envKey: string) {
-  const value = process.env[envKey];
-  return value && value.trim().length > 0 ? value.trim().replace(/\/$/, "") : null;
+function buildSameSiteUrl(path: string, currentOrigin?: string) {
+  if (!currentOrigin) return path;
+  return new URL(path, currentOrigin).toString().replace(/\/$/, path === "/" ? "/" : "");
 }
 
 export function getAppBaseUrl(app: DajemApp, currentOrigin?: string) {
   const company = dajemCompanyLinks.find((entry) => entry.id === app);
-  if (!company) return currentOrigin ?? "/";
-
-  if (currentOrigin) {
-    return currentOrigin.replace(/\/$/, "");
-  }
-
-  const configuredUrl = getConfiguredUrl(company.envKey);
-  if (configuredUrl) return configuredUrl;
-
-  if (process.env.NODE_ENV === "development") {
-    return company.localUrl;
-  }
-
-  return company.productionUrl;
+  if (!company) return buildSameSiteUrl("/", currentOrigin);
+  return buildSameSiteUrl(company.path, currentOrigin);
 }
 
 export function getCompanyLinks(activeApp?: DajemApp, currentOrigin?: string) {
   return dajemCompanyLinks.map((company) => ({
     id: company.id,
     name: company.name,
-    url: company.id === activeApp ? getAppBaseUrl(company.id, currentOrigin) : getAppBaseUrl(company.id),
+    url: getAppBaseUrl(company.id, currentOrigin),
   }));
 }

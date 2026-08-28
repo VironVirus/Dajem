@@ -88,6 +88,8 @@ interface DajemContextValue {
       documentName: string;
       fileName: string;
       fileSizeKb: number;
+      storagePath?: string;
+      fileUrl?: string;
     }[];
     missingDocuments?: string[];
     attested?: boolean;
@@ -144,6 +146,14 @@ interface DajemContextValue {
 }
 
 const DajemContext = React.createContext<DajemContextValue | null>(null);
+const DEFAULT_REFRESH_INTERVAL_MS = 60000;
+
+function getRefreshIntervalMs() {
+  const configuredInterval = Number(process.env.NEXT_PUBLIC_DAJEM_REFRESH_INTERVAL_MS ?? DEFAULT_REFRESH_INTERVAL_MS);
+  if (!Number.isFinite(configuredInterval)) return DEFAULT_REFRESH_INTERVAL_MS;
+  if (configuredInterval === 0) return 0;
+  return Math.max(configuredInterval, 30000);
+}
 
 async function fetchSnapshot() {
   const response = await fetch("/api/platform", {
@@ -194,17 +204,24 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     };
 
     const sync = () => {
-      void refresh();
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
     };
 
     bootstrap();
-    const interval = window.setInterval(sync, 5000);
+    const refreshIntervalMs = getRefreshIntervalMs();
+    const interval = refreshIntervalMs > 0 ? window.setInterval(sync, refreshIntervalMs) : null;
     window.addEventListener("focus", sync);
+    document.addEventListener("visibilitychange", sync);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      if (interval) {
+        window.clearInterval(interval);
+      }
       window.removeEventListener("focus", sync);
+      document.removeEventListener("visibilitychange", sync);
     };
   }, [refresh]);
 

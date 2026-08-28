@@ -117,8 +117,8 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   });
 
   const currentApp = apps.find((app) => app.id === activeApp);
-  const dashboardHref = `${currentApp?.url}/dashboard`;
-  const adminHref = `${currentApp?.url}/admin`;
+  const dashboardHref = currentOrigin ? new URL("/dashboard", currentOrigin).toString() : "/dashboard";
+  const adminHref = currentOrigin ? new URL("/admin", currentOrigin).toString() : "/admin";
   const showCartButton = Boolean(activeApp === "poultry" && currentUser && onCartClick);
 
   const navLinks = (() => {

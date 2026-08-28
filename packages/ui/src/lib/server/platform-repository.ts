@@ -52,9 +52,9 @@ function allowMockPayments() {
   return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
 }
 
-const farmsImageUrl = "https://dajem-poultry.netlify.app/images/farms-hero-farm-v2.png";
-const homesImageUrl = "https://dajem-properties.netlify.app/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "https://dajem-survey.netlify.app/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.png";
+const homesImageUrl = "/images/homes-hero-suite-v2.png";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
 
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {
   if (!sessionEmail) return null;
@@ -541,6 +541,8 @@ export async function submitSurvey(
       documentName: string;
       fileName: string;
       fileSizeKb: number;
+      storagePath?: string;
+      fileUrl?: string;
     }[];
     missingDocuments?: string[];
     attested?: boolean;
@@ -582,6 +584,8 @@ export async function submitSurvey(
           documentName: String(attachment.documentName ?? "").trim(),
           fileName: String(attachment.fileName ?? "").trim().slice(0, 140),
           fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)) || 0,
+          storagePath: String(attachment.storagePath ?? "").trim().slice(0, 240) || undefined,
+          fileUrl: String(attachment.fileUrl ?? "").trim().slice(0, 240) || undefined,
         }))
         .filter((attachment) => attachment.documentName && attachment.fileName),
       missingDocuments: payload.missingDocuments ?? [],
