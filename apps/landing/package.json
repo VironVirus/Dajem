@@ -14,21 +14,21 @@
   },
   "dependencies": {
     "@repo/ui": "*",
-    "lucide-react": "^0.470.0",
-    "next": "^15.1.0",
-    "next-themes": "^0.4.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
     "@repo/typescript-config": "*",
-    "@repo/eslint-config": "*",
+    "autoprefixer": "^10.4.20",
     "@types/node": "^20.17.9",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
-    "autoprefixer": "^10.4.20",
+    "lucide-react": "^0.470.0",
+    "next": "^15.1.0",
+    "next-themes": "^0.4.4",
     "postcss": "^8.4.49",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*"
   }
 }
