@@ -124,6 +124,8 @@ If the build log shows `turbo run build` or `sh: turbo: command not found`, Host
 
 If Hostinger skips build-time packages because production env variables are active during install, keep the install command as `npm install --include=dev`. The runtime starts in production through the generated standalone Next.js server.
 
+If the browser console reports `ChunkLoadError` or a URL under `/_next/static/chunks/` returns `404`, deploy the latest commit containing the standalone asset-copy script, then use **Redeploy** followed by **Restart**. This ensures the standalone server and Hostinger's static asset layer receive the same Next.js build output.
+
 ### If the domain shows 403 Forbidden
 
 A successful build does not by itself connect the domain to the Next.js process. If the domain shows Hostinger's `403 Forbidden` page:
