@@ -20,6 +20,8 @@ import {
   dajemCompanyProfiles,
   getAppBaseUrl,
   HeroSlideshow,
+  SectionNav,
+  TrustRibbon,
   useDajem,
 } from "@repo/ui";
 import { 
@@ -105,53 +107,63 @@ export default function LandingPage() {
       <Header activeApp="landing" />
 
       <main className="flex-1">
+        <SectionNav label="DAJEM Group" items={[
+          { href: "#about", label: "Overview" },
+          { href: "#companies", label: "Companies" },
+          { href: "#contact", label: "Contact" },
+        ]} />
+
         <HeroSlideshow
-          className="py-20 sm:py-24 md:py-32"
+          className="dajem-mobile-hero flex min-h-[32rem] items-center py-14 sm:min-h-[36rem] sm:py-24 md:py-32"
           contentClassName="landing-hero-copy"
           overlayClassName="bg-[linear-gradient(180deg,rgba(248,250,252,0.18),rgba(248,250,252,0.34),rgba(248,250,252,0.68))] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.18),rgba(2,6,23,0.4),rgba(2,6,23,0.74))]"
           slides={[
-            { src: "/images/landing-boardroom-1.png", position: "center" },
-            { src: "/images/landing-boardroom-2.png", position: "center" },
-            { src: "/images/landing-boardroom-3.png", position: "center" },
-            { src: "/images/landing-boardroom-4.png", position: "center" },
+            { src: "/images/landing-boardroom-1.png", position: "center", label: "Group leadership" },
+            { src: "/images/landing-boardroom-2.png", position: "center", label: "Corporate planning" },
+            { src: "/images/landing-boardroom-3.png", position: "center", label: "Team collaboration" },
+            { src: "/images/landing-boardroom-4.png", position: "center", label: "Group operations" },
           ]}
         >
           <div className="absolute left-[-4rem] top-12 h-44 w-44 rounded-full bg-emerald-500/14 blur-3xl -z-10 sm:h-64 sm:w-64" />
           <div className="absolute right-[-5rem] top-20 h-56 w-56 rounded-full bg-primary/14 blur-3xl -z-10 sm:h-80 sm:w-80" />
           <div className="absolute bottom-0 left-1/2 h-32 w-32 -translate-x-1/2 rounded-full bg-amber-400/12 blur-3xl -z-10 sm:h-48 sm:w-48" />
 
-          <div className="container mx-auto max-w-5xl px-4 text-center sm:px-6">
-            <Badge variant="secondary" className="landing-hero-chip mb-5 rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] sm:mb-6 sm:text-sm">
-              DAJEM Group corporate leadership
-            </Badge>
+          <div className="container mx-auto max-w-5xl px-5 text-center sm:px-6">
+            <div className="dajem-hero-copy-panel mx-auto max-w-4xl rounded-[1.75rem] p-5 sm:p-8 md:p-10">
+              <Badge variant="secondary" className="mb-5 rounded-full border border-white/25 bg-white/14 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white hover:bg-white/20 sm:mb-6 sm:text-sm">
+                DAJEM Group corporate leadership
+              </Badge>
 
-            <h1 className="mb-5 bg-gradient-to-r from-primary via-slate-900 to-emerald-600 bg-clip-text text-[2.6rem] font-extrabold leading-[1.02] text-transparent dark:from-blue-400 dark:via-white dark:to-emerald-400 sm:text-5xl md:mb-6 md:text-6xl">
-              <span className="block">DAJEM Group</span>
-              <span className="mt-2 block text-[1.1rem] leading-[1.3] text-slate-800 dark:text-slate-100 sm:text-[1.45rem] md:text-[1.7rem]">
-                Strategic direction and shared oversight for the DAJEM subsidiary companies
-              </span>
-            </h1>
+              <h1 className="mb-5 text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl md:mb-6 md:text-6xl">
+                <span className="dajem-hero-title block">DAJEM Group</span>
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem] md:text-[1.7rem]">
+                  Strategic direction and shared oversight for every DAJEM company
+                </span>
+              </h1>
 
-            <p className="mx-auto mb-8 max-w-3xl text-base leading-relaxed text-slate-700/90 dark:text-slate-200/85 sm:text-lg md:mb-10 md:text-xl">
-              Ownership, governance, and operational coordination across {orbitalProfile.displayName}, {farmsProfile.displayName}, and {homesProfile.displayName} from the corporate base in Enugu.
-            </p>
+              <p className="dajem-hero-lede mx-auto mb-8 max-w-3xl text-base leading-relaxed sm:text-lg md:mb-10 md:text-xl">
+                Ownership, governance, and operational coordination across {orbitalProfile.displayName}, {farmsProfile.displayName}, and {homesProfile.displayName} from the corporate base in Enugu.
+              </p>
 
-            <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <Button size="lg" className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90" onClick={() => {
-                const el = document.getElementById("companies");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}>
-                Explore Our Subsidiaries
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto" onClick={() => {
-                const el = document.getElementById("contact");
-                el?.scrollIntoView({ behavior: "smooth" });
-              }}>
-                Contact Group Office
-              </Button>
+              <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <Button size="lg" className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto" onClick={() => {
+                  const el = document.getElementById("companies");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}>
+                  Explore Our Subsidiaries
+                </Button>
+                <Button size="lg" variant="outline" className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto" onClick={() => {
+                  const el = document.getElementById("contact");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}>
+                  Contact Group Office
+                </Button>
+              </div>
             </div>
           </div>
         </HeroSlideshow>
+
+        <TrustRibbon companyName={groupProfile.displayName} registrationNumber={groupProfile.registrationNumber} />
 
         <section className="border-y border-border bg-card/42 py-10 backdrop-blur-sm sm:py-12">
           <div className="container mx-auto px-4 sm:px-6">

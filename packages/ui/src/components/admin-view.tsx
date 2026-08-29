@@ -269,22 +269,25 @@ export function AdminView() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10 p-6">
-        <Badge variant="secondary" className="mb-3">Unified Admin Portal</Badge>
-        <h1 className="text-3xl font-bold text-primary dark:text-foreground">Dajem Group operations console</h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Manage Dajem Farms products, Dajem Homes listings, Dajem Orbital service requests, approvals, images, users, and integrations from one shared workspace.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full border px-3 py-1">Backend: {snapshot.integrations.backend}</span>
-          <span className="rounded-full border px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Ready" : "Fallback mode"}</span>
-          <span className="rounded-full border px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Test handshake ready" : "Not active"}</span>
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/20 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-xl shadow-slate-950/12">
+        <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-400/16 blur-3xl" />
+        <div className="relative">
+          <Badge variant="secondary" className="mb-3">Unified Admin Portal</Badge>
+          <h1 className="text-3xl font-bold text-white">DAJEM operations console</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-200">
+            Manage Dajem Farms products, Dajem Homes listings, Dajem Orbital service requests, approvals, images, users, and integrations from one shared workspace.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-200">
+            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Backend: {snapshot.integrations.backend}</span>
+            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Ready" : "Fallback mode"}</span>
+            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Test handshake ready" : "Not active"}</span>
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.map((metric) => (
-          <Card key={metric.label}>
+          <Card key={metric.label} className="border-white/45 bg-card/78 shadow-sm backdrop-blur-xl">
             <CardContent className="flex items-center justify-between p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{metric.label}</p>

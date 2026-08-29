@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, BellRing, ClipboardList, Download, Layers3, Package, ShoppingCart } from "lucide-react";
+import { ArrowRight, BellRing, Building2, ClipboardList, Download, Layers3, Map, Package, ShoppingCart } from "lucide-react";
 import { getAppBaseUrl } from "../lib/store";
 import { Badge } from "./badge";
 import { Button } from "./button";
@@ -61,32 +61,40 @@ export function DashboardView() {
     },
     { label: "Survey Requests", value: snapshot.surveys.length, icon: ClipboardList },
   ];
+  const quickActions = [
+    { title: "Start a survey estimate", detail: "Build a posted-cost estimate and send it to the inquiry desk.", href: `${getAppBaseUrl("survey")}#calculator`, icon: Map, tone: "from-cyan-500 to-blue-700" },
+    { title: "Continue farm shopping", detail: "Return to your shared cart and farm catalogue.", href: `${getAppBaseUrl("poultry")}#catalog`, icon: ShoppingCart, tone: "from-emerald-500 to-teal-700" },
+    { title: "Explore verified homes", detail: "Review listings, bids, and hospitality opportunities.", href: `${getAppBaseUrl("real-estate")}#listings`, icon: Building2, tone: "from-blue-600 to-indigo-800" },
+  ];
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 rounded-3xl border bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10 p-6">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/35 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-xl shadow-slate-950/12">
+        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-400/18 blur-3xl" />
+        <div className="relative flex flex-col gap-3">
         <Badge variant="secondary" className="w-max">Shared User Portal</Badge>
-        <h1 className="text-3xl font-bold text-primary dark:text-foreground">Welcome back, {currentUser.name}</h1>
+        <h1 className="text-3xl font-bold text-white">Welcome back, {currentUser.name}</h1>
         {(currentUser.officialTitle || currentUser.identificationType) && (
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {currentUser.officialTitle && <span className="rounded-full border px-3 py-1">Title: {currentUser.officialTitle}</span>}
-            {currentUser.identificationType && <span className="rounded-full border px-3 py-1">ID: {currentUser.identificationType}</span>}
-            {currentUser.identificationNumber && <span className="rounded-full border px-3 py-1">ID No: {currentUser.identificationNumber}</span>}
+          <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+            {currentUser.officialTitle && <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Title: {currentUser.officialTitle}</span>}
+            {currentUser.identificationType && <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">ID: {currentUser.identificationType}</span>}
+            {currentUser.identificationNumber && <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">ID No: {currentUser.identificationNumber}</span>}
           </div>
         )}
-        <p className="max-w-2xl text-sm text-muted-foreground">
+        <p className="max-w-2xl text-sm text-slate-200">
           Orders, bids, property submissions, surveys, and your active Dajem Farms cart now live in one place across Dajem Group Limited.
         </p>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full border px-3 py-1">Backend: {snapshot.integrations.backend}</span>
-          <span className="rounded-full border px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Configured" : "Not configured yet"}</span>
-          <span className="rounded-full border px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Configured" : "Simulation mode"}</span>
+        <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+          <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Backend: {snapshot.integrations.backend}</span>
+          <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Configured" : "Not configured yet"}</span>
+          <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Configured" : "Simulation mode"}</span>
+        </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.map((metric) => (
-          <Card key={metric.label}>
+          <Card key={metric.label} className="border-white/45 bg-card/78 shadow-sm backdrop-blur-xl">
             <CardContent className="flex items-center justify-between p-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{metric.label}</p>
@@ -97,6 +105,25 @@ export function DashboardView() {
               </div>
             </CardContent>
           </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {quickActions.map((action) => (
+          <button
+            key={action.title}
+            type="button"
+            onClick={() => void navigateToUrl(action.href)}
+            className="group relative overflow-hidden rounded-[1.5rem] border border-white/15 bg-slate-950 p-5 text-left text-white shadow-lg transition-transform hover:-translate-y-1"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${action.tone} opacity-70`} />
+            <div className="relative">
+              <action.icon className="h-5 w-5 text-white/90" />
+              <p className="mt-7 text-lg font-bold">{action.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-white/76">{action.detail}</p>
+              <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold">Open <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </div>
+          </button>
         ))}
       </div>
 

@@ -14,6 +14,8 @@ import {
   HeroSlideshow,
   Input,
   Label,
+  SectionNav,
+  TrustRibbon,
   Select,
   Sheet,
   Textarea,
@@ -175,39 +177,52 @@ export default function RealEstatePage() {
       <Header activeApp="real-estate" />
 
       <main className="flex-1">
+        <SectionNav label="DAJEM Homes" items={[
+          { href: "#contact-details", label: "Office" },
+          { href: "#listings", label: "Listings" },
+          { href: "#submit-property", label: "Submit Property" },
+        ]} />
+
         <HeroSlideshow
-          className="py-24"
+          className="dajem-mobile-hero flex min-h-[31rem] items-center py-14 sm:min-h-0 sm:py-24"
           overlayClassName="bg-[linear-gradient(135deg,rgba(239,246,255,0.28),rgba(239,246,255,0.5),rgba(255,255,255,0.82))] dark:bg-[linear-gradient(135deg,rgba(30,64,175,0.24),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
           slides={[
-            { src: "/images/homes-hero-suite-v2.png", position: "center" },
-            { src: "/images/homes-hero-generated.png", position: "center" },
+            { src: "/images/homes-hero-suite-v2.png", position: "center", label: "Homes and hospitality" },
+            { src: "/images/homes-hero-generated.png", position: "center", label: "Property management" },
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#1d4ed812_1px,transparent_1px),linear-gradient(to_bottom,#1d4ed812_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
 
-          <div className="container mx-auto max-w-6xl px-4 text-center space-y-6">
-            <Badge variant="secondary" className="bg-blue-100 px-3 py-1 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-              Started {profile.startDate}
-            </Badge>
-            <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
-              {profile.displayName}: Homes, Hospitality, Development, and Property Management
-            </h1>
-            <p className="mx-auto max-w-3xl text-base text-muted-foreground">
-              {profile.summary}
-            </p>
-            <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <Button size="lg" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
-                Browse Listings
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
-                Submit Property
-              </Button>
+          <div className="container mx-auto max-w-6xl px-5 text-center sm:px-6">
+            <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
+              <Badge variant="secondary" className="border border-blue-200/25 bg-blue-400/15 px-3 py-1 font-semibold text-blue-100 hover:bg-blue-400/20">
+                Started {profile.startDate}
+              </Badge>
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+                <span className="dajem-hero-title block">{profile.shortName}</span>
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                  Homes, hospitality, development, and property management
+                </span>
+              </h1>
+              <p className="dajem-hero-lede mx-auto max-w-3xl text-base leading-relaxed">
+                {profile.summary}
+              </p>
+              <div className="flex flex-col justify-center gap-3 pt-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
+                <Button size="lg" className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
+                  Browse Listings
+                </Button>
+                <Button size="lg" variant="outline" className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
+                  Submit Property
+                </Button>
+              </div>
             </div>
           </div>
         </HeroSlideshow>
 
-        <section className="border-y border-border bg-muted/20 py-12">
-          <div className="container mx-auto grid max-w-6xl gap-4 px-4 md:grid-cols-3">
+        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
+
+        <section id="contact-details" className="border-y border-border bg-muted/20 py-8 sm:py-12">
+          <div className="container mx-auto grid max-w-6xl gap-3 px-5 sm:gap-4 sm:px-6 md:grid-cols-3">
             <div className="rounded-xl border bg-card p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Office</p>
               <p className="mt-2 text-sm text-foreground">{profile.address}</p>
@@ -223,7 +238,7 @@ export default function RealEstatePage() {
           </div>
         </section>
 
-        <section id="listings" className="container mx-auto max-w-6xl px-4 py-20">
+        <section id="listings" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
           <div className="mb-12 text-center">
             <Badge variant="secondary" className="mb-2">Dajem Homes Catalog</Badge>
             <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Properties & Hospitality Offers</h2>
@@ -369,7 +384,7 @@ export default function RealEstatePage() {
           )}
         </section>
 
-        <section id="submit-property" className="border-t border-border bg-muted/20 py-20">
+        <section id="submit-property" className="border-t border-border bg-muted/20 py-14 sm:py-20">
           <div className="container mx-auto max-w-4xl px-4">
             <Card className="border bg-card p-8 shadow-xl">
               <div className="mx-auto mb-8 max-w-2xl text-center">

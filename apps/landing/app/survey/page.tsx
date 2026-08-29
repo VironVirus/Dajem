@@ -14,6 +14,8 @@ import {
   HeroSlideshow,
   Input,
   Label,
+  SectionNav,
+  TrustRibbon,
   Select,
   Textarea,
   dajemCompanyProfiles,
@@ -1213,40 +1215,50 @@ export default function SurveyPage() {
       <Header activeApp="survey" />
 
       <main className="flex-1">
+        <SectionNav label="DAJEM Orbital" items={[
+          { href: "#services", label: "Services" },
+          { href: "#calculator", label: "Calculator" },
+          { href: "#quote", label: "Inquiry Desk" },
+          { href: "#tracker", label: "Tracker" },
+        ]} />
+
         <HeroSlideshow
-          className="py-24"
+          className="dajem-mobile-hero py-14 sm:py-20 lg:py-24"
           overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
           slides={[
-            { src: "/images/orbital-field-survey-1.jpg", position: "center" },
-            { src: "/images/orbital-field-survey-2.jpg", position: "center" },
-            { src: "/images/orbital-hero-field-v2.png", position: "center" },
-            { src: "/images/orbital-hero-generated.png", position: "center" },
+            { src: "/images/orbital-field-survey-1.jpg", position: "center", label: "Field survey" },
+            { src: "/images/orbital-field-survey-2.jpg", position: "center", label: "Site measurement" },
+            { src: "/images/orbital-hero-field-v2.png", position: "center", label: "Mapping and design" },
+            { src: "/images/orbital-hero-generated.png", position: "center", label: "Project delivery" },
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 lg:grid-cols-12">
-            <div className="space-y-6 lg:col-span-7">
-              <Badge variant="secondary" className="bg-cyan-100 px-3 py-1 font-semibold text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 lg:grid-cols-12 lg:gap-12">
+            <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
+              <Badge variant="secondary" className="border border-cyan-200/25 bg-cyan-400/15 px-3 py-1 font-semibold text-cyan-100 hover:bg-cyan-400/20">
                 est. April, 2003
               </Badge>
-              <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary dark:text-foreground sm:text-5xl">
-                {profile.displayName}: Surveying, Mapping, Design, Construction, Logistics, and Contracts
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+                <span className="dajem-hero-title block">{profile.shortName}</span>
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                  Surveying, mapping, design, construction, and logistics
+                </span>
               </h1>
-              <div className="text-base leading-relaxed text-muted-foreground">
+              <div className="dajem-hero-lede text-base leading-relaxed">
                 <p>{profile.summary}</p>
                 <p className="mt-8 pt-2">Submit a request, receive pending approval, and track admin updates from your shared dashboard.</p>
               </div>
-              <div className="flex gap-4 pt-2">
-                <Button size="lg" className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4">
+                <Button size="lg" className="w-full bg-cyan-600 text-white hover:bg-cyan-700 sm:w-auto" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
                   Start Verification Portal
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" variant="outline" className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
                   Cost Estimator
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-6 rounded-2xl border bg-card/78 p-6 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 lg:col-span-5">
+            <div className="space-y-5 rounded-[1.5rem] border bg-card/82 p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5">
               <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
                 <Sparkles className="h-5 w-5 text-cyan-500" />
                 Company Profile
@@ -1259,7 +1271,9 @@ export default function SurveyPage() {
           </div>
         </HeroSlideshow>
 
-        <section id="services" className="container mx-auto max-w-6xl px-4 py-20">
+        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
+
+        <section id="services" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
           <div className="mx-auto mb-16 max-w-2xl text-center">
             <Badge variant="secondary" className="mb-2">DAJEM Orbital Catalog</Badge>
             <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Services</h2>
@@ -1285,7 +1299,29 @@ export default function SurveyPage() {
           </div>
         </section>
 
-        <section id="calculator" className="border-y border-border bg-muted/30 py-20">
+        <section id="calculator" className="border-y border-border bg-muted/30 py-14 sm:py-20">
+          <div className="container mx-auto mb-8 max-w-6xl px-4">
+            <div className="overflow-hidden rounded-[1.5rem] border border-cyan-500/18 bg-card/72 shadow-sm backdrop-blur-xl">
+              <div className="border-b border-border/70 px-5 py-4 sm:px-6">
+                <Badge className="bg-cyan-600 text-white hover:bg-cyan-700">Guided estimator</Badge>
+                <h3 className="mt-2 text-xl font-bold text-foreground">Build a clear survey budget in four steps</h3>
+              </div>
+              <div className="grid divide-y divide-border/70 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+                {[
+                  { number: "01", title: "Survey service", text: "Choose perimeter, litigation, lifting, re-establishment, or another service." },
+                  { number: "02", title: "Land details", text: "Add the area, unit, plot or beacon count, and relevant survey parameters." },
+                  { number: "03", title: "Site profile", text: "Set client type, location, terrain, and delivery needs for the correct extras." },
+                  { number: "04", title: "Invoice summary", text: "Review posted charges, contingency, notes, and send the selection to the inquiry desk." },
+                ].map((step) => (
+                  <div key={step.number} className="p-5">
+                    <span className="text-xs font-extrabold tracking-[0.18em] text-cyan-600 dark:text-cyan-400">{step.number}</span>
+                    <p className="mt-2 font-bold text-foreground">{step.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-4 lg:grid-cols-2">
             <Card className="border bg-card p-8 shadow-lg">
               <h3 className="mb-6 flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">
@@ -1436,7 +1472,7 @@ export default function SurveyPage() {
           </div>
         </section>
 
-        <section id="quote" className="container mx-auto max-w-4xl px-4 py-20">
+        <section id="quote" className="container mx-auto max-w-4xl px-5 py-14 sm:px-6 sm:py-20">
           <Card className="border bg-card p-8 shadow-xl">
             <div className="mx-auto mb-8 max-w-2xl text-center">
               <Badge variant="secondary" className="mb-2">Inquiry Desk</Badge>
@@ -1771,7 +1807,7 @@ export default function SurveyPage() {
           </Card>
         </section>
 
-        <section className="container mx-auto max-w-6xl px-4 pb-20">
+        <section id="tracker" className="container mx-auto max-w-6xl px-5 pb-14 sm:px-6 sm:pb-20">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <Badge variant="secondary" className="mb-2">Live Tracker</Badge>

@@ -15,6 +15,8 @@ import {
   HeroSlideshow,
   Input,
   Label,
+  SectionNav,
+  TrustRibbon,
   Select,
   Sheet,
   Textarea,
@@ -162,33 +164,44 @@ export default function PoultryPage() {
       <Header activeApp="poultry" onCartClick={() => setCartOpen(true)} />
 
       <main className="flex-1">
+        <SectionNav label="DAJEM Farms" items={[
+          { href: "#why-us", label: "Why DAJEM" },
+          { href: "#chicken-selection", label: "Chicken Orders" },
+          ...(promoProducts.length > 0 ? [{ href: "#flash-sales", label: "Offers" }] : []),
+          { href: "#catalog", label: "Shop" },
+          { href: "#bulk-order", label: "Bulk Order" },
+        ]} />
+
         <HeroSlideshow
-          className="py-20"
+          className="dajem-mobile-hero py-14 sm:py-20 lg:py-24"
           overlayClassName="bg-[linear-gradient(135deg,rgba(236,253,245,0.3),rgba(236,253,245,0.52),rgba(255,255,255,0.84))] dark:bg-[linear-gradient(135deg,rgba(6,78,59,0.28),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
           slides={[
-            { src: "/images/farms-hero-farm-v2.png", position: "center" },
-            { src: "/images/farms-hero-generated.png", position: "center" },
+            { src: "/images/farms-hero-farm-v2.png", position: "center", label: "Farm operations" },
+            { src: "/images/farms-hero-generated.png", position: "center", label: "Fresh farm supply" },
           ]}
         >
           <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
           <div className="absolute bottom-10 left-10 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl -z-10" />
 
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 md:grid-cols-2">
-            <div className="space-y-6">
-              <Badge variant="secondary" className="bg-emerald-100 px-3 py-1 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 md:grid-cols-2 md:gap-12">
+            <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
+              <Badge variant="secondary" className="border border-emerald-200/25 bg-emerald-400/15 px-3 py-1 font-semibold text-emerald-100 hover:bg-emerald-400/20">
                 Started {profile.startDate}
               </Badge>
-              <h1 className="text-4xl font-extrabold leading-tight text-primary dark:text-foreground sm:text-5xl">
-                {profile.displayName}: Livestock, Grills (Fish/Chicken), Eggs, Produce, Equipment, and Agro-Allied Supplies
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+                <span className="dajem-hero-title block">{profile.shortName}</span>
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                  Food, livestock, grills, and farm supplies from one trusted source
+                </span>
               </h1>
-              <p className="text-base leading-relaxed text-muted-foreground">
+              <p className="dajem-hero-lede text-base leading-relaxed">
                 Shop Livestock, Poultry, Fish, Goats, Sheep, Turkey, Chicken Grills, Fish Grills, Eggs, Farm Consultancy, Farm Produce, Farm Equipment, And Agro-Allied Products From One Shared DAJEM Cart.
               </p>
 
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
                 <Button
                   size="lg"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
                   onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}
                 >
                   <ShoppingCart className="h-5 w-5" />
@@ -197,6 +210,7 @@ export default function PoultryPage() {
                 <Button
                   size="lg"
                   variant="outline"
+                  className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto"
                   onClick={() => cartOpen ? setCartOpen(false) : setCartOpen(true)}
                 >
                   Shared Cart ({cartCount})
@@ -204,7 +218,7 @@ export default function PoultryPage() {
               </div>
             </div>
 
-            <div className="mx-auto max-w-md space-y-6 rounded-2xl border bg-card/78 p-8 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1">
+            <div className="mx-auto max-w-md space-y-5 rounded-[1.5rem] border bg-card/82 p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:space-y-6 sm:p-8">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operations Linkage</span>
@@ -239,7 +253,9 @@ export default function PoultryPage() {
           </div>
         </HeroSlideshow>
 
-        <section id="why-us" className="border-y border-border bg-muted/20 py-16">
+        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
+
+        <section id="why-us" className="border-y border-border bg-muted/20 py-12 sm:py-16">
           <div className="container mx-auto max-w-6xl px-4">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               {[
@@ -276,7 +292,7 @@ export default function PoultryPage() {
           </div>
         </section>
 
-        <section id="chicken-selection" className="border-b border-emerald-500/20 bg-emerald-500/5 py-14">
+        <section id="chicken-selection" className="border-b border-emerald-500/20 bg-emerald-500/5 py-12 sm:py-14">
           <div className="container mx-auto max-w-6xl px-4">
             <Card className="overflow-hidden border-emerald-500/20 bg-card/92 shadow-lg">
               <CardContent className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[0.9fr_1.1fr] lg:p-8">
@@ -335,7 +351,7 @@ export default function PoultryPage() {
         </section>
 
         {promoProducts.length > 0 && (
-          <section id="flash-sales" className="border-y border-emerald-500/20 bg-emerald-500/10 py-12">
+          <section id="flash-sales" className="border-y border-emerald-500/20 bg-emerald-500/10 py-10 sm:py-12">
             <div className="container mx-auto max-w-6xl px-4">
               <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -375,7 +391,7 @@ export default function PoultryPage() {
           </section>
         )}
 
-        <section id="catalog" className="container mx-auto max-w-6xl px-4 py-20">
+        <section id="catalog" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
           <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <Badge variant="secondary" className="mb-3">{profile.displayName}</Badge>
@@ -476,7 +492,7 @@ export default function PoultryPage() {
           )}
         </section>
 
-        <section id="bulk-order" className="border-t border-border bg-muted/30 py-20">
+        <section id="bulk-order" className="border-t border-border bg-muted/30 py-14 sm:py-20">
           <div className="container mx-auto max-w-4xl px-4">
             <Card className="border bg-card p-8 shadow-lg">
               <div className="mx-auto mb-8 max-w-2xl text-center">

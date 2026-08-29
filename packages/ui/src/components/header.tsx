@@ -1,24 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  ChevronDown,
-  LayoutDashboard,
-  Landmark,
-  Egg,
-  Home as HomeIcon,
-  LogOut,
-  Map,
-  Menu,
-  ShieldCheck,
-  ShoppingCart,
-  UserCircle2,
-  X,
+  Boxes, CalendarDays, ChevronDown, Command, Egg, Grid2X2, House, Landmark,
+  LayoutDashboard, LogOut, Mail, Map, Search, ShieldCheck, ShoppingCart, UserCircle2,
 } from "lucide-react";
-import { ThemeToggle } from "./theme-toggle";
 import { Button } from "./button";
-import { cn } from "../lib/utils";
+import { CommandPalette } from "./command-palette";
 import { useDajem } from "./dajem-provider";
+import { ThemeToggle } from "./theme-toggle";
+import { cn } from "../lib/utils";
 import { getCompanyLinks } from "../lib/store";
 
 interface HeaderProps {
@@ -26,437 +18,151 @@ interface HeaderProps {
   onCartClick?: () => void;
 }
 
-type DesktopMenu = null | "account" | "company";
-type MobileSection = "nav" | "account" | "companies";
+type OpenMenu = "account" | "ecosystem" | null;
+
+const appVisuals = {
+  landing: { icon: Landmark, label: "Group Hub", color: "text-slate-950 dark:text-white", surface: "from-slate-950 via-slate-800 to-slate-700 text-white", description: "Corporate strategy and group oversight" },
+  survey: { icon: Map, label: "Orbital", color: "text-cyan-600 dark:text-cyan-300", surface: "from-cyan-600 via-sky-600 to-blue-800 text-white", description: "Surveying, mapping, and project delivery" },
+  poultry: { icon: Egg, label: "Farms", color: "text-emerald-600 dark:text-emerald-300", surface: "from-emerald-600 via-emerald-700 to-teal-800 text-white", description: "Livestock, food, produce, and agro-commerce" },
+  "real-estate": { icon: House, label: "Homes", color: "text-blue-700 dark:text-blue-300", surface: "from-blue-700 via-blue-800 to-slate-900 text-white", description: "Homes, hospitality, and property management" },
+} as const;
 
 export function Header({ activeApp, onCartClick }: HeaderProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const [currentOrigin, setCurrentOrigin] = React.useState<string | undefined>(undefined);
-  const [desktopMenu, setDesktopMenu] = React.useState<DesktopMenu>(null);
-  const [mobileSection, setMobileSection] = React.useState<MobileSection>("nav");
-  const desktopMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const [openMenu, setOpenMenu] = React.useState<OpenMenu>(null);
+  const [paletteOpen, setPaletteOpen] = React.useState(false);
+  const [mobileCompaniesOpen, setMobileCompaniesOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
   const { currentUser, cartCount, navigateToUrl, openAuthModal, logout } = useDajem();
 
-  React.useEffect(() => {
-    setCurrentOrigin(window.location.origin);
-  }, []);
+  React.useEffect(() => setCurrentOrigin(window.location.origin), []);
 
   React.useEffect(() => {
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!desktopMenuRef.current?.contains(event.target as Node)) {
-        setDesktopMenu(null);
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
       }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setDesktopMenu(null);
-        setIsOpen(false);
+        setOpenMenu(null);
+        setMobileCompaniesOpen(false);
+        setPaletteOpen(false);
       }
     };
-
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpenMenu(null);
+    };
+    window.addEventListener("keydown", handleKeyboard);
     document.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("keydown", handleEscape);
     return () => {
+      window.removeEventListener("keydown", handleKeyboard);
       document.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsOpen(false);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [isOpen]);
-
-  React.useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "unset";
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
-
-  const appVisuals = [
-    {
-      id: "landing",
-      icon: Landmark,
-      color: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      id: "poultry",
-      icon: Egg,
-      color: "text-amber-500",
-    },
-    {
-      id: "real-estate",
-      icon: HomeIcon,
-      color: "text-emerald-500",
-    },
-    {
-      id: "survey",
-      icon: Map,
-      color: "text-cyan-500",
-    },
-  ] as const;
-
-  const apps = getCompanyLinks(activeApp, currentOrigin).map((company) => {
-    const visual = appVisuals.find((entry) => entry.id === company.id);
-
-    return {
-      ...company,
-      icon: visual?.icon ?? Landmark,
-      color: visual?.color ?? "text-primary",
-    };
-  });
-
-  const currentApp = apps.find((app) => app.id === activeApp);
+  const apps = getCompanyLinks(activeApp, currentOrigin).map((company) => ({ ...company, ...appVisuals[company.id] }));
+  const currentApp = apps.find((app) => app.id === activeApp) ?? apps[0];
   const dashboardHref = currentOrigin ? new URL("/dashboard", currentOrigin).toString() : "/dashboard";
+  const contactHref = currentOrigin ? new URL("/#contact", currentOrigin).toString() : "/#contact";
   const adminHref = currentOrigin ? new URL("/admin", currentOrigin).toString() : "/admin";
+  const groupHref = apps.find((app) => app.id === "landing")?.url ?? "/";
   const showCartButton = Boolean(activeApp === "poultry" && currentUser && onCartClick);
 
-  const navLinks = (() => {
-    switch (activeApp) {
-      case "landing":
-        return [
-          { name: "About Us", href: "#about" },
-          { name: "Companies", href: "#companies" },
-          { name: "Global Contact", href: "#contact" },
-        ];
-      case "poultry":
-        return [
-          { name: "Products Catalog", href: "#catalog" },
-          { name: "Why Us", href: "#why-us" },
-          { name: "Bulk Orders", href: "#bulk-order" },
-          { name: "Shared Cart", href: "#catalog" },
-        ];
-      case "real-estate":
-        return [
-          { name: "Property Listings", href: "#listings" },
-          { name: "Property Form", href: "#submit-property" },
-          { name: "Bidding Sheet", href: "#listings" },
-        ];
-      case "survey":
-        return [
-          { name: "Precision Services", href: "#services" },
-          { name: "Plans Calculator", href: "#calculator" },
-          { name: "Tracker Cards", href: "#quote" },
-          { name: "Request Quote", href: "#quote" },
-        ];
-    }
-  })();
-
-  const closeMobileMenu = () => {
-    setIsOpen(false);
-    setMobileSection("nav");
-  };
-
-  const handleNavigate = React.useCallback((
-    event: React.MouseEvent<HTMLAnchorElement>,
-    href: string,
-    afterNavigate?: () => void,
-  ) => {
-    if (
-      event.defaultPrevented
-      || event.button !== 0
-      || event.metaKey
-      || event.ctrlKey
-      || event.shiftKey
-      || event.altKey
-    ) {
-      return;
-    }
-
+  const handleNavigate = React.useCallback((event: React.MouseEvent<HTMLAnchorElement>, href: string, afterNavigate?: () => void) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     afterNavigate?.();
     void navigateToUrl(href);
   }, [navigateToUrl]);
 
-  const DesktopDropdown = ({
-    menu,
-    label,
-    children,
-    tone = "primary",
-  }: {
-    menu: Exclude<DesktopMenu, null>;
-    label: React.ReactNode;
-    children: React.ReactNode;
-    tone?: "primary" | "secondary";
-  }) => (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant={tone === "secondary" ? "outline" : "default"}
-        className={cn(
-          "flex items-center gap-1.5",
-          tone === "primary" && "bg-primary/95 text-white hover:bg-primary",
-          tone === "secondary" && "border-border/70 bg-white/65 backdrop-blur-md hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15",
-        )}
-        aria-expanded={desktopMenu === menu}
-        aria-haspopup="menu"
-        onClick={() => setDesktopMenu((current) => (current === menu ? null : menu))}
-      >
-        {label}
-        <ChevronDown className={cn("h-4 w-4 transition-transform", desktopMenu === menu && "rotate-180")} />
-      </Button>
-      {desktopMenu === menu && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-white/45 bg-background/92 p-2 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/92">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/30 bg-background/72 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/70">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {currentApp && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/35 bg-white/60 shadow-sm backdrop-blur-lg dark:border-white/10 dark:bg-white/5">
-              <currentApp.icon className={cn("h-5 w-5 transition-transform hover:scale-110", currentApp.color)} />
-            </div>
-          )}
-          <a
-            href={currentApp?.url}
-            onClick={(event) => currentApp?.url ? handleNavigate(event, currentApp.url) : undefined}
-            className="flex min-w-0 items-center gap-1.5 text-base font-semibold tracking-tight text-primary hover:opacity-90 dark:text-foreground sm:text-lg"
-          >
-            <span className="truncate">{currentApp?.name}</span>
-          </a>
-        </div>
-
-        <nav className="hidden items-center gap-2 lg:flex">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/70 hover:text-primary dark:hover:bg-white/10 dark:hover:text-foreground"
-            >
-              {link.name}
-            </a>
-          ))}
-        </nav>
-
-        <div ref={desktopMenuRef} className="hidden items-center gap-3 lg:flex">
-          <ThemeToggle />
-          {showCartButton && (
-            <Button variant="outline" size="sm" className="gap-2 border-border/70 bg-white/65 backdrop-blur-md hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15" onClick={onCartClick}>
-              <ShoppingCart className="h-4 w-4" />
-              Cart ({cartCount})
-            </Button>
-          )}
-
-          {!currentUser ? (
-            <>
-              <Button variant="outline" size="sm" className="border-border/70 bg-white/65 backdrop-blur-md hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15" onClick={() => openAuthModal("login")}>
-                Login
-              </Button>
-              <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => openAuthModal("signup")}>
-                Sign Up
-              </Button>
-            </>
-          ) : (
-            <DesktopDropdown
-              menu="account"
-              tone="secondary"
-              label={(
-                <>
-                  <UserCircle2 className="h-4 w-4" />
-                  <span>{currentUser.name.split(" ")[0]}</span>
-                </>
-              )}
-            >
-              <a
-                href={dashboardHref}
-                onClick={(event) => handleNavigate(event, dashboardHref)}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors"
-              >
-                <LayoutDashboard className="h-4 w-4 text-primary" />
-                Dashboard
-              </a>
-              {currentUser.role === "admin" && (
-                <a
-                  href={adminHref}
-                  onClick={(event) => handleNavigate(event, adminHref)}
-                  className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-accent transition-colors"
-                >
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Admin Portal
-                </a>
-              )}
-              <button
-                className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors"
-                onClick={() => void logout()}
-              >
-                <LogOut className="h-4 w-4 text-destructive" />
-                Sign Out
-              </button>
-            </DesktopDropdown>
-          )}
-
-          <DesktopDropdown menu="company" label={<span>Go to Company</span>}>
-            {apps.map((app) => (
-              <a
-                key={app.id}
-                href={app.url}
-                onClick={(event) => handleNavigate(event, app.url)}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                  app.id === activeApp && "bg-accent/60 font-semibold",
-                )}
-              >
-                <app.icon className={cn("h-4 w-4", app.color)} />
-                <span>{app.name}</span>
-              </a>
-            ))}
-          </DesktopDropdown>
-        </div>
-
-        <div className="flex items-center gap-2 lg:hidden">
-          <ThemeToggle />
-          <button
-            type="button"
-            aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={isOpen}
-            onClick={() => setIsOpen((current) => !current)}
-            className="inline-flex items-center justify-center rounded-2xl border border-white/35 bg-white/60 p-2.5 text-muted-foreground shadow-sm backdrop-blur-lg transition-colors hover:bg-white/85 hover:text-primary dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:text-foreground"
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
-      </div>
-
-      {isOpen && (
-        <div className="lg:hidden">
-          <div className="fixed inset-0 top-16 z-30 bg-slate-950/35 backdrop-blur-sm" onClick={closeMobileMenu} />
-          <div className="absolute inset-x-0 top-16 z-40 mx-3 overflow-hidden rounded-[1.75rem] border border-white/35 bg-background/90 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/92">
-            <div className="max-h-[calc(100vh-5.5rem)] overflow-y-auto px-4 pb-5 pt-4">
-              <div className="mb-4 rounded-2xl border border-white/35 bg-white/60 p-4 backdrop-blur-lg dark:border-white/10 dark:bg-white/5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Now Viewing</p>
-                <div className="mt-2 flex items-center gap-2">
-                  {currentApp && <currentApp.icon className={cn("h-5 w-5", currentApp.color)} />}
-                  <p className="font-semibold text-foreground">{currentApp?.name}</p>
-                </div>
-              </div>
-
-              <MobileSectionButton
-                label="Quick Links"
-                isOpen={mobileSection === "nav"}
-                onClick={() => setMobileSection((current) => (current === "nav" ? "companies" : "nav"))}
-              />
-              {mobileSection === "nav" && (
-                <div className="mb-4 grid grid-cols-2 gap-2">
-                  {navLinks.map((link) => (
-                    <a
-                      key={link.name}
-                      href={link.href}
-                      onClick={closeMobileMenu}
-                      className="rounded-2xl border border-white/30 bg-white/60 px-3 py-3 text-sm font-medium text-foreground shadow-sm backdrop-blur-lg transition-colors hover:bg-white/85 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                    >
-                      {link.name}
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              <MobileSectionButton
-                label={currentUser ? "Account" : "Join or Login"}
-                isOpen={mobileSection === "account"}
-                onClick={() => setMobileSection((current) => (current === "account" ? "companies" : "account"))}
-              />
-              {mobileSection === "account" && (
-                <div className="mb-4 grid gap-2">
-                  {!currentUser ? (
-                    <>
-                      <Button variant="outline" className="justify-start border-border/70 bg-white/65 backdrop-blur-md hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15" onClick={() => { closeMobileMenu(); openAuthModal("login"); }}>
-                        Login
-                      </Button>
-                      <Button className="justify-start bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => { closeMobileMenu(); openAuthModal("signup"); }}>
-                        Sign Up
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {showCartButton && (
-                        <Button variant="outline" className="justify-start border-border/70 bg-white/65 backdrop-blur-md hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15" onClick={() => { closeMobileMenu(); onCartClick?.(); }}>
-                          Cart ({cartCount})
-                        </Button>
-                      )}
-                      <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref, closeMobileMenu)}>
-                        <Button className="w-full justify-start" variant="outline">
-                          Dashboard
-                        </Button>
-                      </a>
-                      {currentUser.role === "admin" && (
-                        <a href={adminHref} onClick={(event) => handleNavigate(event, adminHref, closeMobileMenu)}>
-                          <Button className="w-full justify-start" variant="outline">
-                            Admin Portal
-                          </Button>
-                        </a>
-                      )}
-                      <Button variant="destructive" className="justify-start" onClick={() => { closeMobileMenu(); void logout(); }}>
-                        Sign Out
-                      </Button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              <MobileSectionButton
-                label="Browse Companies"
-                isOpen={mobileSection === "companies"}
-                onClick={() => setMobileSection((current) => (current === "companies" ? "nav" : "companies"))}
-              />
-              {mobileSection === "companies" && (
-                <div className="grid grid-cols-1 gap-2">
-                  {apps.map((app) => (
-                    <a
-                      key={app.id}
-                      href={app.url}
-                      onClick={(event) => handleNavigate(event, app.url, closeMobileMenu)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-2xl border border-white/30 bg-white/60 px-3 py-3 text-sm shadow-sm backdrop-blur-lg transition-colors hover:bg-white/85 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10",
-                        app.id === activeApp && "border-primary/30 bg-primary/10 font-semibold",
-                      )}
-                    >
-                      <app.icon className={cn("h-4 w-4", app.color)} />
-                      <span>{app.name}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </header>
-  );
-}
-
-function MobileSectionButton({
-  label,
-  isOpen,
-  onClick,
-}: {
-  label: string;
-  isOpen: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-expanded={isOpen}
-      onClick={onClick}
-      className="mb-2 flex w-full items-center justify-between rounded-2xl border border-white/30 bg-white/60 px-4 py-3 text-left text-sm font-semibold shadow-sm backdrop-blur-lg transition-colors hover:bg-white/85 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+  const AppCard = ({ app, compact = false }: { app: (typeof apps)[number]; compact?: boolean }) => (
+    <a
+      href={app.url}
+      onClick={(event) => handleNavigate(event, app.url, () => { setOpenMenu(null); setMobileCompaniesOpen(false); })}
+      className={cn("group relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br p-4 shadow-lg transition-transform duration-300 hover:-translate-y-0.5", app.surface, compact && "p-3")}
     >
-      <span>{label}</span>
-      <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-    </button>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.24),transparent_38%)]" />
+      <div className="relative flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/16 ring-1 ring-white/20 backdrop-blur-sm"><app.icon className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">{app.label}</span>
+          {!compact && <span className="mt-1 block text-xs leading-relaxed text-white/76">{app.description}</span>}
+        </span>
+      </div>
+    </a>
+  );
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 w-full border-b border-slate-950/5 bg-background/82 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/82">
+        <div className="container mx-auto flex h-[4.5rem] items-center justify-between px-4 sm:px-6 lg:px-8">
+          <a href={currentApp?.url} onClick={(event) => currentApp?.url ? handleNavigate(event, currentApp.url) : undefined} className="flex min-w-0 items-center gap-3">
+            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-gradient-to-br shadow-lg", currentApp.surface)}><currentApp.icon className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">DAJEM ecosystem</span>
+              <span className="block truncate text-sm font-bold tracking-tight text-foreground sm:text-base">{currentApp.name}</span>
+            </span>
+          </a>
+
+          <div ref={menuRef} className="hidden items-center gap-2 lg:flex">
+            <Button variant="outline" size="sm" onClick={() => setPaletteOpen(true)} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 text-muted-foreground shadow-sm hover:bg-accent">
+              <Search className="h-4 w-4" /><span>Search DAJEM</span><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-bold">Ctrl K</kbd>
+            </Button>
+            <div className="relative">
+              <Button size="sm" onClick={() => setOpenMenu((current) => current === "ecosystem" ? null : "ecosystem")} className="h-10 gap-2 rounded-xl bg-slate-950 px-3.5 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100" aria-expanded={openMenu === "ecosystem"} aria-haspopup="menu">
+                <Boxes className="h-4 w-4" /> Ecosystem <ChevronDown className={cn("h-4 w-4 transition-transform", openMenu === "ecosystem" && "rotate-180")} />
+              </Button>
+              <AnimatePresence>
+                {openMenu === "ecosystem" && (
+                  <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-[34rem] rounded-[1.5rem] border border-white/30 bg-background/96 p-3 shadow-2xl shadow-slate-950/18 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }} transition={{ type: "spring", stiffness: 420, damping: 30 }}>
+                    <div className="mb-3 flex items-center justify-between px-2 pt-1"><div><p className="text-sm font-bold text-foreground">Choose a DAJEM company</p><p className="text-xs text-muted-foreground">One account. Shared records. Connected services.</p></div><Command className="h-4 w-4 text-muted-foreground" /></div>
+                    <div className="grid grid-cols-2 gap-3">{apps.map((app) => <AppCard key={app.id} app={app} />)}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            {showCartButton && <Button variant="outline" size="sm" onClick={onCartClick} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 shadow-sm hover:bg-accent"><ShoppingCart className="h-4 w-4" /> Cart ({cartCount})</Button>}
+            <ThemeToggle className="rounded-xl border-border/75 bg-card/72 shadow-sm" />
+            {!currentUser ? (
+              <Button size="sm" onClick={() => openAuthModal("login")} className="h-10 rounded-xl bg-primary px-4 text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90">Sign in</Button>
+            ) : (
+              <div className="relative">
+                <Button variant="outline" size="sm" onClick={() => setOpenMenu((current) => current === "account" ? null : "account")} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 shadow-sm hover:bg-accent" aria-expanded={openMenu === "account"} aria-haspopup="menu"><UserCircle2 className="h-4 w-4" />{currentUser.name.split(" ")[0]}<ChevronDown className={cn("h-4 w-4 transition-transform", openMenu === "account" && "rotate-180")} /></Button>
+                <AnimatePresence>
+                  {openMenu === "account" && (
+                    <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-60 rounded-2xl border border-white/30 bg-background/96 p-2 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }}>
+                      <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref, () => setOpenMenu(null))} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-accent"><LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard</a>
+                      {currentUser.role === "admin" && <a href={adminHref} onClick={(event) => handleNavigate(event, adminHref, () => setOpenMenu(null))} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-accent"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Admin centre</a>}
+                      <button type="button" onClick={() => { setOpenMenu(null); void logout(); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/8"><LogOut className="h-4 w-4" /> Sign out</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+          <div className="lg:hidden"><ThemeToggle className="rounded-xl border-border/75 bg-card/72 shadow-sm" /></div>
+        </div>
+      </header>
+
+      <AnimatePresence>
+        {mobileCompaniesOpen && (
+          <motion.div className="fixed inset-x-4 bottom-[calc(5.9rem+env(safe-area-inset-bottom))] z-50 rounded-[1.5rem] border border-white/20 bg-background/96 p-3 shadow-2xl shadow-slate-950/25 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96 lg:hidden" initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }} transition={{ type: "spring", stiffness: 420, damping: 30 }}>
+            <div className="mb-3 flex items-center justify-between px-1"><div><p className="text-sm font-bold text-foreground">DAJEM ecosystem</p><p className="text-xs text-muted-foreground">Switch company without leaving your account.</p></div><button type="button" onClick={() => setMobileCompaniesOpen(false)} className="rounded-lg px-2 py-1 text-xs font-bold text-muted-foreground hover:bg-accent">Close</button></div>
+            <div className="grid grid-cols-2 gap-2">{apps.map((app) => <AppCard key={app.id} app={app} compact />)}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <nav aria-label="Primary DAJEM navigation" className="fixed inset-x-3 bottom-3 z-50 rounded-[1.45rem] border border-white/40 bg-background/88 p-1.5 shadow-2xl shadow-slate-950/18 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88 lg:hidden">
+        <div className="grid grid-cols-5 gap-1">
+          <a href={groupHref} onClick={(event) => handleNavigate(event, groupHref)} className={cn("dajem-dock-item", activeApp === "landing" && "is-active")}><Landmark className="h-5 w-5" /><span>Home</span></a>
+          <button type="button" onClick={() => setMobileCompaniesOpen((current) => !current)} className={cn("dajem-dock-item", mobileCompaniesOpen && "is-active")}><Grid2X2 className="h-5 w-5" /><span>Companies</span></button>
+          {showCartButton ? <button type="button" onClick={onCartClick} className="dajem-dock-item"><ShoppingCart className="h-5 w-5" /><span>Cart {cartCount ? `(${cartCount})` : ""}</span></button> : <button type="button" onClick={() => void navigateToUrl(dashboardHref)} className="dajem-dock-item"><CalendarDays className="h-5 w-5" /><span>Bookings</span></button>}
+          {currentUser ? <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref)} className="dajem-dock-item"><LayoutDashboard className="h-5 w-5" /><span>Dashboard</span></a> : <button type="button" onClick={() => openAuthModal("login")} className="dajem-dock-item"><LayoutDashboard className="h-5 w-5" /><span>Dashboard</span></button>}
+          <a href={contactHref} onClick={(event) => handleNavigate(event, contactHref)} className="dajem-dock-item"><Mail className="h-5 w-5" /><span>Contact</span></a>
+        </div>
+      </nav>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+    </>
   );
 }

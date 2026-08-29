@@ -4,8 +4,9 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* soft blue-gray tint */
-    --foreground: 222.2 47.4% 11.2%;
+    color-scheme: light;
+    --background: 210 33% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
@@ -13,17 +14,17 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    --primary: 217.2 89% 25%; /* Trustworthy Deep Blue (HSL 217 89% 25%) */
+    --primary: 222 61% 11%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 142.1 72% 38%; /* Growth/Agricultural/Surveying Mint Green (HSL 142 72% 38%) */
+    --secondary: 160 84% 32%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 142.1 72% 95%;
-    --accent-foreground: 142.1 80% 20%;
+    --accent: 210 40% 95%;
+    --accent-foreground: 222 47% 15%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -32,27 +33,28 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 217.2 89% 25%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%; /* Sleek deep dark navy background */
+    color-scheme: dark;
+    --background: 222 61% 7%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 10%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 213 90% 55%; /* Rich high-visibility blue in dark mode */
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 211 100% 62%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 142.1 70% 45%; /* Bright vibrant mint green in dark mode */
     --secondary-foreground: 222.2 84% 4.9%;
 
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 24% 78%;
 
     --accent: 142.1 70% 12%;
     --accent-foreground: 142.1 70% 90%;
@@ -72,26 +74,41 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "Avenir Next", "Segoe UI Variable", "Helvetica Neue", sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     background-image:
-      radial-gradient(circle at top left, hsl(var(--secondary) / 0.12), transparent 32%),
-      radial-gradient(circle at top right, hsl(var(--primary) / 0.09), transparent 28%),
+      radial-gradient(circle at 8% 4%, hsl(190 95% 48% / 0.09), transparent 27%),
+      radial-gradient(circle at 94% 12%, hsl(160 84% 32% / 0.1), transparent 23%),
+      radial-gradient(circle at 48% 105%, hsl(218 80% 55% / 0.07), transparent 30%),
       linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
     background-attachment: fixed;
     min-height: 100vh;
   }
 
+  section[id] {
+    scroll-margin-top: 8.5rem;
+  }
+
   .dajem-hero-slide-frame {
     opacity: 0;
-    animation: dajem-hero-fade 21s ease-in-out infinite;
+    transition: opacity 900ms ease;
     will-change: opacity;
   }
 
+  .dajem-hero-slide-frame.is-active {
+    opacity: 1;
+  }
+
   .dajem-hero-slide-image {
-    transform: scale(1.06);
-    filter: saturate(1.04) contrast(1.03) brightness(0.92);
-    animation: dajem-hero-kenburns 21s ease-in-out infinite;
+    transform: scale(1.02);
+    filter: saturate(1.04) contrast(1.04) brightness(0.76);
+    transition: transform 7s ease-out, filter 900ms ease;
     will-change: transform, filter;
+  }
+
+  .dajem-hero-slide-image.is-active {
+    transform: scale(1.08);
+    filter: saturate(1.08) contrast(1.05) brightness(0.82);
   }
 
   .dajem-ambient-orb {
@@ -107,11 +124,27 @@
     scroll-behavior: smooth;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 1023px) {
     body {
-      background-image:
-        radial-gradient(circle at top, hsl(var(--secondary) / 0.11), transparent 26%),
-        linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+      padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
+    }
+
+    body {
+      background-image: linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .dajem-mobile-hero {
+      min-height: 32rem;
+    }
+
+    .dajem-mobile-hero h1 {
+      letter-spacing: -0.045em;
+    }
+
+    .dajem-mobile-hero .dajem-ambient-orb {
+      display: none;
     }
   }
 
@@ -120,43 +153,57 @@
     .dajem-hero-slide-image,
     .dajem-ambient-orb {
       animation: none;
-      opacity: 1;
       transform: none;
       filter: none;
+      transition: none;
     }
   }
 }
 
-@keyframes dajem-hero-fade {
-  0% {
-    opacity: 0;
+@layer components {
+  .dajem-hero-copy-panel {
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    background: linear-gradient(135deg, rgba(2, 6, 23, 0.82), rgba(15, 23, 42, 0.67));
+    box-shadow: 0 24px 70px rgba(2, 6, 23, 0.28);
+    backdrop-filter: blur(16px);
   }
 
-  8%,
-  30% {
-    opacity: 1;
+  .dajem-hero-title {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    letter-spacing: -0.045em;
+    text-shadow: 0 3px 18px rgba(2, 6, 23, 0.56);
   }
 
-  38%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes dajem-hero-kenburns {
-  0% {
-    transform: scale(1.06) translate3d(0, 0, 0);
-    filter: saturate(1) contrast(1.01) brightness(0.88);
+  .dajem-hero-lede {
+    color: rgba(241, 245, 249, 0.94);
+    text-shadow: 0 2px 12px rgba(2, 6, 23, 0.48);
   }
 
-  30% {
-    transform: scale(1.01) translate3d(0, -1.5%, 0);
-    filter: saturate(1.08) contrast(1.04) brightness(0.98);
+  .dajem-hero-copy-panel .text-muted-foreground {
+    color: rgba(226, 232, 240, 0.9);
   }
 
-  100% {
-    transform: scale(1.08) translate3d(0, -2.5%, 0);
-    filter: saturate(1.03) contrast(1.02) brightness(0.9);
+  .dajem-dock-item {
+    display: flex;
+    min-height: 3.5rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    border-radius: 1rem;
+    padding: 0.35rem 0.15rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+  }
+
+  .dajem-dock-item:hover,
+  .dajem-dock-item.is-active {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    transform: translateY(-1px);
   }
 }
 
