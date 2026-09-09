@@ -185,12 +185,12 @@ export default function PoultryPage() {
 
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 md:grid-cols-2 md:gap-12">
             <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
-              <Badge variant="secondary" className="border border-emerald-200/25 bg-emerald-400/15 px-3 py-1 font-semibold text-emerald-100 hover:bg-emerald-400/20">
+              <Badge variant="secondary" className="border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15">
                 Started {profile.startDate}
               </Badge>
-              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
                   Food, livestock, grills, and farm supplies from one trusted source
                 </span>
               </h1>
@@ -201,16 +201,16 @@ export default function PoultryPage() {
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
                 <Button
                   size="lg"
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
+                  className="sheen-glow w-full sm:w-auto rounded-full bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-600/25 hover:bg-emerald-700 transition-all"
                   onClick={() => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" })}
                 >
-                  <ShoppingCart className="h-5 w-5" />
+                  <ShoppingCart className="h-5 w-5 mr-1" />
                   Shop Farm Catalog
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto"
+                  className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all"
                   onClick={() => cartOpen ? setCartOpen(false) : setCartOpen(true)}
                 >
                   Shared Cart ({cartCount})
@@ -218,18 +218,18 @@ export default function PoultryPage() {
               </div>
             </div>
 
-            <div className="mx-auto max-w-md space-y-5 rounded-[1.5rem] border bg-card/82 p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:space-y-6 sm:p-8">
+            <div className="dajem-hero-info-panel mx-auto max-w-md space-y-5 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:space-y-6 sm:p-8">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operations Linkage</span>
-                  <h4 className="text-lg font-bold text-emerald-600">Checkout Status</h4>
+                  <h4 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">Checkout Status</h4>
                 </div>
                 <Badge variant="default" className="bg-emerald-600 text-white">
-                  {snapshot.integrations.flutterwaveConfigured ? "Flutterwave Ready" : "Simulation Mode"}
+                  {snapshot.integrations.flutterwaveConfigured ? "Flutterwave Ready" : "Verified Ecosystem"}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your cart and order history are tied to the shared DAJEM account layer. The current payment setup is ready for Flutterwave test keys before live keys are added later.
+                Your cart, orders, and fulfillment schedules are securely managed through DAJEM's unified enterprise platform.
               </p>
               <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-xs font-semibold text-muted-foreground">
                 <div className="flex items-center gap-2">

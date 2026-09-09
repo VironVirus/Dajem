@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Menu } from "lucide-react";
+import { Compass } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export interface SectionNavItem {
@@ -16,78 +16,67 @@ interface SectionNavProps {
 }
 
 export function SectionNav({ items, label = "this page", className }: SectionNavProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [activeHash, setActiveHash] = React.useState<string>("");
 
-  const handleDesktopChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const href = event.target.value;
-    if (!href) return;
+  React.useEffect(() => {
+    const updateActive = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        setActiveHash(hash);
+      } else if (items[0]) {
+        setActiveHash(items[0].href);
+      }
+    };
 
+    updateActive();
+    window.addEventListener("hashchange", updateActive);
+    return () => window.removeEventListener("hashchange", updateActive);
+  }, [items]);
+
+  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    event.preventDefault();
+    setActiveHash(href);
     window.history.replaceState(null, "", href);
-    document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    event.target.value = "";
+    const target = document.querySelector(href);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   return (
     <nav
       aria-label={label}
       className={cn(
-        "sticky top-16 z-30 bg-background/88 py-2 backdrop-blur-xl dark:bg-slate-950/88",
+        "sticky top-[4.5rem] z-30 border-b border-border/50 bg-background/80 py-2.5 backdrop-blur-xl transition-all dark:border-white/10 dark:bg-slate-950/80",
         className,
       )}
     >
-      <div className="container mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="hidden min-h-11 items-center justify-between gap-5 lg:flex">
-          <span className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            Explore {label}
-          </span>
-          <label className="relative block w-64">
-            <span className="sr-only">Jump to a {label} section</span>
-            <select
-              defaultValue=""
-              onChange={handleDesktopChange}
-              className="h-10 w-full appearance-none rounded-xl border border-border/80 bg-card/85 px-3 pr-10 text-sm font-semibold text-foreground shadow-sm outline-none transition-colors hover:border-primary/35 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="" disabled>Jump to section</option>
-              {items.map((item) => (
-                <option key={item.href} value={item.href}>{item.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          </label>
+      <div className="container mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <Compass className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
+          <span className="hidden uppercase tracking-wider sm:inline">Explore</span>
+          <span className="font-bold text-foreground">{label}</span>
         </div>
 
-        <div className="relative lg:hidden">
-          <button
-            type="button"
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="page-section-menu"
-            onClick={() => setIsMobileMenuOpen((current) => !current)}
-            className="inline-flex h-11 w-full items-center justify-between rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-colors hover:bg-primary/90"
-          >
-            <span className="flex items-center gap-2.5">
-              <Menu className="h-4 w-4" />
-              Explore {label}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary-foreground/72">
-              Menu
-            </span>
-          </button>
-          {isMobileMenuOpen && (
-            <div id="page-section-menu" className="absolute inset-x-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border border-border/80 bg-background/98 p-2 shadow-2xl backdrop-blur-xl dark:bg-slate-950/98">
-              <div className="grid gap-1">
-                {items.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="rounded-xl px-3 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {items.map((item) => {
+            const isActive = activeHash === item.href;
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={(e) => handleLinkClick(e, item.href)}
+                className={cn(
+                  "inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-all duration-200",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20 scale-[1.02]"
+                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/10",
+                )}
+              >
+                {item.label}
+              </a>
+            );
+          })}
         </div>
       </div>
     </nav>

@@ -30,9 +30,13 @@ import {
   FileUp,
   Info,
   Layers,
+  Loader2,
   Map,
+  MapPin,
+  PackageCheck,
   Ruler,
   Sparkles,
+  Truck,
   UploadCloud,
 } from "lucide-react";
 
@@ -72,6 +76,8 @@ type ReestablishmentMode =
   | "reestablish-destroyed-beacon";
 type ChangeOfTitleState = "undeveloped" | "developed";
 type AcquisitionSource = "community" | "estate-developer" | "dajem" | "other";
+type DeliveryZone = "enugu" | "southeast" | "other";
+type DeliveryRateSource = "dajem-estimate" | "dhl-live";
 type UploadedDocumentAttachment = {
   documentName: string;
   fileName: string;
@@ -80,6 +86,22 @@ type UploadedDocumentAttachment = {
   storagePath?: string;
   fileUrl?: string;
 };
+
+interface SurveyDeliveryCheckout {
+  added: boolean;
+  recipientName: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  zone: DeliveryZone;
+  fee: number;
+  serviceName: string;
+  estimatedDelivery: string;
+  rateSource: DeliveryRateSource;
+}
 
 interface EstimateLineItem {
   label: string;
@@ -254,10 +276,20 @@ const propertySearchLayouts = [
   "Star Residence",
 ];
 
-const surveyDeliveryFees = {
-  enugu: 10000,
-  southeast: 15000,
-  other: 20000,
+const initialSurveyDelivery: SurveyDeliveryCheckout = {
+  added: false,
+  recipientName: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "",
+  state: "Enugu",
+  postalCode: "",
+  zone: "enugu",
+  fee: 0,
+  serviceName: "DHL Express Document Delivery",
+  estimatedDelivery: "",
+  rateSource: "dajem-estimate",
 };
 
 function getCalculatorServiceLabel(serviceType: CalculatorService) {
@@ -276,12 +308,6 @@ function getTerrainLabel(terrain: string) {
   if (terrain === "hilly") return "Hilly / Mountainous";
   if (terrain === "swampy") return "Swamp / Waterlogged";
   return "Flat / Table land";
-}
-
-function getDeliveryZoneLabel(deliveryZone: keyof typeof surveyDeliveryFees) {
-  if (deliveryZone === "southeast") return "Abia, Imo, Anambra or Ebonyi";
-  if (deliveryZone === "other") return "Other States";
-  return "Within Enugu State";
 }
 
 function getReestablishmentModeLabel(mode: ReestablishmentMode) {
@@ -337,10 +363,12 @@ function formatAreaSelection(parcelSize: string, parcelUnit: string) {
   return `${formatMeasurement(value)} ${unitLabel}`;
 }
 
-function addDeliveryLineItem(items: EstimateLineItem[], deliveryZone: keyof typeof surveyDeliveryFees) {
+function addDeliveryLineItem(items: EstimateLineItem[], delivery: SurveyDeliveryCheckout) {
+  if (!delivery.added || delivery.fee <= 0) return;
+
   items.push({
-    label: `Survey plan delivery (${getDeliveryZoneLabel(deliveryZone)})`,
-    amount: surveyDeliveryFees[deliveryZone],
+    label: `DHL Express survey plan delivery (${delivery.city}, ${delivery.state})`,
+    amount: delivery.fee,
   });
 }
 
@@ -452,7 +480,7 @@ function calculateSurveyEstimate(inputs: {
   detailDensity: DetailDensity;
   courtAppearance: string;
   terrain: string;
-  deliveryZone: keyof typeof surveyDeliveryFees;
+  delivery: SurveyDeliveryCheckout;
   reestablishmentMode: ReestablishmentMode;
   reestablishmentCount: string;
   changeOfTitleState: ChangeOfTitleState;
@@ -462,8 +490,25 @@ function calculateSurveyEstimate(inputs: {
   const selections = [
     `Service: ${serviceLabel}`,
     `Terrain profile: ${getTerrainLabel(inputs.terrain)}`,
-    `Survey plan delivery: ${getDeliveryZoneLabel(inputs.deliveryZone)} (${formatCurrency(surveyDeliveryFees[inputs.deliveryZone])})`,
   ];
+
+  if (inputs.delivery.added) {
+    selections.push(
+      `DHL delivery service: ${inputs.delivery.serviceName}`,
+      `Delivery recipient: ${inputs.delivery.recipientName}`,
+      `Delivery address: ${inputs.delivery.address}, ${inputs.delivery.city}, ${inputs.delivery.state}${inputs.delivery.postalCode ? ` ${inputs.delivery.postalCode}` : ""}, Nigeria`,
+      `Delivery contact: ${inputs.delivery.phone}${inputs.delivery.email ? ` | ${inputs.delivery.email}` : ""}`,
+      `Delivery rate: ${formatCurrency(inputs.delivery.fee)} (${inputs.delivery.rateSource === "dhl-live" ? "Live DHL account rate" : "DAJEM estimated DHL rate"})`,
+      `Estimated delivery: ${inputs.delivery.estimatedDelivery}`,
+    );
+  }
+
+  const deliveryFulfillmentNote = "DHL delivery will be booked after the survey plan is approved, ready for dispatch, and delivery payment is confirmed.";
+  const buildScopedEmptyEstimate = (detail: string, notes: string[] = []): SurveyEstimate => ({
+    ...buildEmptyEstimate(inputs.serviceType, detail),
+    selections,
+    notes: inputs.delivery.added ? [...notes, deliveryFulfillmentNote] : notes,
+  });
 
   const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[]) => ({
     serviceType: inputs.serviceType,
@@ -472,39 +517,42 @@ function calculateSurveyEstimate(inputs: {
     detail,
     lineItems: items,
     selections: [...selections, ...extraSelections],
-    notes,
+    notes: inputs.delivery.added
+      ? [...notes, deliveryFulfillmentNote]
+      : notes,
   });
 
   if (inputs.serviceType === "parcellation") {
     const plots = parsePositiveNumber(inputs.plotCount);
     if (!plots) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+      return buildScopedEmptyEstimate("Enter number of plots to calculate the estimate.");
     }
 
     const base = calculateParcellationBaseEstimate(plots);
     const items: EstimateLineItem[] = [
       { label: `Parcellation survey base (${base.detail})`, amount: base.amount },
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
       [`Number of plots: ${Math.ceil(plots)}`],
       base.detail,
       [
-        "Parcellation totals include the selected delivery fee.",
+        inputs.delivery.added ? "The selected DHL delivery fee is included in this total." : "DHL delivery has not been added.",
         "Registry or site-specific requirements can still adjust the final operational bill.",
       ],
     );
   }
 
   if (inputs.serviceType === "control" || inputs.serviceType === "engineering") {
-    return buildEmptyEstimate(
-      inputs.serviceType,
+    return buildScopedEmptyEstimate(
       "Formal assessment is required for this selected service.",
       [
         "Control and engineering surveys vary with scope, control points, design requirements, and field access.",
-        `Selected delivery option: ${getDeliveryZoneLabel(inputs.deliveryZone)} (${formatCurrency(surveyDeliveryFees[inputs.deliveryZone])}).`,
+        inputs.delivery.added
+          ? `Selected DHL delivery: ${formatCurrency(inputs.delivery.fee)} to ${inputs.delivery.city}, ${inputs.delivery.state}.`
+          : "DHL delivery has not been added.",
       ],
     );
   }
@@ -512,7 +560,7 @@ function calculateSurveyEstimate(inputs: {
   if (inputs.serviceType === "reestablishment") {
     const quantity = parsePositiveNumber(inputs.reestablishmentCount);
     if (!quantity) {
-      return buildEmptyEstimate(inputs.serviceType, `Enter number of ${getReestablishmentUnitLabel(inputs.reestablishmentMode)} to calculate the estimate.`);
+      return buildScopedEmptyEstimate(`Enter number of ${getReestablishmentUnitLabel(inputs.reestablishmentMode)} to calculate the estimate.`);
     }
 
     const count = Math.ceil(quantity);
@@ -529,7 +577,7 @@ function calculateSurveyEstimate(inputs: {
         amount: contingency,
       },
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     const notes = [
       "Contingency has been added automatically at 5% of the survey cost.",
@@ -551,7 +599,7 @@ function calculateSurveyEstimate(inputs: {
   if (inputs.serviceType === "change-of-title") {
     const plots = parsePositiveNumber(inputs.plotCount);
     if (!plots) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+      return buildScopedEmptyEstimate("Enter number of plots to calculate the estimate.");
     }
 
     const count = Math.ceil(plots);
@@ -562,7 +610,7 @@ function calculateSurveyEstimate(inputs: {
         amount: count * rate,
       },
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -582,10 +630,10 @@ function calculateSurveyEstimate(inputs: {
     const plots = parsePositiveNumber(inputs.plotCount);
     const squareMetres = toSquareMetres(inputs.parcelSize, inputs.parcelUnit);
     if (!plots) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter number of plots to calculate the estimate.");
+      return buildScopedEmptyEstimate("Enter number of plots to calculate the estimate.");
     }
     if (!squareMetres) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter parcel size to calculate the estimate.");
+      return buildScopedEmptyEstimate("Enter parcel size to calculate the estimate.");
     }
 
     const count = Math.ceil(plots);
@@ -605,7 +653,7 @@ function calculateSurveyEstimate(inputs: {
     } else {
       const perimeterBase = calculatePerimeterBaseEstimate(Math.max(squareMetres, 1000), inputs.clientType);
       if (!perimeterBase) {
-        return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported perimeter survey table.");
+        return buildScopedEmptyEstimate("Enter a parcel size within the supported perimeter survey table.");
       }
 
       const perimeterExtrasTotal = sumLineItems(perimeterExtraItems);
@@ -620,7 +668,7 @@ function calculateSurveyEstimate(inputs: {
       detail = `${perimeterBase.detail} perimeter pricing applied to lifting.`;
     }
 
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -636,20 +684,20 @@ function calculateSurveyEstimate(inputs: {
 
   const squareMetres = toSquareMetres(inputs.parcelSize, inputs.parcelUnit);
   if (!squareMetres) {
-    return buildEmptyEstimate(inputs.serviceType, "Enter parcel size to calculate the estimate.");
+    return buildScopedEmptyEstimate("Enter parcel size to calculate the estimate.");
   }
 
   if (inputs.serviceType === "perimeter") {
     const base = calculatePerimeterBaseEstimate(squareMetres, inputs.clientType);
     if (!base) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported perimeter survey table.");
+      return buildScopedEmptyEstimate("Enter a parcel size within the supported perimeter survey table.");
     }
 
     const items: EstimateLineItem[] = [
       { label: `Perimeter survey base (${base.detail})`, amount: base.amount },
       ...perimeterExtraItems,
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -668,13 +716,13 @@ function calculateSurveyEstimate(inputs: {
   if (inputs.serviceType === "topography") {
     const base = calculateTopographyBaseEstimate(squareMetres, inputs.topographyTerrain);
     if (!base) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported topography survey table.");
+      return buildScopedEmptyEstimate("Enter a parcel size within the supported topography survey table.");
     }
 
     const items: EstimateLineItem[] = [
       { label: `Topography survey base (${base.detail})`, amount: base.amount },
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -695,7 +743,7 @@ function calculateSurveyEstimate(inputs: {
     const items: EstimateLineItem[] = [
       { label: `Detail survey base (${base.detail})`, amount: base.amount },
     ];
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -714,7 +762,7 @@ function calculateSurveyEstimate(inputs: {
   if (inputs.serviceType === "litigation") {
     const base = calculateLitigationBaseEstimate(squareMetres, inputs.clientType);
     if (!base) {
-      return buildEmptyEstimate(inputs.serviceType, "Enter a parcel size within the supported litigation survey table.");
+      return buildScopedEmptyEstimate("Enter a parcel size within the supported litigation survey table.");
     }
 
     const planCompilationRate = inputs.clientType === "private" ? 0.35 : 0.4;
@@ -738,7 +786,7 @@ function calculateSurveyEstimate(inputs: {
       });
     }
 
-    addDeliveryLineItem(items, inputs.deliveryZone);
+    addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
       items,
@@ -757,7 +805,7 @@ function calculateSurveyEstimate(inputs: {
     );
   }
 
-  return buildEmptyEstimate(inputs.serviceType, "Formal assessment is required for this selected service.");
+  return buildScopedEmptyEstimate("Formal assessment is required for this selected service.");
 }
 
 function buildEstimateNarrative(estimate: SurveyEstimate) {
@@ -802,7 +850,6 @@ export default function SurveyPage() {
     detailDensity: "low" as DetailDensity,
     courtAppearance: "no",
     terrain: "flat",
-    deliveryZone: "enugu" as keyof typeof surveyDeliveryFees,
     reestablishmentMode: "identification-plot" as ReestablishmentMode,
     reestablishmentCount: "1",
     changeOfTitleState: "undeveloped" as ChangeOfTitleState,
@@ -829,10 +876,14 @@ export default function SurveyPage() {
   const [dragActive, setDragActive] = React.useState(false);
   const [quoteSent, setQuoteSent] = React.useState(false);
   const [quoteError, setQuoteError] = React.useState<string | null>(null);
+  const [deliveryCheckout, setDeliveryCheckout] = React.useState<SurveyDeliveryCheckout>(initialSurveyDelivery);
+  const [deliveryError, setDeliveryError] = React.useState<string | null>(null);
+  const [isCalculatingDelivery, setIsCalculatingDelivery] = React.useState(false);
+  const [deliveryEditor, setDeliveryEditor] = React.useState<string | null>(null);
 
-  const calculatedEstimate = calculateSurveyEstimate(calculatorInputs);
+  const calculatedEstimate = calculateSurveyEstimate({ ...calculatorInputs, delivery: deliveryCheckout });
   const linkedInquiryEstimate = isCalculatorService(quoteForm.serviceType)
-    ? calculateSurveyEstimate({ ...calculatorInputs, serviceType: quoteForm.serviceType })
+    ? calculateSurveyEstimate({ ...calculatorInputs, serviceType: quoteForm.serviceType, delivery: deliveryCheckout })
     : null;
 
   const serviceIcons = [Ruler, Compass, Map, Layers];
@@ -854,8 +905,94 @@ export default function SurveyPage() {
     unitConverter.toUnit,
   );
 
+  React.useEffect(() => {
+    if (!currentUser) return;
+
+    setDeliveryCheckout((current) => ({
+      ...current,
+      recipientName: current.recipientName || currentUser.name,
+      phone: current.phone || currentUser.phone,
+      email: current.email || currentUser.email,
+    }));
+  }, [currentUser]);
+
   const setCalculatorValue = <K extends keyof typeof calculatorInputs>(key: K, value: (typeof calculatorInputs)[K]) => {
     setCalculatorInputs((current) => ({ ...current, [key]: value }));
+  };
+
+  const setDeliveryValue = <K extends keyof SurveyDeliveryCheckout>(key: K, value: SurveyDeliveryCheckout[K]) => {
+    setDeliveryError(null);
+    setDeliveryCheckout((current) => ({
+      ...current,
+      [key]: value,
+      added: false,
+      fee: 0,
+      estimatedDelivery: "",
+    }));
+  };
+
+  const calculateAndAddDelivery = async () => {
+    const requiredFields = [
+      deliveryCheckout.recipientName,
+      deliveryCheckout.phone,
+      deliveryCheckout.address,
+      deliveryCheckout.city,
+      deliveryCheckout.state,
+    ];
+
+    if (requiredFields.some((value) => !value.trim())) {
+      setDeliveryError("Enter the recipient name, phone number, street address, city, and state before calculating delivery.");
+      return;
+    }
+
+    setDeliveryError(null);
+    setIsCalculatingDelivery(true);
+
+    try {
+      const response = await fetch("/api/dhl/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination: {
+            city: deliveryCheckout.city,
+            state: deliveryCheckout.state,
+            postalCode: deliveryCheckout.postalCode,
+            countryCode: "NG",
+          },
+          zone: deliveryCheckout.zone,
+        }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to calculate DHL delivery right now.");
+      }
+
+      setDeliveryCheckout((current) => ({
+        ...current,
+        added: true,
+        fee: Number(payload.amount),
+        serviceName: String(payload.serviceName ?? "DHL Express Document Delivery"),
+        estimatedDelivery: String(payload.estimatedDelivery ?? "2-5 business days after dispatch"),
+        rateSource: payload.source === "dhl-live" ? "dhl-live" : "dajem-estimate",
+      }));
+    } catch (error) {
+      setDeliveryError(error instanceof Error ? error.message : "Unable to calculate DHL delivery right now.");
+    } finally {
+      setIsCalculatingDelivery(false);
+    }
+  };
+
+  const removeDelivery = () => {
+    setDeliveryError(null);
+    setDeliveryCheckout((current) => ({
+      ...current,
+      added: false,
+      fee: 0,
+      estimatedDelivery: "",
+      rateSource: "dajem-estimate",
+    }));
+    setDeliveryEditor(null);
   };
 
   const buildFilesFromList = (files: FileList | null, documentNames = quoteForm.uploadedDocuments) => {
@@ -952,6 +1089,137 @@ export default function SurveyPage() {
     if (isCalculatorService(value)) {
       setCalculatorInputs((current) => ({ ...current, serviceType: value }));
     }
+  };
+
+  const renderDeliveryCheckout = (idPrefix: string) => {
+    if (deliveryEditor !== idPrefix) {
+      return (
+        <div className="overflow-hidden rounded-2xl border border-amber-400/45 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm dark:border-amber-400/20 dark:from-amber-950/25 dark:to-slate-950/60">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-300 text-red-700 shadow-sm">
+                <Truck className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-extrabold tracking-tight text-foreground">{deliveryCheckout.added ? "DHL delivery is included" : "Deliver my survey plan with DHL"}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {deliveryCheckout.added
+                    ? `${formatCurrency(deliveryCheckout.fee)} · ${deliveryCheckout.city}, ${deliveryCheckout.state} · ${deliveryCheckout.estimatedDelivery}`
+                    : "Add secure document delivery to your estimate and Inquiry Desk request."}
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant={deliveryCheckout.added ? "outline" : "default"}
+              className={deliveryCheckout.added ? "shrink-0 border-red-700 text-red-800 hover:bg-red-50 dark:text-red-200" : "shrink-0 bg-red-700 text-white hover:bg-red-800"}
+              onClick={() => setDeliveryEditor(idPrefix)}
+            >
+              <PackageCheck className="h-4 w-4" />
+              {deliveryCheckout.added ? "View Delivery" : "Add DHL Delivery"}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-hidden rounded-2xl border border-amber-400/55 bg-card shadow-lg">
+        <div className="border-b border-amber-400/35 bg-gradient-to-r from-amber-300 via-amber-200 to-amber-50 p-4 text-slate-950 dark:from-amber-400 dark:via-amber-300 dark:to-amber-200">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-14 items-center justify-center rounded-lg bg-red-700 text-[11px] font-black italic tracking-tight text-amber-200 shadow-sm">DHL</span>
+              <div>
+                <p className="font-extrabold">Survey Plan Delivery Checkout</p>
+                <p className="text-xs font-medium text-slate-700">Secure document envelope from DAJEM Orbital, Enugu</p>
+              </div>
+            </div>
+            <button type="button" onClick={removeDelivery} className="rounded-lg bg-white/65 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-white">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-5 p-4 sm:p-5">
+          <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="rounded-lg bg-primary px-2 py-2 text-primary-foreground">1. Address</div>
+            <div className={deliveryCheckout.added ? "rounded-lg bg-primary px-2 py-2 text-primary-foreground" : "rounded-lg bg-muted px-2 py-2"}>2. Rate</div>
+            <div className={deliveryCheckout.added ? "rounded-lg bg-emerald-700 px-2 py-2 text-white" : "rounded-lg bg-muted px-2 py-2"}>3. Added</div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idPrefix}-delivery-name`}>Recipient Name</Label>
+              <Input id={`${idPrefix}-delivery-name`} autoComplete="name" value={deliveryCheckout.recipientName} onChange={(event) => setDeliveryValue("recipientName", event.target.value)} placeholder="Full name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idPrefix}-delivery-phone`}>Phone Number</Label>
+              <Input id={`${idPrefix}-delivery-phone`} type="tel" autoComplete="tel" value={deliveryCheckout.phone} onChange={(event) => setDeliveryValue("phone", event.target.value)} placeholder="+234..." />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor={`${idPrefix}-delivery-email`}>Email Address <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input id={`${idPrefix}-delivery-email`} type="email" autoComplete="email" value={deliveryCheckout.email} onChange={(event) => setDeliveryValue("email", event.target.value)} placeholder="recipient@example.com" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor={`${idPrefix}-delivery-address`}>Street Address</Label>
+              <Input id={`${idPrefix}-delivery-address`} autoComplete="street-address" value={deliveryCheckout.address} onChange={(event) => setDeliveryValue("address", event.target.value)} placeholder="House number, street and landmark" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idPrefix}-delivery-city`}>City / Town</Label>
+              <Input id={`${idPrefix}-delivery-city`} autoComplete="address-level2" value={deliveryCheckout.city} onChange={(event) => setDeliveryValue("city", event.target.value)} placeholder="Enugu" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idPrefix}-delivery-state`}>State</Label>
+              <Input id={`${idPrefix}-delivery-state`} autoComplete="address-level1" value={deliveryCheckout.state} onChange={(event) => setDeliveryValue("state", event.target.value)} placeholder="Enugu" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={`${idPrefix}-delivery-postal`}>Postal Code <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input id={`${idPrefix}-delivery-postal`} inputMode="numeric" autoComplete="postal-code" value={deliveryCheckout.postalCode} onChange={(event) => setDeliveryValue("postalCode", event.target.value)} placeholder="400001" />
+            </div>
+            <Select
+              label="Delivery Zone"
+              value={deliveryCheckout.zone}
+              onChange={(event) => setDeliveryValue("zone", event.target.value as DeliveryZone)}
+              options={[
+                { value: "enugu", label: "Within Enugu State" },
+                { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi" },
+                { value: "other", label: "Other Nigerian States" },
+              ]}
+            />
+          </div>
+
+          <div className="grid gap-3 rounded-xl border bg-muted/25 p-4 text-xs sm:grid-cols-3">
+            <div><p className="font-bold text-foreground">Document envelope</p><p className="mt-1 text-muted-foreground">Survey plan package</p></div>
+            <div><p className="font-bold text-foreground">0.5 kg</p><p className="mt-1 text-muted-foreground">35 x 25 x 2 cm</p></div>
+            <div><p className="font-bold text-foreground">From Enugu</p><p className="mt-1 text-muted-foreground">Domestic delivery</p></div>
+          </div>
+
+          {deliveryError && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{deliveryError}</p>}
+
+          {deliveryCheckout.added && (
+            <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/35">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex gap-3">
+                  <PackageCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                  <div>
+                    <p className="font-bold text-emerald-900 dark:text-emerald-100">Delivery added to estimate</p>
+                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">{deliveryCheckout.serviceName} · {deliveryCheckout.estimatedDelivery}</p>
+                    <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-200">{deliveryCheckout.rateSource === "dhl-live" ? "Live DHL account rate" : "DAJEM estimated DHL rate"}</p>
+                  </div>
+                </div>
+                <p className="text-xl font-black text-emerald-900 dark:text-emerald-100">{formatCurrency(deliveryCheckout.fee)}</p>
+              </div>
+            </div>
+          )}
+
+          <Button type="button" className="w-full bg-red-700 text-white hover:bg-red-800" disabled={isCalculatingDelivery} onClick={calculateAndAddDelivery}>
+            {isCalculatingDelivery ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+            {isCalculatingDelivery ? "Calculating DHL Rate..." : deliveryCheckout.added ? "Recalculate Delivery" : "Calculate & Add Delivery"}
+          </Button>
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">The displayed rate is an estimate until DHL accepts the shipment. Dispatch is arranged when the completed survey plan and delivery payment are confirmed.</p>
+        </div>
+      </div>
+    );
   };
 
   const renderSharedEstimatorFields = (serviceType: CalculatorService, idPrefix: string) => (
@@ -1096,7 +1364,7 @@ export default function SurveyPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4">
         <Select
           label="Terrain Profile"
           value={calculatorInputs.terrain}
@@ -1107,17 +1375,9 @@ export default function SurveyPage() {
             { value: "swampy", label: "Swamp / Waterlogged" },
           ]}
         />
-        <Select
-          label="Survey Plan Delivery"
-          value={calculatorInputs.deliveryZone}
-          onChange={(event) => setCalculatorValue("deliveryZone", event.target.value as keyof typeof surveyDeliveryFees)}
-          options={[
-            { value: "enugu", label: "Within Enugu State - N10,000" },
-            { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi - N15,000" },
-            { value: "other", label: "Other States - N20,000" },
-          ]}
-        />
       </div>
+
+      {renderDeliveryCheckout(idPrefix)}
     </>
   );
 
@@ -1207,6 +1467,13 @@ export default function SurveyPage() {
       propertySearchLayout: "",
     });
     setUploadedFiles([]);
+    setDeliveryCheckout({
+      ...initialSurveyDelivery,
+      recipientName: currentUser?.name ?? "",
+      phone: currentUser?.phone ?? "",
+      email: currentUser?.email ?? "",
+    });
+    setDeliveryEditor(null);
     setQuoteError(null);
   };
 
@@ -1235,12 +1502,12 @@ export default function SurveyPage() {
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 lg:grid-cols-12 lg:gap-12">
             <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
-              <Badge variant="secondary" className="border border-cyan-200/25 bg-cyan-400/15 px-3 py-1 font-semibold text-cyan-100 hover:bg-cyan-400/20">
+              <Badge variant="secondary" className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/15">
                 est. April, 2003
               </Badge>
-              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
                   Surveying, mapping, design, construction, and logistics
                 </span>
               </h1>
@@ -1249,16 +1516,16 @@ export default function SurveyPage() {
                 <p className="mt-8 pt-2">Submit a request, receive pending approval, and track admin updates from your shared dashboard.</p>
               </div>
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4">
-                <Button size="lg" className="w-full bg-cyan-600 text-white hover:bg-cyan-700 sm:w-auto" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
                   Start Verification Portal
                 </Button>
-                <Button size="lg" variant="outline" className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
                   Cost Estimator
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-5 rounded-[1.5rem] border bg-card/82 p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5">
+            <div className="dajem-hero-info-panel space-y-5 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5">
               <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
                 <Sparkles className="h-5 w-5 text-cyan-500" />
                 Company Profile

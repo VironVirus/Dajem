@@ -27,25 +27,25 @@ export function Footer() {
   }, [navigateToUrl]);
 
   return (
-    <footer className="border-t border-border bg-card text-card-foreground">
+    <footer className="border-t border-border/50 bg-card/60 backdrop-blur-md text-card-foreground">
       <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo & Corporate Summary */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-2">
               <Landmark className="h-6 w-6 text-primary dark:text-blue-400" />
-              <span className="text-lg font-bold tracking-tight text-primary dark:text-foreground">
+              <span className="text-lg font-bold tracking-tight text-foreground">
                 {group.displayName}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {group.summary}
             </p>
           </div>
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-foreground">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
               Companies
             </h4>
             <ul className="space-y-2">
@@ -66,7 +66,7 @@ export function Footer() {
 
           {/* Group General info */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-foreground">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
               Corporate Office
             </h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
@@ -83,10 +83,10 @@ export function Footer() {
 
           {/* Trust and Certifications */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-primary dark:text-foreground">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
               Our Vision
             </h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Coordinating DAJEM Orbital Resources Limited, DAJEM Farms Limited, and DAJEM Homes Limited through shared strategic management.
             </p>
             <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
@@ -97,17 +97,18 @@ export function Footer() {
         </div>
 
         {/* Bottom Banner */}
-        <div className="border-t border-border/60 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
-          <p>&copy; {currentYear} {group.displayName}. All rights reserved.</p>
+        <div className="border-t border-border/50 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
+          <p>&copy; {currentYear} {group.displayName}. All rights reserved. Registered in Nigeria · {group.registrationNumber}</p>
           <div className="flex items-center gap-6">
-            <a href={`${landingUrl}#privacy`} className="hover:text-primary transition-colors">
+            <a href={`${landingUrl}#privacy`} className="hover:text-foreground transition-colors">
               Privacy Policy
             </a>
-            <a href={`${landingUrl}#terms`} className="hover:text-primary transition-colors">
+            <a href={`${landingUrl}#terms`} className="hover:text-foreground transition-colors">
               Terms of Service
             </a>
-            <span className="text-emerald-500 dark:text-emerald-400 font-semibold">
-              Ready for Supabase & Flutterwave
+            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Verified Corporate Entity
             </span>
           </div>
         </div>

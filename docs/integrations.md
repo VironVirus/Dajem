@@ -55,6 +55,21 @@ Set these environment variables in Hostinger:
 1. Add `NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY` and `FLUTTERWAVE_SECRET_KEY`.
 2. Set the Flutterwave redirect/callback URL to `https://dajem.consolish.com/checkout/callback`.
 
+## DHL Survey Plan Delivery
+
+The survey calculator includes an optional DHL-style document delivery checkout. Without DHL credentials, it uses the posted DAJEM Nigeria-zone estimates and clearly identifies them as estimates. It does not poll DHL, so it only uses a Hostinger API request when the client clicks **Calculate & Add Delivery**.
+
+For live MyDHL account rates, create or connect a DHL Express business account, request MyDHL API access, and add these server-only Hostinger environment variables:
+
+- `DHL_API_KEY`
+- `DHL_API_SECRET`
+- `DHL_ACCOUNT_NUMBER`
+- `DHL_API_MODE=production`
+- `DHL_ORIGIN_CITY=Enugu`
+- `DHL_ORIGIN_POSTAL_CODE=400001`
+
+Keep the DHL credentials server-side. The checkout rates a 0.5 kg document envelope measuring 35 x 25 x 2 cm. Shipment creation and courier pickup are separate fulfillment steps to enable after DAJEM confirms its DHL account workflow.
+
 ## Cloudflare Setup
 
 Cloudflare is optional but recommended in front of Hostinger.

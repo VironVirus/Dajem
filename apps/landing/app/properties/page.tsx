@@ -195,12 +195,12 @@ export default function RealEstatePage() {
 
           <div className="container mx-auto max-w-6xl px-5 text-center sm:px-6">
             <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
-              <Badge variant="secondary" className="border border-blue-200/25 bg-blue-400/15 px-3 py-1 font-semibold text-blue-100 hover:bg-blue-400/20">
+              <Badge variant="secondary" className="border border-blue-500/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/15">
                 Started {profile.startDate}
               </Badge>
-              <h1 className="text-[2.55rem] font-bold leading-[0.98] text-white sm:text-5xl">
+              <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-100 sm:text-[1.45rem]">
+                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
                   Homes, hospitality, development, and property management
                 </span>
               </h1>
@@ -208,10 +208,10 @@ export default function RealEstatePage() {
                 {profile.summary}
               </p>
               <div className="flex flex-col justify-center gap-3 pt-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
-                <Button size="lg" className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
                   Browse Listings
                 </Button>
-                <Button size="lg" variant="outline" className="w-full border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
                   Submit Property
                 </Button>
               </div>

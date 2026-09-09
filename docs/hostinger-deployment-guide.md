@@ -65,9 +65,17 @@ Optional values to add later only when those features are ready:
 ```text
 NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY=
 FLUTTERWAVE_SECRET_KEY=
+DHL_API_KEY=
+DHL_API_SECRET=
+DHL_ACCOUNT_NUMBER=
+DHL_API_MODE=production
+DHL_ORIGIN_CITY=Enugu
+DHL_ORIGIN_POSTAL_CODE=400001
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 ```
+
+The DHL values are not required for deployment. Until they are added, the survey delivery checkout uses DAJEM's posted Nigeria-zone estimates. After you receive MyDHL API credentials, add the values in Hostinger Environment Variables, save, redeploy, and restart the app.
 
 ## 4. Push The Repo To GitHub
 

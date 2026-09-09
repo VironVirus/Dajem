@@ -94,43 +94,43 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-slate-950/5 bg-background/82 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/82">
+      <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-2xl transition-colors dark:border-white/10 dark:bg-slate-950/80 lg:sticky">
         <div className="container mx-auto flex h-[4.5rem] items-center justify-between px-4 sm:px-6 lg:px-8">
-          <a href={currentApp?.url} onClick={(event) => currentApp?.url ? handleNavigate(event, currentApp.url) : undefined} className="flex min-w-0 items-center gap-3">
-            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-gradient-to-br shadow-lg", currentApp.surface)}><currentApp.icon className="h-5 w-5" /></span>
+          <a href={currentApp?.url} onClick={(event) => currentApp?.url ? handleNavigate(event, currentApp.url) : undefined} className="flex min-w-0 items-center gap-3 group">
+            <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-md transition-transform duration-300 group-hover:scale-105 ring-1 ring-white/20", currentApp.surface)}><currentApp.icon className="h-5 w-5" /></span>
             <span className="min-w-0">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">DAJEM ecosystem</span>
-              <span className="block truncate text-sm font-bold tracking-tight text-foreground sm:text-base">{currentApp.name}</span>
+              <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">DAJEM ecosystem</span>
+              <span className="block truncate text-sm font-bold tracking-tight text-foreground sm:text-base group-hover:text-primary transition-colors">{currentApp.name}</span>
             </span>
           </a>
 
           <div ref={menuRef} className="hidden items-center gap-2 lg:flex">
-            <Button variant="outline" size="sm" onClick={() => setPaletteOpen(true)} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 text-muted-foreground shadow-sm hover:bg-accent">
-              <Search className="h-4 w-4" /><span>Search DAJEM</span><kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-bold">Ctrl K</kbd>
+            <Button variant="outline" size="sm" onClick={() => setPaletteOpen(true)} className="h-9 gap-2 rounded-full border-border/60 bg-muted/40 px-3.5 text-xs font-semibold text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground">
+              <Search className="h-3.5 w-3.5" /><span>Search DAJEM</span><kbd className="rounded border border-border/60 bg-background/60 px-1.5 py-0.5 text-[9px] font-bold">Ctrl K</kbd>
             </Button>
             <div className="relative">
-              <Button size="sm" onClick={() => setOpenMenu((current) => current === "ecosystem" ? null : "ecosystem")} className="h-10 gap-2 rounded-xl bg-slate-950 px-3.5 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100" aria-expanded={openMenu === "ecosystem"} aria-haspopup="menu">
-                <Boxes className="h-4 w-4" /> Ecosystem <ChevronDown className={cn("h-4 w-4 transition-transform", openMenu === "ecosystem" && "rotate-180")} />
+              <Button size="sm" onClick={() => setOpenMenu((current) => current === "ecosystem" ? null : "ecosystem")} className="h-9 gap-2 rounded-full border border-border/60 bg-card px-4 text-xs font-semibold text-foreground shadow-sm hover:bg-accent/80 hover:text-accent-foreground dark:border-white/10 dark:bg-card/80" aria-expanded={openMenu === "ecosystem"} aria-haspopup="menu">
+                <Boxes className="h-3.5 w-3.5 text-primary dark:text-blue-400" /> Ecosystem <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform duration-200", openMenu === "ecosystem" && "rotate-180")} />
               </Button>
               <AnimatePresence>
                 {openMenu === "ecosystem" && (
-                  <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-[34rem] rounded-[1.5rem] border border-white/30 bg-background/96 p-3 shadow-2xl shadow-slate-950/18 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }} transition={{ type: "spring", stiffness: 420, damping: 30 }}>
+                  <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-[34rem] rounded-[1.5rem] border border-border/60 bg-background/95 p-3.5 shadow-2xl shadow-slate-950/15 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }} transition={{ type: "spring", stiffness: 420, damping: 30 }}>
                     <div className="mb-3 flex items-center justify-between px-2 pt-1"><div><p className="text-sm font-bold text-foreground">Choose a DAJEM company</p><p className="text-xs text-muted-foreground">One account. Shared records. Connected services.</p></div><Command className="h-4 w-4 text-muted-foreground" /></div>
                     <div className="grid grid-cols-2 gap-3">{apps.map((app) => <AppCard key={app.id} app={app} />)}</div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            {showCartButton && <Button variant="outline" size="sm" onClick={onCartClick} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 shadow-sm hover:bg-accent"><ShoppingCart className="h-4 w-4" /> Cart ({cartCount})</Button>}
-            <ThemeToggle className="rounded-xl border-border/75 bg-card/72 shadow-sm" />
+            {showCartButton && <Button variant="outline" size="sm" onClick={onCartClick} className="h-9 gap-2 rounded-full border-border/60 bg-card px-3.5 text-xs font-semibold shadow-sm hover:bg-accent"><ShoppingCart className="h-3.5 w-3.5" /> Cart ({cartCount})</Button>}
+            <ThemeToggle className="rounded-full border-border/60 bg-card shadow-sm h-9 w-9" />
             {!currentUser ? (
-              <Button size="sm" onClick={() => openAuthModal("login")} className="h-10 rounded-xl bg-primary px-4 text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90">Sign in</Button>
+              <Button size="sm" onClick={() => openAuthModal("login")} className="sheen-glow h-9 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90">Sign in</Button>
             ) : (
               <div className="relative">
-                <Button variant="outline" size="sm" onClick={() => setOpenMenu((current) => current === "account" ? null : "account")} className="h-10 gap-2 rounded-xl border-border/75 bg-card/72 px-3.5 shadow-sm hover:bg-accent" aria-expanded={openMenu === "account"} aria-haspopup="menu"><UserCircle2 className="h-4 w-4" />{currentUser.name.split(" ")[0]}<ChevronDown className={cn("h-4 w-4 transition-transform", openMenu === "account" && "rotate-180")} /></Button>
+                <Button variant="outline" size="sm" onClick={() => setOpenMenu((current) => current === "account" ? null : "account")} className="h-9 gap-2 rounded-full border-border/60 bg-card px-3.5 text-xs font-semibold shadow-sm hover:bg-accent" aria-expanded={openMenu === "account"} aria-haspopup="menu"><UserCircle2 className="h-4 w-4" />{currentUser.name.split(" ")[0]}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", openMenu === "account" && "rotate-180")} /></Button>
                 <AnimatePresence>
                   {openMenu === "account" && (
-                    <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-60 rounded-2xl border border-white/30 bg-background/96 p-2 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }}>
+                    <motion.div role="menu" className="absolute right-0 top-full z-50 mt-3 w-60 rounded-2xl border border-border/60 bg-background/95 p-2 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95" initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }}>
                       <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref, () => setOpenMenu(null))} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-accent"><LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard</a>
                       {currentUser.role === "admin" && <a href={adminHref} onClick={(event) => handleNavigate(event, adminHref, () => setOpenMenu(null))} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-accent"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Admin centre</a>}
                       <button type="button" onClick={() => { setOpenMenu(null); void logout(); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/8"><LogOut className="h-4 w-4" /> Sign out</button>
@@ -140,9 +140,10 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
               </div>
             )}
           </div>
-          <div className="lg:hidden"><ThemeToggle className="rounded-xl border-border/75 bg-card/72 shadow-sm" /></div>
+          <div className="lg:hidden"><ThemeToggle className="rounded-full border-border/60 bg-card shadow-sm h-9 w-9" /></div>
         </div>
       </header>
+      <div className="h-[4.5rem] lg:hidden" aria-hidden="true" />
 
       <AnimatePresence>
         {mobileCompaniesOpen && (
@@ -153,7 +154,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
         )}
       </AnimatePresence>
 
-      <nav aria-label="Primary DAJEM navigation" className="fixed inset-x-3 bottom-3 z-50 rounded-[1.45rem] border border-white/40 bg-background/88 p-1.5 shadow-2xl shadow-slate-950/18 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88 lg:hidden">
+      <nav aria-label="Primary DAJEM navigation" className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 rounded-[1.45rem] border border-white/40 bg-background/94 p-1.5 shadow-2xl shadow-slate-950/18 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/94 lg:hidden">
         <div className="grid grid-cols-5 gap-1">
           <a href={groupHref} onClick={(event) => handleNavigate(event, groupHref)} className={cn("dajem-dock-item", activeApp === "landing" && "is-active")}><Landmark className="h-5 w-5" /><span>Home</span></a>
           <button type="button" onClick={() => setMobileCompaniesOpen((current) => !current)} className={cn("dajem-dock-item", mobileCompaniesOpen && "is-active")}><Grid2X2 className="h-5 w-5" /><span>Companies</span></button>

@@ -89,12 +89,12 @@ export function HeroSlideshow({
         {children}
       </div>
       {hasMultipleSlides && (
-        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/42 p-1.5 text-white shadow-lg backdrop-blur-md sm:bottom-6 sm:right-6">
+        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full border border-border/50 bg-background/60 p-1.5 text-foreground shadow-xl backdrop-blur-xl dark:border-white/15 dark:bg-slate-950/60 dark:text-white sm:bottom-6 sm:right-6">
           <button
             type="button"
             aria-label="Show previous image"
             onClick={selectPreviousSlide}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-foreground/10 dark:hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -107,8 +107,8 @@ export function HeroSlideshow({
                 aria-current={index === activeSlide ? "true" : undefined}
                 onClick={() => setActiveSlide(index)}
                 className={cn(
-                  "h-1.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80",
-                  index === activeSlide ? "w-6 bg-white" : "w-1.5 bg-white/55 hover:bg-white/85",
+                  "h-1.5 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  index === activeSlide ? "w-6 bg-primary dark:bg-white" : "w-1.5 bg-foreground/25 hover:bg-foreground/50 dark:bg-white/35 dark:hover:bg-white/70",
                 )}
               />
             ))}
@@ -117,7 +117,7 @@ export function HeroSlideshow({
             type="button"
             aria-label="Show next image"
             onClick={selectNextSlide}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-foreground/10 dark:hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
