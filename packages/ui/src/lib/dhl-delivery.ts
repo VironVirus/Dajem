@@ -6,6 +6,8 @@ export type CheckoutDeliveryInput = {
   state: string;
   localGovernment: string;
   postalCode?: string;
+  /** Calculated by the server from the cart, never trusted from a client. */
+  weightKg?: number;
 };
 
 export type DeliveryRate = {
@@ -66,7 +68,7 @@ async function requestLiveDhlRate(destination: CheckoutDeliveryInput): Promise<D
     destinationCountryCode: "NG",
     destinationPostalCode: destination.postalCode,
     destinationCityName: destination.localGovernment,
-    weight: "0.5",
+    weight: String(destination.weightKg && destination.weightKg > 0 ? destination.weightKg : 0.5),
     length: "35",
     width: "25",
     height: "2",
@@ -108,6 +110,9 @@ export function normalizeCheckoutDelivery(input: CheckoutDeliveryInput): Checkou
     state: normalizeText(input.state, 100),
     localGovernment: normalizeText(input.localGovernment, 120),
     postalCode: normalizeText(input.postalCode, 20) || undefined,
+    weightKg: Number.isFinite(Number(input.weightKg)) && Number(input.weightKg) > 0
+      ? Math.min(Math.max(Number(input.weightKg), 0.1), 1000)
+      : undefined,
   };
   if (!delivery.recipientName || !delivery.phone || !delivery.address || !delivery.state || !delivery.localGovernment) throw new Error("Complete the delivery address before continuing.");
   if (!/^\+[1-9]\d{6,14}$/.test(delivery.phone)) throw new Error("Enter a valid delivery phone number.");

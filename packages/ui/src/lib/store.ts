@@ -45,6 +45,8 @@ export interface InventoryItem {
   imageUrl?: string;
   age?: string;
   weight?: string;
+  /** Shipping weight for one sellable unit. This is used for courier rating. */
+  shippingWeightKg?: number;
   originalPrice?: number;
   promoPrice?: number;
   promoEndsAt?: string;
@@ -65,6 +67,7 @@ export interface CartItem {
   imageUrl?: string;
   age?: string;
   weight?: string;
+  shippingWeightKg?: number;
   originalPrice?: number;
   promoPrice?: number;
   promoEndsAt?: string;
@@ -102,6 +105,20 @@ export interface CheckoutDelivery {
   state: string;
   localGovernment: string;
   postalCode?: string;
+  weightKg?: number;
+}
+
+/**
+ * Prefer an admin-set courier weight. Older products keep working by reading a
+ * value such as "2.2kg average"; products without either use light packaging.
+ */
+export function shippingWeightKg(item: Pick<InventoryItem | CartItem, "shippingWeightKg" | "weight">) {
+  if (typeof item.shippingWeightKg === "number" && Number.isFinite(item.shippingWeightKg) && item.shippingWeightKg >= 0) {
+    return item.shippingWeightKg;
+  }
+
+  const parsed = String(item.weight ?? "").match(/(\d+(?:\.\d+)?)\s*kg/i);
+  return parsed ? Number(parsed[1]) : 0.25;
 }
 
 export interface PropertyListing {
@@ -444,6 +461,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 340,
     age: "Mature",
     weight: "2.2kg average",
+    shippingWeightKg: 2.2,
     originalPrice: 14500,
     promoPrice: 12500,
     promoEndsAt: "2026-07-31T23:59:59.000Z",
@@ -461,6 +479,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 48,
     age: "Table size",
     weight: "1.5kg average",
+    shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
     imageUrl: farmsImageUrl,
   },
@@ -474,6 +493,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 32,
     age: "Adult",
     weight: "18kg average",
+    shippingWeightKg: 18,
     imageBg: "bg-emerald-500/10 text-emerald-700",
     imageUrl: farmsImageUrl,
   },
@@ -487,6 +507,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 22,
     age: "Adult",
     weight: "22kg average",
+    shippingWeightKg: 22,
     imageBg: "bg-green-500/10 text-green-700",
     imageUrl: farmsImageUrl,
   },
@@ -500,6 +521,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 40,
     age: "Mature",
     weight: "5kg average",
+    shippingWeightKg: 5,
     imageBg: "bg-lime-500/10 text-lime-700",
     imageUrl: farmsImageUrl,
   },
@@ -511,6 +533,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Prepared chicken grill for quick orders and event supply.",
     stockStatus: "In Stock",
     availableUnits: 65,
+    shippingWeightKg: 1.2,
     imageBg: "bg-orange-500/10 text-orange-700",
     imageUrl: farmsImageUrl,
   },
@@ -522,6 +545,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Prepared fish grill for direct purchase, events, and hospitality orders.",
     stockStatus: "In Stock",
     availableUnits: 55,
+    shippingWeightKg: 1.3,
     imageBg: "bg-sky-500/10 text-sky-700",
     imageUrl: farmsImageUrl,
   },
@@ -533,6 +557,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Freshly packed eggs supplied from controlled farm operations.",
     stockStatus: "In Stock",
     availableUnits: 180,
+    shippingWeightKg: 2,
     imageBg: "bg-yellow-500/10 text-yellow-700",
     imageUrl: farmsImageUrl,
   },
@@ -544,6 +569,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Advisory session for farm setup, livestock planning, sourcing, and operations.",
     stockStatus: "In Stock",
     availableUnits: 20,
+    shippingWeightKg: 0,
     imageBg: "bg-teal-500/10 text-teal-700",
     imageUrl: farmsImageUrl,
   },
@@ -555,6 +581,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Seasonal produce packs available for homes, kitchens, and bulk buyers.",
     stockStatus: "In Stock",
     availableUnits: 80,
+    shippingWeightKg: 3,
     imageBg: "bg-green-500/10 text-green-700",
     imageUrl: farmsImageUrl,
   },
@@ -566,6 +593,7 @@ export const seedInventory: InventoryItem[] = [
     description: "Durable waterers for poultry houses and controlled farming setups.",
     stockStatus: "In Stock",
     availableUnits: 65,
+    shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
     imageUrl: farmsImageUrl,
   },
@@ -577,6 +605,7 @@ export const seedInventory: InventoryItem[] = [
     description: "A starter pack of agro-allied supplies for farm support and small operations.",
     stockStatus: "In Stock",
     availableUnits: 45,
+    shippingWeightKg: 4,
     imageBg: "bg-lime-500/10 text-lime-700",
     imageUrl: farmsImageUrl,
   },

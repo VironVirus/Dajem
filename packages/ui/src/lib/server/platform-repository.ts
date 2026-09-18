@@ -29,6 +29,7 @@ import type {
   SurveyStatus,
   User,
 } from "../store";
+import { shippingWeightKg } from "../store";
 import { normalizeCheckoutDelivery, quoteDhlDelivery, type CheckoutDeliveryInput } from "../dhl-delivery";
 import { getIntegrationStatus, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
 
@@ -211,6 +212,7 @@ function cloneCartItem(
     imageUrl: item.imageUrl,
     age: item.age,
     weight: item.weight,
+    shippingWeightKg: item.shippingWeightKg,
     originalPrice: item.originalPrice,
     promoPrice: item.promoPrice,
     promoEndsAt: item.promoEndsAt,
@@ -813,6 +815,7 @@ export async function updateInventoryItem(
     imageBg?: string;
     age?: string;
     weight?: string;
+    shippingWeightKg?: number;
     originalPrice?: number;
     promoPrice?: number;
     promoEndsAt?: string;
@@ -841,6 +844,9 @@ export async function updateInventoryItem(
       item.imageBg = payload.imageBg?.trim() || item.imageBg;
       item.age = payload.age?.trim() || undefined;
       item.weight = payload.weight?.trim() || undefined;
+      item.shippingWeightKg = Number.isFinite(Number(payload.shippingWeightKg)) && Number(payload.shippingWeightKg) >= 0
+        ? Number(payload.shippingWeightKg)
+        : undefined;
       item.originalPrice = Number.isFinite(Number(payload.originalPrice)) && Number(payload.originalPrice) > 0 ? Number(payload.originalPrice) : undefined;
       item.promoPrice = Number.isFinite(Number(payload.promoPrice)) && Number(payload.promoPrice) > 0 ? Number(payload.promoPrice) : undefined;
       item.promoEndsAt = payload.promoEndsAt?.trim() || undefined;
@@ -866,6 +872,9 @@ export async function updateInventoryItem(
       imageUrl: payload.imageUrl?.trim() || farmsImageUrl,
       age: payload.age?.trim() || undefined,
       weight: payload.weight?.trim() || undefined,
+      shippingWeightKg: Number.isFinite(Number(payload.shippingWeightKg)) && Number(payload.shippingWeightKg) >= 0
+        ? Number(payload.shippingWeightKg)
+        : undefined,
       originalPrice: Number.isFinite(Number(payload.originalPrice)) && Number(payload.originalPrice) > 0 ? Number(payload.originalPrice) : undefined,
       promoPrice: Number.isFinite(Number(payload.promoPrice)) && Number(payload.promoPrice) > 0 ? Number(payload.promoPrice) : undefined,
       promoEndsAt: payload.promoEndsAt?.trim() || undefined,
@@ -1158,7 +1167,11 @@ export async function createPaymentIntent(
         variantLabel: cartItem.variantLabel,
       });
     });
-    const deliveryInput = options.delivery ? normalizeCheckoutDelivery(options.delivery) : undefined;
+    // Rebuild the delivery weight from inventory so the browser cannot alter it.
+    const shipmentWeightKg = items.reduce((total, item) => total + (shippingWeightKg(item) * item.quantity), 0);
+    const deliveryInput = options.delivery
+      ? normalizeCheckoutDelivery({ ...options.delivery, weightKg: shipmentWeightKg })
+      : undefined;
     const deliveryRate = deliveryInput ? await quoteDhlDelivery(deliveryInput) : undefined;
     const delivery = deliveryInput && deliveryRate ? {
       provider: deliveryRate.provider,
@@ -1174,6 +1187,7 @@ export async function createPaymentIntent(
       state: deliveryInput.state,
       localGovernment: deliveryInput.localGovernment,
       postalCode: deliveryInput.postalCode,
+      weightKg: deliveryInput.weightKg,
     } : undefined;
     const amount = items.reduce((total, item) => total + item.price * item.quantity, 0) + (delivery?.fee ?? 0);
     const intent: PaymentIntent = {

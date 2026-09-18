@@ -23,6 +23,7 @@ import {
   Sheet,
   Textarea,
   dajemCompanyProfiles,
+  shippingWeightKg,
   useDajem,
 } from "@repo/ui";
 import { localGovernmentsForState, nigeriaStates } from "@repo/ui/lib/nigeria-locations";
@@ -162,6 +163,7 @@ export default function PoultryPage() {
   const chickenCutOptions = chickenType === "processed" ? processedChickenCuts : chickenType === "grilled" ? grilledChickenCuts : [];
   const selectedChickenVariantLabel = getChickenVariantLabel(chickenType, chickenCut);
   const cartTotal = snapshot.cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const cartWeightKg = snapshot.cart.reduce((total, item) => total + (shippingWeightKg(item) * item.quantity), 0);
   const selectedLocalGovernments = localGovernmentsForState(deliveryDetails.state);
   const checkoutTotal = cartTotal + (deliveryQuote?.amount ?? 0);
 
@@ -220,6 +222,7 @@ export default function PoultryPage() {
             ...deliveryDetails,
             city: deliveryDetails.localGovernment,
             countryCode: "NG",
+            weightKg: cartWeightKg,
           },
           zone: deliveryDetails.state === "Enugu" ? "enugu" : ["Abia", "Anambra", "Ebonyi", "Imo"].includes(deliveryDetails.state) ? "southeast" : "other",
         }),
@@ -627,11 +630,12 @@ export default function PoultryPage() {
 
       <button
         type="button"
-        className="fixed bottom-[6.6rem] right-4 z-40 inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-3 font-bold text-white shadow-2xl shadow-emerald-900/25 transition hover:-translate-y-0.5 hover:bg-emerald-700 lg:bottom-5 lg:right-5 lg:h-14 lg:min-w-14 lg:px-4"
+        className="fixed bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-4 z-40 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-600 px-4 font-bold text-white shadow-2xl shadow-emerald-900/30 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 lg:bottom-5 lg:right-5"
         onClick={() => setCartOpen(true)}
       >
         <ShoppingCart className="h-5 w-5" />
-        <span>{cartCount}</span>
+        <span className="text-sm">Cart</span>
+        <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs tabular-nums">{cartCount}</span>
       </button>
 
       <Sheet
@@ -706,6 +710,10 @@ export default function PoultryPage() {
                   <span>Total</span>
                   <span>{formatCurrency(cartTotal)}</span>
                 </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery weight</span>
+                  <span className="font-semibold text-foreground">{cartWeightKg.toFixed(2)} kg</span>
+                </div>
               </div>
 
               {checkoutError && (
@@ -765,7 +773,7 @@ export default function PoultryPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-bold text-foreground">Delivery</p>
-                <p className="mt-1 text-xs text-muted-foreground">Within Enugu is N5,000. Other locations are priced through DHL.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cartWeightKg.toFixed(2)} kg shipment. Within Enugu is N5,000; other locations are priced through DHL.</p>
               </div>
               <div className="flex rounded-xl border bg-background p-1 text-xs font-bold">
                 <button type="button" onClick={() => { setDeliveryRequested(false); setDeliveryQuote(null); setDeliveryError(null); }} className={`rounded-lg px-3 py-2 ${!deliveryRequested ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>No</button>
@@ -800,6 +808,10 @@ export default function PoultryPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total Items</span>
               <span className="font-semibold">{cartCount}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Shipment weight</span>
+              <span className="font-semibold text-foreground">{cartWeightKg.toFixed(2)} kg</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-lg font-bold text-foreground">
               <span>Amount Due</span>

@@ -31,7 +31,7 @@ export function Dialog({ isOpen, onClose, title, children }: DialogProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 py-4 sm:items-center sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
@@ -40,7 +40,7 @@ export function Dialog({ isOpen, onClose, title, children }: DialogProps) {
       {/* Modal Dialog Content */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg rounded-[1.5rem] border border-white/35 bg-background/88 p-5 text-card-foreground shadow-2xl backdrop-blur-2xl transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 sm:p-6 dark:border-white/10 dark:bg-slate-950/90"
+          "relative z-50 my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-[1.5rem] border border-border bg-card p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-card-foreground shadow-2xl transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 sm:max-h-[calc(100dvh-2rem)] sm:p-6 dark:border-white/10 dark:bg-slate-950"
         )}
       >
         {/* Close Button */}

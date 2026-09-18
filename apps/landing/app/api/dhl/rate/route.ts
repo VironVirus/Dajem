@@ -59,7 +59,7 @@ function buildFallbackRate(zone: DeliveryZone, note?: string) {
   };
 }
 
-async function requestLiveDhlRate(destination: { city: string; postalCode: string; countryCode: string }) {
+async function requestLiveDhlRate(destination: { city: string; postalCode: string; countryCode: string; weightKg?: number }) {
   const apiKey = process.env.DHL_API_KEY?.trim();
   const apiSecret = process.env.DHL_API_SECRET?.trim();
   const accountNumber = process.env.DHL_ACCOUNT_NUMBER?.trim();
@@ -78,7 +78,7 @@ async function requestLiveDhlRate(destination: { city: string; postalCode: strin
     destinationCountryCode: destination.countryCode,
     destinationPostalCode: destination.postalCode,
     destinationCityName: destination.city,
-    weight: "0.5",
+    weight: String(destination.weightKg && destination.weightKg > 0 ? destination.weightKg : 0.5),
     length: "35",
     width: "25",
     height: "2",
@@ -136,6 +136,9 @@ export async function POST(request: NextRequest) {
       state: normalizeText(payload?.destination?.state),
       postalCode: normalizeText(payload?.destination?.postalCode, 20),
       countryCode: normalizeText(payload?.destination?.countryCode, 2).toUpperCase() || "NG",
+      weightKg: Number.isFinite(Number(payload?.destination?.weightKg)) && Number(payload.destination.weightKg) > 0
+        ? Math.min(Math.max(Number(payload.destination.weightKg), 0.1), 1000)
+        : undefined,
     };
 
     if (!(zone in fallbackRates)) {

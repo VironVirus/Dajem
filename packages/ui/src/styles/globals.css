@@ -5,14 +5,14 @@
 @layer base {
   :root {
     color-scheme: light;
-    --background: 210 36% 97%;
-    --foreground: 222 52% 10%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 52% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 52% 10%;
+    --popover-foreground: 222 47% 11%;
 
     --primary: 222 65% 12%;
     --primary-foreground: 210 40% 98%;
@@ -20,17 +20,17 @@
     --secondary: 160 84% 34%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 214 32% 93%;
-    --muted-foreground: 215 25% 32%;
+    --muted: 214 32% 94%;
+    --muted-foreground: 215 25% 27%;
 
     --accent: 212 34% 92%;
-    --accent-foreground: 222 52% 12%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 216 24% 84%;
-    --input: 216 24% 82%;
+    --border: 216 24% 78%;
+    --input: 216 24% 76%;
     --ring: 222 65% 24%;
 
     --radius: 1rem;
@@ -77,11 +77,11 @@
     font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     background-image:
-      radial-gradient(ellipse at 12% 0%, hsl(199 95% 48% / 0.08), transparent 40%),
-      radial-gradient(ellipse at 88% 8%, hsl(160 84% 34% / 0.08), transparent 36%),
-      radial-gradient(circle at 50% 95%, hsl(218 80% 55% / 0.05), transparent 45%),
+      radial-gradient(ellipse at 12% 0%, hsl(199 95% 48% / 0.045), transparent 40%),
+      radial-gradient(ellipse at 88% 8%, hsl(160 84% 34% / 0.045), transparent 36%),
+      radial-gradient(circle at 50% 95%, hsl(218 80% 55% / 0.025), transparent 45%),
       linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
-    background-attachment: fixed;
+    background-attachment: scroll;
     min-height: 100vh;
   }
 

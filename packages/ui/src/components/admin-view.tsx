@@ -125,6 +125,7 @@ const blankInventory: InventoryItem = {
   imageUrl: farmsImageUrl,
   age: "",
   weight: "",
+  shippingWeightKg: 0.25,
   originalPrice: undefined,
   promoPrice: undefined,
   promoEndsAt: "",
@@ -392,6 +393,17 @@ export function AdminView() {
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="new-product-shipping-weight">Courier weight (kg)</Label>
+              <Input
+                id="new-product-shipping-weight"
+                type="number"
+                min={0}
+                step="0.01"
+                value={newInventory.shippingWeightKg ?? ""}
+                onChange={(event) => setNewInventory((current) => ({ ...current, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) }))}
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="new-product-original-price">Price Before Slash</Label>
               <Input
                 id="new-product-original-price"
@@ -538,6 +550,17 @@ export function AdminView() {
                           onChange={(event) => setInventoryDrafts((current) => ({
                             ...current,
                             [item.productId]: { ...draft, weight: event.target.value },
+                          }))}
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={draft.shippingWeightKg ?? ""}
+                          aria-label="Courier weight in kilograms"
+                          onChange={(event) => setInventoryDrafts((current) => ({
+                            ...current,
+                            [item.productId]: { ...draft, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) },
                           }))}
                         />
                         <Input
