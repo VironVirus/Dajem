@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
       throw new Error("Missing transaction reference.");
     }
 
-    const intent = await getPaymentIntent(txRef);
+    if (!sessionEmail) {
+      return NextResponse.json({ error: "Please log in to verify this payment." }, { status: 401 });
+    }
+
+    const intent = await getPaymentIntent(sessionEmail, txRef);
     if (!intent) {
       throw new Error("Payment session not found.");
     }
@@ -32,9 +36,9 @@ export async function GET(request: NextRequest) {
         throw new Error("Flutterwave verification is not configured.");
       }
 
-      const result = await completePaymentIntent(sessionEmail ?? intent.userEmail, {
+      const result = await completePaymentIntent(sessionEmail, {
         txRef,
-        provider: "Simulation",
+        provider: "Flutterwave Mock",
       });
 
       return NextResponse.json({
@@ -64,14 +68,14 @@ export async function GET(request: NextRequest) {
     const data = verificationPayload?.data;
     const statusIsValid = data?.status === "successful";
     const referenceMatches = data?.tx_ref === txRef;
-    const amountMatches = Number(data?.amount) >= Number(intent.amount);
+    const amountMatches = Number(data?.amount) === Number(intent.amount);
     const currencyMatches = data?.currency === intent.currency;
 
     if (!statusIsValid || !referenceMatches || !amountMatches || !currencyMatches) {
       throw new Error("Flutterwave verification did not match the expected order details.");
     }
 
-    const result = await completePaymentIntent(sessionEmail ?? intent.userEmail, {
+    const result = await completePaymentIntent(sessionEmail, {
       txRef,
       provider: "Flutterwave",
       transactionId,

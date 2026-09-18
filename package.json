@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "npm@10.8.2",
   "engines": {
-    "node": "20.x",
+    "node": ">=20.9.0 <21",
     "npm": "10.x"
   },
   "workspaces": [
@@ -15,7 +15,6 @@
     "build": "npm run build --workspace landing",
     "dev": "npm run dev --workspace landing",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
-    "lint": "npm run lint --workspace landing",
     "deploy:check": "npm run build"
   }
 }

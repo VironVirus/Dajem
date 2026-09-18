@@ -119,10 +119,10 @@ export default function LandingPage() {
           contentClassName="landing-hero-copy"
           overlayClassName="bg-[linear-gradient(180deg,rgba(248,250,252,0.25),rgba(248,250,252,0.45),rgba(248,250,252,0.8))] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.35),rgba(2,6,23,0.55),rgba(2,6,23,0.85))]"
           slides={[
-            { src: "/images/landing-boardroom-1.png", position: "center", label: "Group leadership" },
-            { src: "/images/landing-boardroom-2.png", position: "center", label: "Corporate planning" },
-            { src: "/images/landing-boardroom-3.png", position: "center", label: "Team collaboration" },
-            { src: "/images/landing-boardroom-4.png", position: "center", label: "Group operations" },
+            { src: "/images/landing-boardroom-1.png", position: "center", label: "DAJEM Group leadership", actionLabel: "Explore our companies", href: "/#companies" },
+            { src: "/images/landing-boardroom-2.png", position: "center", label: "DAJEM Orbital services", actionLabel: "Request a survey", href: "/survey/inquiry" },
+            { src: "/images/landing-boardroom-3.png", position: "center", label: "DAJEM Farms marketplace", actionLabel: "Shop farm products", href: "/farms/shop" },
+            { src: "/images/landing-boardroom-4.png", position: "center", label: "DAJEM Homes listings", actionLabel: "Find a property", href: "/properties/listings" },
           ]}
         >
           <div className="absolute left-[-4rem] top-12 h-56 w-56 rounded-full bg-emerald-500/15 blur-3xl -z-10 sm:h-72 sm:w-72" />

@@ -8,18 +8,20 @@ import {
   removeCartItem,
   submitBid,
   submitPropertyListing,
+  submitPropertyListingPaymentProof,
   submitSurvey,
   updateBidStatus,
   updateCartItem,
   updateInventoryItem,
   updatePropertyListingStatus,
+  updatePropertyListingAgentPayment,
+  updateSurveyDelivery,
   updateSurveyStatus,
   upsertPropertyListing,
   upsertSurveyService,
 } from "./server/platform-repository";
 import {
   clearSessionCookie,
-  createSessionHandoffToken,
   readSessionEmail,
   writeSessionCookie,
 } from "./server/session";
@@ -39,15 +41,6 @@ function assertSameOrigin(request: NextRequest) {
 function jsonError(error: unknown, status = 400) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return NextResponse.json({ error: message }, { status });
-}
-
-function normalizeTargetOrigin(input: string) {
-  const parsed = new URL(input);
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new Error("Unsupported navigation target.");
-  }
-
-  return parsed.origin;
 }
 
 export async function GET(request: NextRequest) {
@@ -96,23 +89,6 @@ export async function POST(request: NextRequest) {
         clearSessionCookie(response);
         return response;
       }
-      case "create-session-handoff": {
-        if (!sessionEmail) {
-          return jsonError(new Error("Please log in to continue."), 401);
-        }
-
-        const targetOrigin = normalizeTargetOrigin(String(payload?.targetOrigin ?? ""));
-        const nextPath = String(payload?.nextPath ?? "/").trim() || "/";
-        const token = createSessionHandoffToken({
-          email: sessionEmail,
-          targetOrigin,
-          nextPath,
-        });
-
-        return NextResponse.json({
-          redirectUrl: `${targetOrigin}/api/session/handoff?token=${encodeURIComponent(token)}`,
-        });
-      }
       case "add-to-cart":
         return NextResponse.json(await addToCart(sessionEmail, payload));
       case "update-cart-item":
@@ -125,18 +101,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await submitBid(sessionEmail, payload));
       case "submit-property-listing":
         return NextResponse.json(await submitPropertyListing(sessionEmail, payload));
+      case "submit-property-listing-payment-proof":
+        return NextResponse.json(await submitPropertyListingPaymentProof(sessionEmail, payload));
       case "submit-survey":
         return NextResponse.json(await submitSurvey(sessionEmail, payload));
       case "update-bid-status":
         return NextResponse.json(await updateBidStatus(sessionEmail, payload));
       case "update-property-listing-status":
         return NextResponse.json(await updatePropertyListingStatus(sessionEmail, payload));
+      case "update-property-listing-agent-payment":
+        return NextResponse.json(await updatePropertyListingAgentPayment(sessionEmail, payload));
       case "upsert-property-listing":
         return NextResponse.json(await upsertPropertyListing(sessionEmail, payload));
       case "upsert-survey-service":
         return NextResponse.json(await upsertSurveyService(sessionEmail, payload));
       case "update-survey-status":
         return NextResponse.json(await updateSurveyStatus(sessionEmail, payload));
+      case "update-survey-delivery":
+        return NextResponse.json(await updateSurveyDelivery(sessionEmail, payload));
       case "update-inventory-item":
         return NextResponse.json(await updateInventoryItem(sessionEmail, payload));
       default:

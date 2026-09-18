@@ -45,7 +45,7 @@ function CallbackContent() {
   return (
     <Card className="w-full">
       <CardContent className="space-y-5 p-8 text-center">
-        <Badge variant="secondary" className="mx-auto w-max">Flutterwave Callback</Badge>
+        <Badge variant="secondary" className="mx-auto w-max">Payment Status</Badge>
         {status === "verifying" ? (
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
             <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
@@ -81,7 +81,7 @@ function CallbackFallback() {
   return (
     <Card className="w-full">
       <CardContent className="space-y-5 p-8 text-center">
-        <Badge variant="secondary" className="mx-auto w-max">Flutterwave Callback</Badge>
+        <Badge variant="secondary" className="mx-auto w-max">Payment Status</Badge>
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
           <LoaderCircle className="h-7 w-7 animate-spin text-primary" />
         </div>

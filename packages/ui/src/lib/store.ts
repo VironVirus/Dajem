@@ -4,10 +4,16 @@ export type InventoryCategory = "livestock" | "grills" | "eggs" | "consultancy" 
 export type InventoryStockStatus = "In Stock" | "Low Stock" | "Out of Stock";
 export type BidStatus = "Pending Approval" | "Connected" | "Rejected";
 export type SurveyStatus = "Pending Approval" | "In Progress" | "Completed & Sent" | "Rejected";
+export type SurveyDeliveryStatus = "Rate Added" | "Awaiting Dispatch" | "Dispatched" | "Delivered" | "Cancelled";
 export type ApprovalStatus = "Pending Approval" | "Approved" | "Rejected";
 export type PropertyType = "sale" | "short-let" | "hotel" | "management";
 export type PropertyCategory = "apartment" | "suite" | "hotel" | "land" | "commercial" | "short-let";
-export type IdentificationType = "Drivers License" | "NIN" | "International Passport" | "Voters Card";
+export type HomesListingGroup = "land-sale" | "land-lease" | "house-rent" | "house-sale" | "short-let";
+export type ResidenceType = "self-contain" | "one-bedroom" | "two-bedroom" | "three-bedroom" | "single-room" | "bungalow" | "duplex";
+export type AgentListingPaymentStatus = "Not Requested" | "Awaiting Payment" | "Payment Submitted" | "Paid";
+export type PaymentProvider = "flutterwave" | "opay";
+export type PaymentApp = "farms" | "homes" | "survey";
+export type PaymentPurpose = "farm-order" | "property-listing-fee" | "survey-payment";
 
 export interface User {
   id: string;
@@ -16,10 +22,10 @@ export interface User {
   phone: string;
   role: UserRole;
   createdAt: string;
-  officialTitle?: string;
-  identificationType?: IdentificationType;
-  identificationNumber?: string;
-  identificationImageUrl?: string;
+  country?: string;
+  address?: string;
+  state?: string;
+  localGovernment?: string;
 }
 
 export interface ServerUser extends User {
@@ -72,9 +78,13 @@ export interface Order {
   total: number;
   date: string;
   reference: string;
-  provider: "Flutterwave" | "Simulation";
+  provider: "Flutterwave" | "OPay" | "Flutterwave Mock" | "OPay Mock";
   paymentStatus: "Paid" | "Pending" | "Failed";
   status: "Processing" | "Completed";
+  invoiceNumber: string;
+  app: PaymentApp;
+  purpose: PaymentPurpose;
+  propertyListingId?: string;
 }
 
 export interface PropertyListing {
@@ -84,6 +94,8 @@ export interface PropertyListing {
   price: number;
   type: PropertyType;
   category: PropertyCategory;
+  listingGroup?: HomesListingGroup;
+  residenceType?: ResidenceType;
   beds?: number;
   baths?: number;
   size: number;
@@ -96,6 +108,12 @@ export interface PropertyListing {
   submittedByName?: string;
   submittedByEmail?: string;
   submittedByPhone?: string;
+  agentName?: string;
+  agentEmail?: string;
+  agentPhone?: string;
+  agentCompany?: string;
+  agentListingPaymentStatus?: AgentListingPaymentStatus;
+  agentPaymentProofPath?: string;
   createdAt: string;
   date: string;
 }
@@ -149,10 +167,29 @@ export interface SurveyRequest {
     fileName: string;
     fileSizeKb: number;
     storagePath?: string;
-    fileUrl?: string;
   }[];
   missingDocuments?: string[];
   attested?: boolean;
+  delivery?: {
+    provider: "DHL Express";
+    serviceName: string;
+    fee: number;
+    currency: "NGN";
+    rateSource: "dajem-estimate" | "dhl-live";
+    estimatedDelivery: string;
+    recipientName: string;
+    phone: string;
+    email?: string;
+    address: string;
+    city: string;
+    state: string;
+    postalCode?: string;
+    countryCode: "NG";
+    status: SurveyDeliveryStatus;
+    trackingNumber?: string;
+    dispatchedAt?: string;
+    deliveredAt?: string;
+  };
   processingNote?: string;
   paymentStatus?: "Awaiting Review" | "Payment Link Sent" | "Paid";
   completedFileName?: string;
@@ -187,7 +224,11 @@ export interface PaymentIntent {
   amount: number;
   currency: string;
   items: CartItem[];
-  provider: "flutterwave" | "mock";
+  provider: PaymentProvider;
+  app: PaymentApp;
+  purpose: PaymentPurpose;
+  invoiceNumber: string;
+  propertyListingId?: string;
   status: "pending" | "paid" | "failed";
   checkoutUrl?: string;
   transactionId?: string;
@@ -198,6 +239,7 @@ export interface IntegrationStatus {
   backend: "filesystem" | "supabase" | "unconfigured";
   supabaseConfigured: boolean;
   flutterwaveConfigured: boolean;
+  opayMockAvailable: boolean;
   hostingConfigured: boolean;
 }
 
@@ -233,8 +275,10 @@ export interface DajemActionResponse {
   message?: string;
   preview?: CommunicationPreview;
   order?: Order;
+  listing?: PropertyListing;
   payment?: {
     mode: "redirect" | "mock";
+    provider: PaymentProvider;
     txRef: string;
     checkoutUrl?: string;
   };
@@ -636,6 +680,7 @@ export const emptySnapshot: DashboardSnapshot = {
     backend: "filesystem",
     supabaseConfigured: false,
     flutterwaveConfigured: false,
+    opayMockAvailable: true,
     hostingConfigured: false,
   },
 };

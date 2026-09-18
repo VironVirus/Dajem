@@ -31,10 +31,13 @@ interface CommandItem {
 
 const commands: CommandItem[] = [
   { label: "DAJEM Group Hub", description: "Corporate portfolio and contact", href: "/", icon: Building2, tone: "bg-slate-900 text-white" },
-  { label: "Perimeter survey estimator", description: "Start a live estimate", href: "/survey#calculator", icon: Calculator, tone: "bg-cyan-500 text-white" },
-  { label: "Survey inquiry desk", description: "Submit documents and a formal request", href: "/survey#quote", icon: Map, tone: "bg-sky-600 text-white" },
-  { label: "Farm catalogue", description: "Shop livestock, grills, produce, and equipment", href: "/farms#catalog", icon: ShoppingBasket, tone: "bg-emerald-600 text-white" },
-  { label: "DAJEM Homes listings", description: "Browse verified homes and hospitality", href: "/properties#listings", icon: House, tone: "bg-blue-700 text-white" },
+  { label: "Perimeter survey estimator", description: "Start a live estimate", href: "/survey/estimate", icon: Calculator, tone: "bg-cyan-500 text-white" },
+  { label: "Survey inquiry desk", description: "Submit documents and a formal request", href: "/survey/inquiry", icon: Map, tone: "bg-sky-600 text-white" },
+  { label: "Survey tracker", description: "Follow survey and DHL delivery progress", href: "/survey/tracker", icon: Map, tone: "bg-cyan-700 text-white" },
+  { label: "Farm catalogue", description: "Shop livestock, grills, produce, and equipment", href: "/farms/shop", icon: ShoppingBasket, tone: "bg-emerald-600 text-white" },
+  { label: "Chicken orders", description: "Choose live, processed, grilled, and cut options", href: "/farms/chicken", icon: ShoppingBasket, tone: "bg-emerald-700 text-white" },
+  { label: "DAJEM Homes listings", description: "Browse verified homes and hospitality", href: "/properties/listings", icon: House, tone: "bg-blue-700 text-white" },
+  { label: "Submit a property", description: "Send a property for verification and approval", href: "/properties/submit", icon: House, tone: "bg-blue-800 text-white" },
 ];
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {

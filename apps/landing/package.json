@@ -3,33 +3,29 @@
   "version": "0.0.0",
   "private": true,
   "engines": {
-    "node": "20.x",
+    "node": ">=20.9.0 <21",
     "npm": "10.x"
   },
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "postbuild": "mkdir -p .next/standalone/apps/landing/public .next/standalone/apps/landing/.next .next/standalone/public .next/standalone/.next ../../.next/standalone && cp -R public/. .next/standalone/apps/landing/public/ && cp -R public/. .next/standalone/public/ && cp -R .next/static .next/standalone/apps/landing/.next/static && cp -R .next/static .next/standalone/.next/static && cp -R .next/standalone/. ../../.next/standalone/ && cp scripts/hostinger-standalone-server.cjs ../../.next/standalone/server.js",
-    "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/landing/server.js",
-    "lint": "next lint"
+    "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/landing/server.js"
   },
   "dependencies": {
-    "@repo/ui": "*",
     "@repo/typescript-config": "*",
-    "autoprefixer": "^10.4.20",
+    "@repo/ui": "*",
     "@types/node": "^20.17.9",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
+    "autoprefixer": "^10.4.20",
     "lucide-react": "^0.470.0",
-    "next": "^15.1.0",
+    "next": "16.3.5",
     "next-themes": "^0.4.4",
     "postcss": "^8.4.49",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
-  },
-  "devDependencies": {
-    "@repo/eslint-config": "*"
   }
 }

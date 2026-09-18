@@ -14,7 +14,9 @@ import {
   HeroSlideshow,
   Input,
   Label,
-  SectionNav,
+  SubsidiaryNav,
+  SubsidiaryPageIntro,
+  SubsidiaryRouteGrid,
   TrustRibbon,
   Select,
   Textarea,
@@ -28,6 +30,7 @@ import {
   Clock,
   Compass,
   FileUp,
+  Home,
   Info,
   Layers,
   Loader2,
@@ -39,6 +42,7 @@ import {
   Truck,
   UploadCloud,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -84,7 +88,6 @@ type UploadedDocumentAttachment = {
   fileSizeKb: number;
   file?: File;
   storagePath?: string;
-  fileUrl?: string;
 };
 
 interface SurveyDeliveryCheckout {
@@ -102,6 +105,39 @@ interface SurveyDeliveryCheckout {
   estimatedDelivery: string;
   rateSource: DeliveryRateSource;
 }
+
+const surveyWorkspaceStorageKey = "dajem-survey-workspace-v1";
+
+const orbitalNavItems = [
+  { href: "/survey", label: "Home", icon: Home },
+  { href: "/survey/services", label: "Services", icon: Layers },
+  { href: "/survey/estimate", label: "Estimate", icon: Calculator },
+  { href: "/survey/inquiry", label: "Inquiry", icon: FileUp },
+  { href: "/survey/tracker", label: "Tracker", icon: Clock },
+];
+
+const orbitalPageMeta = {
+  services: {
+    eyebrow: "Orbital service catalog",
+    title: "Professional survey and geomatics services",
+    description: "Review available survey, mapping, boundary, and engineering work.",
+  },
+  estimate: {
+    eyebrow: "Guided cost estimator",
+    title: "Build a clear survey budget",
+    description: "Calculate posted charges, extras, contingency, and DHL delivery.",
+  },
+  inquiry: {
+    eyebrow: "Inquiry and document desk",
+    title: "Submit a formal survey request",
+    description: "Send property details, your estimate, and supporting documents.",
+  },
+  tracker: {
+    eyebrow: "Client project tracker",
+    title: "Follow every submitted survey request",
+    description: "Check status, documents, payment notes, and delivery progress.",
+  },
+} as const;
 
 interface EstimateLineItem {
   label: string;
@@ -838,6 +874,18 @@ function isCalculatorService(value: string): value is CalculatorService {
 }
 
 export default function SurveyPage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const pageView = pathname === "/survey/services"
+    ? "services"
+    : pathname === "/survey/estimate"
+      ? "estimate"
+      : pathname === "/survey/inquiry"
+        ? "inquiry"
+        : pathname === "/survey/tracker"
+          ? "tracker"
+          : "home";
+  const activePageMeta = pageView === "home" ? null : orbitalPageMeta[pageView];
   const profile = dajemCompanyProfiles.survey;
   const { currentUser, openAuthModal, requireAuth, snapshot, submitSurvey } = useDajem();
   const [calculatorInputs, setCalculatorInputs] = React.useState({
@@ -880,6 +928,7 @@ export default function SurveyPage() {
   const [deliveryError, setDeliveryError] = React.useState<string | null>(null);
   const [isCalculatingDelivery, setIsCalculatingDelivery] = React.useState(false);
   const [deliveryEditor, setDeliveryEditor] = React.useState<string | null>(null);
+  const [workspaceHydrated, setWorkspaceHydrated] = React.useState(false);
 
   const calculatedEstimate = calculateSurveyEstimate({ ...calculatorInputs, delivery: deliveryCheckout });
   const linkedInquiryEstimate = isCalculatorService(quoteForm.serviceType)
@@ -904,6 +953,37 @@ export default function SurveyPage() {
     toSquareMetres(unitConverter.quantity, unitConverter.fromUnit),
     unitConverter.toUnit,
   );
+
+  React.useEffect(() => {
+    try {
+      const savedWorkspace = window.sessionStorage.getItem(surveyWorkspaceStorageKey);
+      if (savedWorkspace) {
+        const parsed = JSON.parse(savedWorkspace) as {
+          calculatorInputs?: typeof calculatorInputs;
+          deliveryCheckout?: SurveyDeliveryCheckout;
+          inquiryService?: string;
+        };
+        if (parsed.calculatorInputs) setCalculatorInputs(parsed.calculatorInputs);
+        if (parsed.deliveryCheckout) setDeliveryCheckout(parsed.deliveryCheckout);
+        if (parsed.inquiryService) {
+          setQuoteForm((current) => ({ ...current, serviceType: parsed.inquiryService ?? current.serviceType }));
+        }
+      }
+    } catch {
+      window.sessionStorage.removeItem(surveyWorkspaceStorageKey);
+    } finally {
+      setWorkspaceHydrated(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!workspaceHydrated) return;
+    window.sessionStorage.setItem(surveyWorkspaceStorageKey, JSON.stringify({
+      calculatorInputs,
+      deliveryCheckout,
+      inquiryService: quoteForm.serviceType,
+    }));
+  }, [calculatorInputs, deliveryCheckout, quoteForm.serviceType, workspaceHydrated]);
 
   React.useEffect(() => {
     if (!currentUser) return;
@@ -1030,7 +1110,6 @@ export default function SurveyPage() {
         fileName: attachment.fileName,
         fileSizeKb: attachment.fileSizeKb,
         storagePath: attachment.storagePath,
-        fileUrl: attachment.fileUrl,
       };
     }
 
@@ -1054,7 +1133,6 @@ export default function SurveyPage() {
       fileName: String(data?.attachment?.fileName ?? attachment.fileName),
       fileSizeKb: Number(data?.attachment?.fileSizeKb ?? attachment.fileSizeKb),
       storagePath: typeof data?.attachment?.storagePath === "string" ? data.attachment.storagePath : undefined,
-      fileUrl: typeof data?.attachment?.fileUrl === "string" ? data.attachment.fileUrl : undefined,
     };
   };
 
@@ -1089,6 +1167,17 @@ export default function SurveyPage() {
     if (isCalculatorService(value)) {
       setCalculatorInputs((current) => ({ ...current, serviceType: value }));
     }
+  };
+
+  const openInquiryFromEstimate = () => {
+    const inquiryService = calculatorInputs.serviceType;
+    handleInquiryServiceChange(inquiryService);
+    window.sessionStorage.setItem(surveyWorkspaceStorageKey, JSON.stringify({
+      calculatorInputs,
+      deliveryCheckout,
+      inquiryService,
+    }));
+    router.push("/survey/inquiry");
   };
 
   const renderDeliveryCheckout = (idPrefix: string) => {
@@ -1450,6 +1539,25 @@ export default function SurveyPage() {
       uploadedDocuments: quoteForm.uploadedDocuments,
       documentAttachments: storedAttachments,
       attested: quoteForm.attested,
+      delivery: deliveryCheckout.added
+        ? {
+            provider: "DHL Express",
+            serviceName: deliveryCheckout.serviceName,
+            fee: deliveryCheckout.fee,
+            currency: "NGN",
+            rateSource: deliveryCheckout.rateSource,
+            estimatedDelivery: deliveryCheckout.estimatedDelivery,
+            recipientName: deliveryCheckout.recipientName,
+            phone: deliveryCheckout.phone,
+            email: deliveryCheckout.email.trim() || undefined,
+            address: deliveryCheckout.address,
+            city: deliveryCheckout.city,
+            state: deliveryCheckout.state,
+            postalCode: deliveryCheckout.postalCode.trim() || undefined,
+            countryCode: "NG",
+            status: "Rate Added",
+          }
+        : undefined,
     });
 
     setQuoteSent(true);
@@ -1482,21 +1590,27 @@ export default function SurveyPage() {
       <Header activeApp="survey" />
 
       <main className="flex-1">
-        <SectionNav label="DAJEM Orbital" items={[
-          { href: "#services", label: "Services" },
-          { href: "#calculator", label: "Calculator" },
-          { href: "#quote", label: "Inquiry Desk" },
-          { href: "#tracker", label: "Tracker" },
-        ]} />
+        <SubsidiaryNav label="DAJEM Orbital" items={orbitalNavItems} accent="cyan" />
 
+        {activePageMeta && (
+          <SubsidiaryPageIntro
+            eyebrow={activePageMeta.eyebrow}
+            title={activePageMeta.title}
+            description={activePageMeta.description}
+            accent="cyan"
+          />
+        )}
+
+        {pageView === "home" && (
+          <>
         <HeroSlideshow
           className="dajem-mobile-hero py-14 sm:py-20 lg:py-24"
           overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
           slides={[
-            { src: "/images/orbital-field-survey-1.jpg", position: "center", label: "Field survey" },
-            { src: "/images/orbital-field-survey-2.jpg", position: "center", label: "Site measurement" },
-            { src: "/images/orbital-hero-field-v2.png", position: "center", label: "Mapping and design" },
-            { src: "/images/orbital-hero-generated.png", position: "center", label: "Project delivery" },
+            { src: "/images/orbital-field-survey-1.jpg", position: "center", label: "Professional field survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
+            { src: "/images/orbital-field-survey-2.jpg", position: "center", label: "Site measurement and beacon work", actionLabel: "Submit a survey inquiry", href: "/survey/inquiry" },
+            { src: "/images/orbital-hero-field-v2.png", position: "center", label: "Mapping, plans, and design", actionLabel: "Explore survey services", href: "/survey/services" },
+            { src: "/images/orbital-hero-generated.png", position: "center", label: "Survey plan completion and delivery", actionLabel: "Track my survey job", href: "/survey/tracker" },
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
@@ -1511,21 +1625,20 @@ export default function SurveyPage() {
                   Surveying, mapping, design, construction, and logistics
                 </span>
               </h1>
-              <div className="dajem-hero-lede text-base leading-relaxed">
-                <p>{profile.summary}</p>
-                <p className="mt-8 pt-2">Submit a request, receive pending approval, and track admin updates from your shared dashboard.</p>
-              </div>
+              <p className="dajem-hero-lede text-base leading-relaxed">
+                Surveying, mapping, engineering, construction, and project support.
+              </p>
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4">
-                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => router.push("/survey/inquiry")}>
                   Start Verification Portal
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/survey/estimate")}>
                   Cost Estimator
                 </Button>
               </div>
             </div>
 
-            <div className="dajem-hero-info-panel space-y-5 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5">
+            <div className="dajem-hero-info-panel hidden space-y-5 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5 lg:block">
               <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
                 <Sparkles className="h-5 w-5 text-cyan-500" />
                 Company Profile
@@ -1540,11 +1653,24 @@ export default function SurveyPage() {
 
         <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
 
+        <SubsidiaryRouteGrid
+          title="Choose your Orbital workspace"
+          accent="cyan"
+          items={[
+            { ...orbitalNavItems[1], meta: `${services.length} approved`, description: "Browse survey services." },
+            { ...orbitalNavItems[2], meta: "Live calculation", description: "Calculate survey costs." },
+            { ...orbitalNavItems[3], meta: "Documents ready", description: "Submit a formal request." },
+            { ...orbitalNavItems[4], meta: `${userSurveys.length} requests`, description: "Track requests and delivery." },
+          ]}
+        />
+          </>
+        )}
+
+        {pageView === "services" && (
         <section id="services" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
-          <div className="mx-auto mb-16 max-w-2xl text-center">
+          <div className="mx-auto mb-8 max-w-2xl text-center">
             <Badge variant="secondary" className="mb-2">DAJEM Orbital Catalog</Badge>
             <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Services</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Services are managed from the unified admin portal and displayed here after approval.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {services.map((service) => (
@@ -1565,32 +1691,12 @@ export default function SurveyPage() {
             ))}
           </div>
         </section>
+        )}
 
-        <section id="calculator" className="border-y border-border bg-muted/30 py-14 sm:py-20">
-          <div className="container mx-auto mb-8 max-w-6xl px-4">
-            <div className="overflow-hidden rounded-[1.5rem] border border-cyan-500/18 bg-card/72 shadow-sm backdrop-blur-xl">
-              <div className="border-b border-border/70 px-5 py-4 sm:px-6">
-                <Badge className="bg-cyan-600 text-white hover:bg-cyan-700">Guided estimator</Badge>
-                <h3 className="mt-2 text-xl font-bold text-foreground">Build a clear survey budget in four steps</h3>
-              </div>
-              <div className="grid divide-y divide-border/70 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-                {[
-                  { number: "01", title: "Survey service", text: "Choose perimeter, litigation, lifting, re-establishment, or another service." },
-                  { number: "02", title: "Land details", text: "Add the area, unit, plot or beacon count, and relevant survey parameters." },
-                  { number: "03", title: "Site profile", text: "Set client type, location, terrain, and delivery needs for the correct extras." },
-                  { number: "04", title: "Invoice summary", text: "Review posted charges, contingency, notes, and send the selection to the inquiry desk." },
-                ].map((step) => (
-                  <div key={step.number} className="p-5">
-                    <span className="text-xs font-extrabold tracking-[0.18em] text-cyan-600 dark:text-cyan-400">{step.number}</span>
-                    <p className="mt-2 font-bold text-foreground">{step.title}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        {pageView === "estimate" && (
+        <section id="calculator" className="border-y border-border bg-muted/30 py-10 sm:py-16">
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-4 lg:grid-cols-2">
-            <Card className="border bg-card p-8 shadow-lg">
+            <Card className="border bg-card p-5 shadow-lg sm:p-8">
               <h3 className="mb-6 flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">
                 <Calculator className="h-5 w-5 text-cyan-500" />
                 Estimate Pricing Calculator
@@ -1659,10 +1765,7 @@ export default function SurveyPage() {
                   <Button
                     type="button"
                     className="w-full bg-cyan-600 text-white hover:bg-cyan-700"
-                    onClick={() => {
-                      handleInquiryServiceChange(calculatorInputs.serviceType);
-                      document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" });
-                    }}
+                    onClick={openInquiryFromEstimate}
                   >
                     Use This Estimate In Inquiry Desk
                   </Button>
@@ -1671,12 +1774,8 @@ export default function SurveyPage() {
             </Card>
 
             <div className="space-y-6">
-              <Badge variant="secondary">Cost Parameters</Badge>
-              <h3 className="text-3xl font-bold text-primary dark:text-foreground">Transparent Survey Fees</h3>
-              <p className="leading-relaxed text-muted-foreground">
-                Costs change with terrain difficulty, accessibility, vegetation density, and registry requirements. The estimator now rolls the posted extras into the total and keeps the same summary ready for the inquiry desk.
-              </p>
-              <div className="grid grid-cols-2 gap-4 border-t pt-6 text-xs font-bold text-muted-foreground">
+              <h3 className="text-xl font-bold text-primary dark:text-foreground">Quick Tools</h3>
+              <div className="grid grid-cols-2 gap-4 text-xs font-bold text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-emerald-500" />
                   <span>5-10 Days Turnaround</span>
@@ -1687,10 +1786,7 @@ export default function SurveyPage() {
                 </div>
               </div>
               <div className="space-y-4 border-t pt-6">
-                <div>
-                  <Badge variant="secondary">Unit Converter</Badge>
-                  <h4 className="mt-2 text-xl font-bold text-primary dark:text-foreground">Convert Survey Units</h4>
-                </div>
+                <h4 className="text-xl font-bold text-primary dark:text-foreground">Unit Converter</h4>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
                   <Select
                     label="From"
@@ -1738,21 +1834,17 @@ export default function SurveyPage() {
             </div>
           </div>
         </section>
+        )}
 
-        <section id="quote" className="container mx-auto max-w-4xl px-5 py-14 sm:px-6 sm:py-20">
-          <Card className="border bg-card p-8 shadow-xl">
-            <div className="mx-auto mb-8 max-w-2xl text-center">
-              <Badge variant="secondary" className="mb-2">Inquiry Desk</Badge>
-              <h3 className="text-2xl font-bold text-primary dark:text-foreground">Request Formal Survey Proposal</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                The inquiry desk now carries the same estimator details, transaction summary, and side notes into the request record.
-              </p>
-            </div>
+        {pageView === "inquiry" && (
+        <section id="quote" className="container mx-auto max-w-4xl px-5 py-10 sm:px-6 sm:py-16">
+          <Card className="border bg-card p-5 shadow-xl sm:p-8">
+            <Badge variant="secondary" className="mb-5">Inquiry Desk</Badge>
 
             <form onSubmit={handleQuoteSubmit} className="space-y-5">
               {!currentUser && (
                 <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                  <p className="mb-3">Sign in first so we can attach this request to your shared dashboard and tracker.</p>
+                  <p className="mb-3">Sign in to submit and track this request.</p>
                   <div className="flex flex-wrap gap-3">
                     <Button type="button" onClick={() => openAuthModal("login")}>Login</Button>
                     <Button type="button" variant="outline" onClick={() => openAuthModal("signup")}>
@@ -1877,9 +1969,8 @@ export default function SurveyPage() {
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-foreground">Linked Estimate Details</p>
-                      <p className="text-xs text-muted-foreground">These selections stay connected to the main estimator.</p>
                     </div>
-                    <Button type="button" variant="outline" onClick={() => document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" })}>
+                    <Button type="button" variant="outline" onClick={() => router.push("/survey/estimate")}>
                       Review Main Estimator
                     </Button>
                   </div>
@@ -2073,14 +2164,10 @@ export default function SurveyPage() {
             </form>
           </Card>
         </section>
+        )}
 
-        <section id="tracker" className="container mx-auto max-w-6xl px-5 pb-14 sm:px-6 sm:pb-20">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <Badge variant="secondary" className="mb-2">Live Tracker</Badge>
-              <h3 className="text-2xl font-bold text-primary dark:text-foreground">Your Survey Requests</h3>
-            </div>
-          </div>
+        {pageView === "tracker" && (
+        <section id="tracker" className="container mx-auto max-w-6xl px-5 py-10 sm:px-6 sm:py-16">
           {userSurveys.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-sm text-muted-foreground">
@@ -2102,7 +2189,10 @@ export default function SurveyPage() {
                   <CardContent className="space-y-2">
                     <p className="text-xs font-semibold text-cyan-600">{survey.applicationNumber ?? survey.id}</p>
                     <p className="text-sm text-muted-foreground">{survey.serviceType}</p>
-                    <p className="whitespace-pre-line text-sm text-muted-foreground">{survey.description}</p>
+                    <details className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+                      <summary className="cursor-pointer font-semibold text-foreground">View submitted details</summary>
+                      <p className="mt-3 whitespace-pre-line">{survey.description}</p>
+                    </details>
                     {survey.billingType && (
                       <Badge variant="outline">{survey.billingType}</Badge>
                     )}
@@ -2121,6 +2211,32 @@ export default function SurveyPage() {
                         ))}
                       </div>
                     )}
+                    {survey.delivery && (
+                      <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 dark:border-red-950 dark:bg-red-950/20">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex gap-2.5">
+                            <Truck className="mt-0.5 h-4 w-4 shrink-0 text-red-700 dark:text-red-300" />
+                            <div>
+                              <p className="text-sm font-bold text-red-950 dark:text-red-100">DHL survey plan delivery</p>
+                              <p className="mt-1 text-xs text-red-900/80 dark:text-red-100/80">
+                                {survey.delivery.address}, {survey.delivery.city}, {survey.delivery.state}
+                                {survey.delivery.postalCode ? ` ${survey.delivery.postalCode}` : ""}
+                              </p>
+                              <p className="mt-1 text-xs text-red-900/80 dark:text-red-100/80">
+                                {survey.delivery.estimatedDelivery}
+                                {survey.delivery.trackingNumber ? ` · Tracking: ${survey.delivery.trackingNumber}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-sm font-black text-red-950 dark:text-red-100">{formatCurrency(survey.delivery.fee)}</p>
+                            <Badge variant="outline" className="mt-1 border-red-300 text-red-900 dark:border-red-800 dark:text-red-100">
+                              {survey.delivery.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {survey.paymentStatus && (
                       <p className="text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
                     )}
@@ -2136,9 +2252,10 @@ export default function SurveyPage() {
             </div>
           )}
         </section>
+        )}
       </main>
 
-      <Footer />
+      <Footer compact />
 
       <Dialog isOpen={quoteSent} onClose={() => setQuoteSent(false)} title="Quotation Request Logged">
         <div className="space-y-4 py-6 text-center">

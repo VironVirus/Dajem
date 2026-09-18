@@ -1,6 +1,5 @@
-import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { randomBytes, scryptSync } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type {
@@ -21,38 +20,12 @@ const SUPABASE_TABLE = process.env.SUPABASE_DAJEM_STATE_TABLE ?? "dajem_state";
 const SUPABASE_ROW_KEY = process.env.SUPABASE_DAJEM_STATE_KEY ?? "platform";
 let supabaseRuntimeState: "unknown" | "healthy" | "degraded" = "unknown";
 
-function isProductionRuntime() {
-  return process.env.NODE_ENV === "production" || Boolean(process.env.NETLIFY);
-}
-
 function allowFileBackend() {
-  return !isProductionRuntime() || process.env.DAJEM_ALLOW_FILE_FALLBACK === "true";
-}
-
-function allowTransientNetlifyFallback() {
-  return Boolean(process.env.NETLIFY);
-}
-
-function resolveRepoRoot() {
-  const cwd = process.cwd();
-  if (existsSync(join(cwd, "turbo.json"))) return cwd;
-
-  const parentRoot = resolve(cwd, "..", "..");
-  if (existsSync(join(parentRoot, "turbo.json"))) return parentRoot;
-
-  return cwd;
+  return process.env.NODE_ENV !== "production";
 }
 
 function resolveDataFilePath() {
-  if (process.env.DAJEM_DATA_FILE) {
-    return process.env.DAJEM_DATA_FILE;
-  }
-
-  if (process.env.NETLIFY && allowFileBackend()) {
-    return join("/tmp", ".dajem", "platform-state.json");
-  }
-
-  return join(resolveRepoRoot(), ".dajem", "platform-state.json");
+  return join(process.cwd(), ".dajem", "platform-state.json");
 }
 
 function nowIso() {
@@ -82,7 +55,7 @@ function getConfiguredAdminSeed() {
     return { email, password, phone };
   }
 
-  if (isProductionRuntime()) {
+  if (process.env.NODE_ENV === "production") {
     return null;
   }
 
@@ -156,6 +129,13 @@ function normalizePropertyListings(listings: PropertyListing[]) {
   return seedPropertyListings;
 }
 
+function deriveHomesListingGroup(listing: PropertyListing): NonNullable<PropertyListing["listingGroup"]> {
+  if (listing.listingGroup) return listing.listingGroup;
+  if (listing.category === "land") return listing.type === "sale" ? "land-sale" : "land-lease";
+  if (listing.type === "short-let" || listing.category === "short-let" || listing.category === "suite") return "short-let";
+  return listing.type === "sale" ? "house-sale" : "house-rent";
+}
+
 function normalizeSurveyServices(services: SurveyService[]) {
   if (services.length > 0) return services;
   return seedSurveyServices;
@@ -168,12 +148,27 @@ function migratePendingStatus<T extends { status?: string }>(items: T[]) {
   }));
 }
 
+function removeLegacyIdentityFields(user: ServerUser) {
+  const {
+    officialTitle: _officialTitle,
+    identificationType: _identificationType,
+    identificationNumber: _identificationNumber,
+    identificationImageUrl: _identificationImageUrl,
+    ...safeUser
+  } = user as ServerUser & Record<string, unknown>;
+
+  return safeUser as ServerUser;
+}
+
 function sanitizeState(raw: unknown): PlatformState {
   const base = createDefaultState();
   if (!raw || typeof raw !== "object") return base;
 
   const candidate = raw as Partial<PlatformState>;
-  const users = Array.isArray(candidate.users) ? candidate.users : [];
+  const users = Array.isArray(candidate.users)
+    ? candidate.users.filter((user): user is ServerUser => Boolean(user && typeof user === "object"))
+      .map(removeLegacyIdentityFields)
+    : [];
   const configuredAdmin = createAdminUser();
   const adminEmail = configuredAdmin?.email.toLowerCase();
   const adminExists = adminEmail
@@ -181,13 +176,14 @@ function sanitizeState(raw: unknown): PlatformState {
     : true;
 
   return {
-    users: adminExists || !configuredAdmin ? users as ServerUser[] : [configuredAdmin, ...(users as ServerUser[])],
+    users: adminExists || !configuredAdmin ? users : [configuredAdmin, ...users],
     carts: candidate.carts && typeof candidate.carts === "object" ? candidate.carts : {},
     orders: Array.isArray(candidate.orders) ? candidate.orders : [],
     bids: Array.isArray(candidate.bids) ? migratePendingStatus(candidate.bids) : [],
     surveys: Array.isArray(candidate.surveys) ? migratePendingStatus(candidate.surveys) : [],
     inventory: migrateInventory(Array.isArray(candidate.inventory) ? candidate.inventory : []),
-    propertyListings: normalizePropertyListings(Array.isArray(candidate.propertyListings) ? candidate.propertyListings : []),
+    propertyListings: normalizePropertyListings(Array.isArray(candidate.propertyListings) ? candidate.propertyListings : [])
+      .map((listing) => ({ ...listing, listingGroup: deriveHomesListingGroup(listing) })),
     surveyServices: normalizeSurveyServices(Array.isArray(candidate.surveyServices) ? candidate.surveyServices : []),
     paymentIntents: Array.isArray(candidate.paymentIntents) ? candidate.paymentIntents : [],
     communicationLogs: Array.isArray(candidate.communicationLogs) ? candidate.communicationLogs : [],
@@ -232,11 +228,15 @@ export function getSupabaseStorageBucket() {
   return process.env.SUPABASE_STORAGE_BUCKET?.trim() || "dajem-documents";
 }
 
+export function getSupabaseMediaBucket() {
+  return process.env.SUPABASE_MEDIA_BUCKET?.trim() || "dajem-media";
+}
+
 async function readFromFile() {
   const filePath = resolveDataFilePath();
 
   try {
-    const raw = await readFile(filePath, "utf8");
+    const raw = await readFile(/* turbopackIgnore: true */ filePath, "utf8");
     return sanitizeState(JSON.parse(raw));
   } catch {
     const seeded = createDefaultState();
@@ -252,39 +252,70 @@ async function writeToFile(state: PlatformState) {
   await writeFile(filePath, JSON.stringify(state, null, 2), "utf8");
 }
 
-async function readFromSupabase() {
+type SupabaseState = {
+  state: PlatformState;
+  updatedAt: string;
+};
+
+type StateForUpdate = {
+  state: PlatformState;
+  source: "supabase" | "file" | "memory";
+  updatedAt?: string;
+};
+
+async function readFromSupabase(): Promise<SupabaseState | null> {
   const client = getSupabaseAdminClient();
   if (!client) return null;
 
   try {
     const { data, error } = await client
       .from(SUPABASE_TABLE)
-      .select("value")
+      .select("value, updated_at")
       .eq("key", SUPABASE_ROW_KEY)
       .maybeSingle();
 
     if (error) throw error;
     if (!data?.value) {
       const seeded = createDefaultState();
-      await writeToSupabase(seeded);
-      markSupabaseHealthy();
-      return seeded;
+      const wrote = await writeToSupabase(seeded);
+      if (wrote !== "written") {
+        throw new Error("Unable to initialise shared data.");
+      }
+      return readFromSupabase();
     }
 
     markSupabaseHealthy();
-    return sanitizeState(data.value);
+    return {
+      state: sanitizeState(data.value),
+      updatedAt: data.updated_at,
+    };
   } catch (error) {
     markSupabaseDegraded();
-    console.error("Supabase state read failed, falling back to filesystem.", error);
+    console.error("Supabase state read failed.", error);
     return null;
   }
 }
 
-async function writeToSupabase(state: PlatformState) {
+async function writeToSupabase(state: PlatformState, expectedUpdatedAt?: string) {
   const client = getSupabaseAdminClient();
-  if (!client) return false;
+  if (!client) return "unavailable" as const;
 
   try {
+    if (expectedUpdatedAt) {
+      const { data, error } = await client
+        .from(SUPABASE_TABLE)
+        .update({ value: state, updated_at: nowIso() })
+        .eq("key", SUPABASE_ROW_KEY)
+        .eq("updated_at", expectedUpdatedAt)
+        .select("updated_at");
+
+      if (error) throw error;
+      if (!data?.length) return "conflict" as const;
+
+      markSupabaseHealthy();
+      return "written" as const;
+    }
+
     const { error } = await client.from(SUPABASE_TABLE).upsert({
       key: SUPABASE_ROW_KEY,
       value: state,
@@ -293,51 +324,65 @@ async function writeToSupabase(state: PlatformState) {
 
     if (error) throw error;
     markSupabaseHealthy();
-    return true;
+    return "written" as const;
   } catch (error) {
     markSupabaseDegraded();
-    console.error("Supabase state write failed, falling back to filesystem.", error);
-    return false;
+    console.error("Supabase state write failed.", error);
+    return "unavailable" as const;
   }
+}
+
+async function readPlatformStateForUpdate(): Promise<StateForUpdate> {
+  const supabaseIsConfigured = Boolean(getSupabaseConfig());
+  const supabaseState = await readFromSupabase();
+  if (supabaseState) {
+    return {
+      state: supabaseState.state,
+      source: "supabase",
+      updatedAt: supabaseState.updatedAt,
+    };
+  }
+
+  if (supabaseIsConfigured && !allowFileBackend()) {
+    throw new Error("The shared data service is temporarily unavailable. Please try again shortly.");
+  }
+
+  if (allowFileBackend()) {
+    return { state: await readFromFile(), source: "file" };
+  }
+
+  return { state: createDefaultState(), source: "memory" };
 }
 
 export async function readPlatformState() {
-  const supabaseIsConfigured = Boolean(getSupabaseConfig());
-  const supabaseState = await readFromSupabase();
-  if (supabaseState) return supabaseState;
-
-  if (allowFileBackend() || allowTransientNetlifyFallback()) {
-    return readFromFile();
-  }
-
-  if (supabaseIsConfigured) {
-    return createDefaultState();
-  }
-
-  return createDefaultState();
-}
-
-export async function writePlatformState(state: PlatformState) {
-  const normalized = sanitizeState(state);
-  const wroteToSupabase = await writeToSupabase(normalized);
-  if (wroteToSupabase) return;
-
-  if (allowFileBackend() || allowTransientNetlifyFallback()) {
-    await writeToFile(normalized);
-    return;
-  }
-
-  throw new Error("Supabase is required for persistent production actions.");
+  return (await readPlatformStateForUpdate()).state;
 }
 
 export async function updatePlatformState<T>(
   updater: (state: PlatformState) => Promise<T> | T,
 ) {
-  const current = await readPlatformState();
-  const next = cloneState(current);
-  const result = await updater(next);
-  await writePlatformState(next);
-  return { result, state: next };
+  // Supabase updates are optimistic so concurrent customers cannot silently overwrite one another.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = await readPlatformStateForUpdate();
+    const next = cloneState(current.state);
+    const result = await updater(next);
+
+    if (current.source === "supabase") {
+      const outcome = await writeToSupabase(next, current.updatedAt);
+      if (outcome === "written") return { result, state: next };
+      if (outcome === "conflict") continue;
+      throw new Error("The shared data service is temporarily unavailable. Please try again shortly.");
+    }
+
+    if (current.source === "file") {
+      await writeToFile(next);
+      return { result, state: next };
+    }
+
+    throw new Error("Supabase is required for persistent production actions.");
+  }
+
+  throw new Error("Your data changed in another session. Please try again.");
 }
 
 export function publicUser(user: ServerUser): User {
@@ -348,10 +393,10 @@ export function publicUser(user: ServerUser): User {
     phone: user.phone,
     role: user.role,
     createdAt: user.createdAt,
-    officialTitle: user.officialTitle,
-    identificationType: user.identificationType,
-    identificationNumber: user.identificationNumber,
-    identificationImageUrl: user.identificationImageUrl,
+    country: user.country,
+    address: user.address,
+    state: user.state,
+    localGovernment: user.localGovernment,
   };
 }
 
@@ -359,7 +404,7 @@ export function getIntegrationStatus(): IntegrationStatus {
   const supabaseConfigured = Boolean(getSupabaseConfig());
   const backend = supabaseConfigured && supabaseRuntimeState !== "degraded"
     ? "supabase"
-    : allowFileBackend() || allowTransientNetlifyFallback()
+    : allowFileBackend()
       ? "filesystem"
       : supabaseConfigured
         ? "supabase"
@@ -369,6 +414,7 @@ export function getIntegrationStatus(): IntegrationStatus {
     backend,
     supabaseConfigured,
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY),
+    opayMockAvailable: process.env.OPAY_MOCK_ENABLED !== "false",
     hostingConfigured: Boolean(process.env.NEXT_PUBLIC_DAJEM_SITE_URL || process.env.URL || process.env.HOSTINGER || process.env.NETLIFY),
   };
 }

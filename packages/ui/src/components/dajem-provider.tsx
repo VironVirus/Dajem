@@ -11,8 +11,12 @@ import type {
   InventoryCategory,
   InventoryStockStatus,
   Order,
+  PaymentProvider,
+  PaymentPurpose,
   PropertyCategory,
+  PropertyListing,
   PropertyType,
+  SurveyDeliveryStatus,
   SurveyStatus,
 } from "../lib/store";
 import { emptySnapshot } from "../lib/store";
@@ -36,11 +40,11 @@ interface DajemContextValue {
     name: string;
     email: string;
     phone: string;
+    country: string;
+    address: string;
+    state: string;
+    localGovernment: string;
     password: string;
-    officialTitle?: string;
-    identificationType?: string;
-    identificationNumber?: string;
-    identificationImageUrl?: string;
   }) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
@@ -63,13 +67,18 @@ interface DajemContextValue {
     price: number;
     type: PropertyType;
     category: PropertyCategory;
+    listingGroup?: PropertyListing["listingGroup"];
+    residenceType?: PropertyListing["residenceType"];
     beds?: number;
     baths?: number;
     size: number;
     summary: string;
     highlights?: string[];
     imageUrl?: string;
-  }) => Promise<void>;
+    agentCompany?: string;
+    requestContactPublication?: boolean;
+  }) => Promise<{ listing?: PropertyListing }>;
+  submitPropertyListingPaymentProof: (propertyId: string, paymentProofPath: string) => Promise<void>;
   submitSurvey: (payload: {
     location: string;
     serviceType: string;
@@ -89,10 +98,26 @@ interface DajemContextValue {
       fileName: string;
       fileSizeKb: number;
       storagePath?: string;
-      fileUrl?: string;
     }[];
     missingDocuments?: string[];
     attested?: boolean;
+    delivery?: {
+      provider: "DHL Express";
+      serviceName: string;
+      fee: number;
+      currency: "NGN";
+      rateSource: "dajem-estimate" | "dhl-live";
+      estimatedDelivery: string;
+      recipientName: string;
+      phone: string;
+      email?: string;
+      address: string;
+      city: string;
+      state: string;
+      postalCode?: string;
+      countryCode: "NG";
+      status: SurveyDeliveryStatus;
+    };
   }) => Promise<void>;
   updateBidStatus: (bidId: string, status: BidStatus) => Promise<void>;
   updatePropertyListingStatus: (propertyId: string, status: ApprovalStatus) => Promise<void>;
@@ -103,6 +128,8 @@ interface DajemContextValue {
     price: number;
     type: PropertyType;
     category: PropertyCategory;
+    listingGroup?: PropertyListing["listingGroup"];
+    residenceType?: PropertyListing["residenceType"];
     beds?: number;
     baths?: number;
     size: number;
@@ -124,6 +151,7 @@ interface DajemContextValue {
     status?: ApprovalStatus;
   }) => Promise<void>;
   updateSurveyStatus: (surveyId: string, status: SurveyStatus) => Promise<void>;
+  updateSurveyDelivery: (surveyId: string, status: SurveyDeliveryStatus, trackingNumber?: string) => Promise<void>;
   updateInventoryItem: (payload: {
     productId?: string;
     name?: string;
@@ -141,6 +169,8 @@ interface DajemContextValue {
     promoEndsAt?: string;
     promoLabel?: string;
   }) => Promise<void>;
+  updatePropertyListingAgentPayment: (propertyId: string, status: NonNullable<PropertyListing["agentListingPaymentStatus"]>, paymentProofPath?: string) => Promise<void>;
+  startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   verifyFlutterwaveCheckout: (params: { txRef: string; transactionId?: string }) => Promise<{ order?: Order }>;
 }
@@ -238,6 +268,12 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     setAuthPreview(null);
   }, []);
 
+  const navigateToDashboard = React.useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.location.assign(new URL("/dashboard", window.location.origin).toString());
+    }
+  }, []);
+
   const requireAuth = React.useCallback((mode: AuthMode = "login") => {
     if (snapshot.currentUser) return true;
     openAuthModal(mode);
@@ -281,11 +317,11 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     name: string;
     email: string;
     phone: string;
+    country: string;
+    address: string;
+    state: string;
+    localGovernment: string;
     password: string;
-    officialTitle?: string;
-    identificationType?: string;
-    identificationNumber?: string;
-    identificationImageUrl?: string;
   }) => {
     const result = await postAction("register", payload);
     setAuthPreview(result.preview ?? null);
@@ -295,7 +331,8 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     await postAction("login", payload);
     setAuthModalOpen(false);
     setAuthError(null);
-  }, [postAction]);
+    navigateToDashboard();
+  }, [navigateToDashboard, postAction]);
 
   const logout = React.useCallback(async () => {
     await postAction("logout");
@@ -307,45 +344,20 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
 
     const resolvedTarget = new URL(targetUrl, window.location.origin);
-    if (!snapshot.currentUser || resolvedTarget.origin === window.location.origin) {
-      window.location.assign(resolvedTarget.toString());
-      return;
-    }
+    window.location.assign(resolvedTarget.toString());
+  }, []);
 
+  const startPaymentCheckout = React.useCallback(async (
+    provider: PaymentProvider,
+    options: { purpose?: PaymentPurpose; propertyListingId?: string } = {},
+  ) => {
+    setBusyAction(`${provider}-checkout`);
     try {
-      const response = await fetch("/api/platform", {
+      const response = await fetch(provider === "opay" ? "/api/opay/checkout" : "/api/flutterwave/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          action: "create-session-handoff",
-          payload: {
-            targetOrigin: resolvedTarget.origin,
-            nextPath: `${resolvedTarget.pathname}${resolvedTarget.search}${resolvedTarget.hash}`,
-          },
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data?.error ?? "Unable to continue into the selected app.");
-      }
-
-      window.location.assign(typeof data?.redirectUrl === "string" ? data.redirectUrl : resolvedTarget.toString());
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Unable to continue into the selected app.");
-      window.location.assign(resolvedTarget.toString());
-    }
-  }, [snapshot.currentUser]);
-
-  const startFlutterwaveCheckout = React.useCallback(async () => {
-    setBusyAction("flutterwave-checkout");
-    try {
-      const response = await fetch("/api/flutterwave/checkout", {
-        method: "POST",
-        credentials: "include",
+        body: JSON.stringify(options),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -362,6 +374,10 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
       setBusyAction(null);
     }
   }, []);
+
+  const startFlutterwaveCheckout = React.useCallback(async () => (
+    startPaymentCheckout("flutterwave")
+  ), [startPaymentCheckout]);
 
   const verifyFlutterwaveCheckout = React.useCallback(async (params: { txRef: string; transactionId?: string }) => {
     setBusyAction("flutterwave-verify");
@@ -423,7 +439,11 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
       await postAction("submit-bid", payload);
     },
     submitPropertyListing: async (payload) => {
-      await postAction("submit-property-listing", payload);
+      const result = await postAction("submit-property-listing", payload);
+      return { listing: result.listing };
+    },
+    submitPropertyListingPaymentProof: async (propertyId, paymentProofPath) => {
+      await postAction("submit-property-listing-payment-proof", { propertyId, paymentProofPath });
     },
     submitSurvey: async (payload) => {
       await postAction("submit-survey", payload);
@@ -443,9 +463,16 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     updateSurveyStatus: async (surveyId, status) => {
       await postAction("update-survey-status", { surveyId, status });
     },
+    updateSurveyDelivery: async (surveyId, status, trackingNumber) => {
+      await postAction("update-survey-delivery", { surveyId, status, trackingNumber });
+    },
     updateInventoryItem: async (payload) => {
       await postAction("update-inventory-item", payload);
     },
+    updatePropertyListingAgentPayment: async (propertyId, status, paymentProofPath) => {
+      await postAction("update-property-listing-agent-payment", { propertyId, status, paymentProofPath });
+    },
+    startPaymentCheckout,
     startFlutterwaveCheckout,
     verifyFlutterwaveCheckout,
   }), [
@@ -464,6 +491,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     register,
     requireAuth,
     snapshot,
+    startPaymentCheckout,
     startFlutterwaveCheckout,
     verifyFlutterwaveCheckout,
   ]);
@@ -479,6 +507,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
         preview={authPreview}
         onClose={closeAuthModal}
         onModeChange={setAuthMode}
+        onAuthenticated={navigateToDashboard}
         onLogin={login}
         onRegister={register}
       />

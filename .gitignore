@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 .next/
 .turbo/
+.dajem/
 .netlify/
 .env
 .env.local

@@ -5,6 +5,7 @@ import { readSessionEmail } from "./server/session";
 export const dynamic = "force-dynamic";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_REQUEST_SIZE_BYTES = MAX_FILE_SIZE_BYTES + 256 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -35,6 +36,16 @@ function jsonError(error: unknown, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function hasExpectedFileSignature(bytes: Buffer, mimeType: string) {
+  if (mimeType === "application/pdf") return bytes.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === "image/png") {
+    return bytes.length >= 8
+      && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
@@ -42,6 +53,11 @@ export async function POST(request: NextRequest) {
     const sessionEmail = readSessionEmail(request);
     if (!sessionEmail) {
       return jsonError(new Error("Please log in before uploading documents."), 401);
+    }
+
+    const contentLength = Number(request.headers.get("content-length") ?? 0);
+    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_SIZE_BYTES) {
+      throw new Error("Each document must be 5MB or less.");
     }
 
     const formData = await request.formData();
@@ -60,8 +76,13 @@ export async function POST(request: NextRequest) {
       throw new Error("Each document must be 5MB or less.");
     }
 
-    if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
       throw new Error("Only PDF, JPG, and PNG documents are allowed.");
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    if (!hasExpectedFileSignature(bytes, file.type)) {
+      throw new Error("The uploaded file does not match its declared document type.");
     }
 
     const safeEmail = safeSegment(sessionEmail);
@@ -86,7 +107,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
     const { error } = await supabase.storage
       .from(getSupabaseStorageBucket())
       .upload(storagePath, bytes, {

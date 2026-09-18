@@ -54,6 +54,18 @@ Set these environment variables in Hostinger:
 
 1. Add `NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY` and `FLUTTERWAVE_SECRET_KEY`.
 2. Set the Flutterwave redirect/callback URL to `https://dajem.consolish.com/checkout/callback`.
+3. Add a secret `FLUTTERWAVE_WEBHOOK_HASH` in Hostinger and set the same value in Flutterwave Webhooks.
+4. Set the Flutterwave webhook URL to `https://dajem.consolish.com/api/flutterwave/webhook`.
+
+The app validates the signed webhook and independently verifies the transaction with Flutterwave before issuing the order and receipt. The browser return page is a customer confirmation page; the webhook lets DAJEM record a verified payment even if the customer closes that page.
+
+## OPay Test Adapter
+
+The current OPay option is a deliberately labelled local mock, not a live OPay integration. It can be enabled only for a private test deployment with `DAJEM_ALLOW_MOCK_PAYMENTS=true` and `OPAY_MOCK_ENABLED=true`; it records a mock payment but collects no money. Keep both values false on the public production site until DAJEM has approved OPay merchant credentials and a verified server-side integration specification.
+
+## Managed Images
+
+Run `supabase/dajem_media.sql` once in Supabase SQL Editor. Images uploaded through the Homes and admin workflows are limited to 5 MB, verified as JPG/PNG/WebP, converted to WebP, and watermarked with DAJEM before server-side Storage upload.
 
 ## DHL Survey Plan Delivery
 
@@ -68,7 +80,9 @@ For live MyDHL account rates, create or connect a DHL Express business account, 
 - `DHL_ORIGIN_CITY=Enugu`
 - `DHL_ORIGIN_POSTAL_CODE=400001`
 
-Keep the DHL credentials server-side. The checkout rates a 0.5 kg document envelope measuring 35 x 25 x 2 cm. Shipment creation and courier pickup are separate fulfillment steps to enable after DAJEM confirms its DHL account workflow.
+Keep the DHL credentials server-side. The checkout rates a 0.5 kg document envelope measuring 35 x 25 x 2 cm. When the client submits the inquiry, the selected delivery fee and destination are stored with that survey request. Administrators can then update the delivery through **Rate Added**, **Awaiting Dispatch**, **Dispatched**, **Delivered**, or **Cancelled** and add the DHL tracking number from `/admin`; the client sees those updates in the survey tracker and shared dashboard.
+
+Live shipment creation, label purchase, and courier pickup remain separate fulfillment steps to enable after DAJEM confirms its DHL account workflow. Until then, the administrator creates the shipment in the DHL business portal and records the issued tracking number in DAJEM.
 
 ## Cloudflare Setup
 

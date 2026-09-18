@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, ClipboardList, Home, ImageIcon, Package, Shield, UploadCloud, Users } from "lucide-react";
+import { BarChart3, ClipboardList, Home, ImageIcon, Package, Shield, Truck, UploadCloud, Users } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
@@ -11,6 +11,7 @@ import { Select } from "./select";
 import { Textarea } from "./textarea";
 import { useDajem } from "./dajem-provider";
 import type {
+  AgentListingPaymentStatus,
   ApprovalStatus,
   InventoryCategory,
   InventoryItem,
@@ -18,6 +19,7 @@ import type {
   PropertyCategory,
   PropertyListing,
   PropertyType,
+  SurveyDeliveryStatus,
   SurveyService,
 } from "../lib/store";
 
@@ -41,14 +43,15 @@ function joinHighlights(value: string[] | undefined) {
   return (value ?? []).join(", ");
 }
 
-function readImageFile(file: File, onValue: (value: string) => void) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (typeof reader.result === "string") {
-      onValue(reader.result);
-    }
-  };
-  reader.readAsDataURL(file);
+async function uploadManagedImage(file: File, scope: "farm" | "property") {
+  if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5MB or less.");
+  const formData = new FormData();
+  formData.append("scope", scope);
+  formData.append("file", file);
+  const response = await fetch("/api/storage/images", { method: "POST", credentials: "include", body: formData });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.error ?? "Image upload failed.");
+  return String(data.imageUrl);
 }
 
 function ImagePreview({ imageUrl, fallbackClass }: { imageUrl?: string; fallbackClass: string }) {
@@ -162,6 +165,19 @@ const blankService: SurveyService = {
   status: "Approved",
 };
 
+const surveyDeliveryStatuses: SurveyDeliveryStatus[] = [
+  "Rate Added",
+  "Awaiting Dispatch",
+  "Dispatched",
+  "Delivered",
+  "Cancelled",
+];
+
+type SurveyDeliveryDraft = {
+  status: SurveyDeliveryStatus;
+  trackingNumber: string;
+};
+
 export function AdminView() {
   const {
     currentUser,
@@ -170,6 +186,8 @@ export function AdminView() {
     updateBidStatus,
     updateInventoryItem,
     updatePropertyListingStatus,
+    updatePropertyListingAgentPayment,
+    updateSurveyDelivery,
     updateSurveyStatus,
     upsertPropertyListing,
     upsertSurveyService,
@@ -179,11 +197,28 @@ export function AdminView() {
   const [newInventory, setNewInventory] = React.useState<InventoryItem>(blankInventory);
   const [propertyDraft, setPropertyDraft] = React.useState<PropertyForm>(blankProperty);
   const [serviceDraft, setServiceDraft] = React.useState<SurveyService>(blankService);
+  const [deliveryDrafts, setDeliveryDrafts] = React.useState<Record<string, SurveyDeliveryDraft>>({});
+  const [mediaError, setMediaError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const nextDrafts = Object.fromEntries(snapshot.inventory.map((item) => [item.productId, item]));
     setInventoryDrafts(nextDrafts);
   }, [snapshot.inventory]);
+
+  React.useEffect(() => {
+    const nextDrafts = Object.fromEntries(
+      snapshot.surveys
+        .filter((survey) => survey.delivery)
+        .map((survey) => [
+          survey.id,
+          {
+            status: survey.delivery!.status,
+            trackingNumber: survey.delivery!.trackingNumber ?? "",
+          },
+        ]),
+    );
+    setDeliveryDrafts(nextDrafts);
+  }, [snapshot.surveys]);
 
   const saveInventory = async (item: InventoryItem) => {
     await updateInventoryItem({
@@ -275,15 +310,16 @@ export function AdminView() {
           <Badge variant="secondary" className="mb-3">Unified Admin Portal</Badge>
           <h1 className="text-3xl font-bold text-white">DAJEM operations console</h1>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-200">
-            Manage Dajem Farms products, Dajem Homes listings, Dajem Orbital service requests, approvals, images, users, and integrations from one shared workspace.
+            Manage products, listings, service requests, approvals, images, users, and payments from one shared workspace.
           </p>
           <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-200">
-            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Backend: {snapshot.integrations.backend}</span>
-            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Supabase: {snapshot.integrations.supabaseConfigured ? "Ready" : "Fallback mode"}</span>
-            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Flutterwave: {snapshot.integrations.flutterwaveConfigured ? "Test handshake ready" : "Not active"}</span>
+            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Data records: {snapshot.integrations.supabaseConfigured ? "Connected" : "Needs setup"}</span>
+            <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1">Payments: {snapshot.integrations.flutterwaveConfigured ? "Available" : "Needs setup"}</span>
           </div>
         </div>
       </div>
+
+      {mediaError && <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{mediaError}</div>}
 
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.map((metric) => (
@@ -430,10 +466,12 @@ export function AdminView() {
               <Input
                 id="new-product-file"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) readImageFile(file, (imageUrl) => setNewInventory((current) => ({ ...current, imageUrl })));
+                  if (file) void uploadManagedImage(file, "farm")
+                    .then((imageUrl) => setNewInventory((current) => ({ ...current, imageUrl })))
+                    .catch((error) => setMediaError(error instanceof Error ? error.message : "Image upload failed."));
                 }}
               />
             </div>
@@ -642,10 +680,12 @@ export function AdminView() {
                 />
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) readImageFile(file, (imageUrl) => setPropertyDraft((current) => ({ ...current, imageUrl })));
+                    if (file) void uploadManagedImage(file, "property")
+                      .then((imageUrl) => setPropertyDraft((current) => ({ ...current, imageUrl })))
+                      .catch((error) => setMediaError(error instanceof Error ? error.message : "Image upload failed."));
                   }}
                 />
                 <Select
@@ -694,6 +734,19 @@ export function AdminView() {
                       >
                         Edit in Form
                       </Button>
+                      {property.submittedByEmail && (
+                        <Select
+                          className="h-8 w-44 text-xs"
+                          value={property.agentListingPaymentStatus ?? "Not Requested"}
+                          onChange={(event) => void updatePropertyListingAgentPayment(property.id, event.target.value as AgentListingPaymentStatus)}
+                          options={[
+                            { value: "Not Requested", label: "No contact publication" },
+                            { value: "Awaiting Payment", label: "Awaiting fee" },
+                            { value: "Payment Submitted", label: "Proof submitted" },
+                            { value: "Paid", label: "Fee confirmed" },
+                          ]}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -748,10 +801,12 @@ export function AdminView() {
                 />
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
-                    if (file) readImageFile(file, (imageUrl) => setServiceDraft((current) => ({ ...current, imageUrl })));
+                    if (file) void uploadManagedImage(file, "property")
+                      .then((imageUrl) => setServiceDraft((current) => ({ ...current, imageUrl })))
+                      .catch((error) => setMediaError(error instanceof Error ? error.message : "Image upload failed."));
                   }}
                 />
               </div>
@@ -872,6 +927,77 @@ export function AdminView() {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+                {survey.delivery && deliveryDrafts[survey.id] && (
+                  <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-4 dark:border-red-950 dark:bg-red-950/20">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-700 text-white">
+                          <Truck className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-red-950 dark:text-red-100">DHL Delivery Fulfillment</p>
+                          <p className="mt-1 text-xs text-red-900/80 dark:text-red-100/80">
+                            {survey.delivery.recipientName} · {survey.delivery.phone}
+                          </p>
+                          <p className="mt-1 text-xs text-red-900/80 dark:text-red-100/80">
+                            {survey.delivery.address}, {survey.delivery.city}, {survey.delivery.state}
+                            {survey.delivery.postalCode ? ` ${survey.delivery.postalCode}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <p className="text-sm font-black text-red-950 dark:text-red-100">{formatCurrency(survey.delivery.fee)}</p>
+                        <p className="text-xs text-red-900/70 dark:text-red-100/70">{survey.delivery.estimatedDelivery}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_11rem_auto] sm:items-end">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`delivery-tracking-${survey.id}`}>DHL tracking number</Label>
+                        <Input
+                          id={`delivery-tracking-${survey.id}`}
+                          value={deliveryDrafts[survey.id].trackingNumber}
+                          onChange={(event) => setDeliveryDrafts((current) => ({
+                            ...current,
+                            [survey.id]: {
+                              ...current[survey.id],
+                              trackingNumber: event.target.value,
+                            },
+                          }))}
+                          placeholder="Enter after dispatch"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`delivery-status-${survey.id}`}>Delivery status</Label>
+                        <Select
+                          id={`delivery-status-${survey.id}`}
+                          value={deliveryDrafts[survey.id].status}
+                          onChange={(event) => setDeliveryDrafts((current) => ({
+                            ...current,
+                            [survey.id]: {
+                              ...current[survey.id],
+                              status: event.target.value as SurveyDeliveryStatus,
+                            },
+                          }))}
+                          options={surveyDeliveryStatuses.map((status) => ({ value: status, label: status }))}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-red-700 text-white hover:bg-red-800"
+                        disabled={isBusy}
+                        onClick={() => void updateSurveyDelivery(
+                          survey.id,
+                          deliveryDrafts[survey.id].status,
+                          deliveryDrafts[survey.id].trackingNumber,
+                        )}
+                      >
+                        Save Delivery
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <Select

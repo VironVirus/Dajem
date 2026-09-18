@@ -12,6 +12,7 @@ export * from "./components/header";
 export * from "./components/footer";
 export * from "./components/hero-slideshow";
 export * from "./components/section-nav";
+export * from "./components/subsidiary-navigation";
 export * from "./components/command-palette";
 export * from "./components/trust-ribbon";
 export * from "./components/theme-provider";

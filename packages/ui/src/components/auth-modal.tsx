@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Mail, MessageSquareText, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Mail, MessageSquareText, ShieldCheck } from "lucide-react";
 import type { CommunicationPreview } from "../lib/store";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
@@ -17,42 +17,37 @@ interface AuthModalProps {
   preview: CommunicationPreview | null;
   onClose: () => void;
   onModeChange: (mode: "login" | "signup") => void;
+  onAuthenticated: () => void;
   onLogin: (payload: { email: string; password: string }) => Promise<void>;
   onRegister: (payload: {
     name: string;
     email: string;
     phone: string;
+    country: string;
+    address: string;
+    state: string;
+    localGovernment: string;
     password: string;
-    officialTitle?: string;
-    identificationType?: string;
-    identificationNumber?: string;
-    identificationImageUrl?: string;
   }) => Promise<void>;
 }
 
-async function compressImage(file: File) {
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+const phoneCountries = [
+  { value: "NG", country: "Nigeria", dialCode: "+234", label: "Nigeria (+234)" },
+  { value: "GH", country: "Ghana", dialCode: "+233", label: "Ghana (+233)" },
+  { value: "KE", country: "Kenya", dialCode: "+254", label: "Kenya (+254)" },
+  { value: "ZA", country: "South Africa", dialCode: "+27", label: "South Africa (+27)" },
+  { value: "GB", country: "United Kingdom", dialCode: "+44", label: "United Kingdom (+44)" },
+  { value: "US", country: "United States", dialCode: "+1", label: "United States (+1)" },
+];
 
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const nextImage = new Image();
-    nextImage.onload = () => resolve(nextImage);
-    nextImage.onerror = reject;
-    nextImage.src = dataUrl;
-  });
+function formatInternationalPhone(dialCode: string, input: string) {
+  let digits = input.replace(/\D/g, "");
 
-  const maxSize = 900;
-  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith(dialCode.slice(1))) digits = digits.slice(dialCode.length - 1);
+  if (dialCode === "+234") digits = digits.replace(/^0+/, "");
 
-  return canvas.toDataURL("image/jpeg", 0.72);
+  return `${dialCode}${digits}`;
 }
 
 export function AuthModal({
@@ -63,6 +58,7 @@ export function AuthModal({
   preview,
   onClose,
   onModeChange,
+  onAuthenticated,
   onLogin,
   onRegister,
 }: AuthModalProps) {
@@ -70,13 +66,18 @@ export function AuthModal({
   const [signupForm, setSignupForm] = React.useState({
     name: "",
     email: "",
+    countryCode: "NG",
     phone: "",
+    address: "",
+    state: "",
+    localGovernment: "",
     password: "",
-    officialTitle: "",
-    identificationType: "NIN",
-    identificationNumber: "",
-    identificationImageUrl: "",
+    confirmPassword: "",
   });
+  const [showLoginPassword, setShowLoginPassword] = React.useState(false);
+  const [showSignupPassword, setShowSignupPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -84,13 +85,18 @@ export function AuthModal({
       setSignupForm({
         name: "",
         email: "",
+        countryCode: "NG",
         phone: "",
+        address: "",
+        state: "",
+        localGovernment: "",
         password: "",
-        officialTitle: "",
-        identificationType: "NIN",
-        identificationNumber: "",
-        identificationImageUrl: "",
+        confirmPassword: "",
       });
+      setShowLoginPassword(false);
+      setShowSignupPassword(false);
+      setShowConfirmPassword(false);
+      setFormError(null);
     }
   }, [isOpen]);
 
@@ -137,8 +143,8 @@ export function AuthModal({
             </div>
           </div>
 
-          <Button className="w-full bg-primary text-white" onClick={onClose}>
-            Continue into the portal
+          <Button className="w-full bg-primary text-white" onClick={() => { onClose(); onAuthenticated(); }}>
+            Open my dashboard
           </Button>
         </div>
       ) : (
@@ -162,9 +168,9 @@ export function AuthModal({
             </div>
           </div>
 
-          {error && (
+          {(error || formError) && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
+              {formError ?? error}
             </div>
           )}
 
@@ -188,13 +194,25 @@ export function AuthModal({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="login-password">Password</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  required
-                  value={loginForm.password}
-                  onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-                />
+                <div className="relative">
+                  <Input
+                    id="login-password"
+                    type={showLoginPassword ? "text" : "password"}
+                    required
+                    className="pr-20"
+                    value={loginForm.password}
+                    onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowLoginPassword((visible) => !visible)}
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showLoginPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full bg-primary text-white" disabled={isBusy}>
                 {isBusy ? "Signing in..." : "Login to Dajem"}
@@ -205,7 +223,23 @@ export function AuthModal({
               className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
-                await onRegister(signupForm);
+                setFormError(null);
+                if (signupForm.password !== signupForm.confirmPassword) {
+                  setFormError("Passwords do not match.");
+                  return;
+                }
+
+                const selectedCountry = phoneCountries.find((country) => country.value === signupForm.countryCode) ?? phoneCountries[0];
+                await onRegister({
+                  name: signupForm.name,
+                  email: signupForm.email,
+                  phone: formatInternationalPhone(selectedCountry.dialCode, signupForm.phone),
+                  country: selectedCountry.country,
+                  address: signupForm.address,
+                  state: signupForm.state,
+                  localGovernment: signupForm.localGovernment,
+                  password: signupForm.password,
+                });
               }}
             >
               <div className="space-y-1.5">
@@ -215,14 +249,6 @@ export function AuthModal({
                   required
                   value={signupForm.name}
                   onChange={(event) => setSignupForm((current) => ({ ...current, name: event.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="signup-title">Official title</Label>
-                <Input
-                  id="signup-title"
-                  value={signupForm.officialTitle}
-                  onChange={(event) => setSignupForm((current) => ({ ...current, officialTitle: event.target.value }))}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -247,51 +273,104 @@ export function AuthModal({
                   />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                 <Select
-                  label="Means of identification"
-                  value={signupForm.identificationType}
-                  onChange={(event) => setSignupForm((current) => ({ ...current, identificationType: event.target.value }))}
-                  options={[
-                    { value: "Drivers License", label: "Drivers License" },
-                    { value: "NIN", label: "NIN" },
-                    { value: "International Passport", label: "International Passport" },
-                    { value: "Voters Card", label: "Voters Card" },
-                  ]}
+                  label="Country"
+                  value={signupForm.countryCode}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, countryCode: event.target.value }))}
+                  options={phoneCountries.map(({ value, label }) => ({ value, label }))}
                 />
                 <div className="space-y-1.5">
-                  <Label htmlFor="signup-id-number">Identification number</Label>
+                  <Label htmlFor="signup-phone">Phone number</Label>
                   <Input
-                    id="signup-id-number"
-                    value={signupForm.identificationNumber}
-                    onChange={(event) => setSignupForm((current) => ({ ...current, identificationNumber: event.target.value }))}
+                    id="signup-phone"
+                    type="tel"
+                    required
+                    inputMode="tel"
+                    placeholder="080 1234 5678"
+                    value={signupForm.phone}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, phone: event.target.value }))}
                   />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="signup-id-image">Identification image</Label>
+                <Label htmlFor="signup-address">Address</Label>
                 <Input
-                  id="signup-id-image"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    void compressImage(file).then((identificationImageUrl) => {
-                      setSignupForm((current) => ({ ...current, identificationImageUrl }));
-                    });
-                  }}
+                  id="signup-address"
+                  required
+                  autoComplete="street-address"
+                  value={signupForm.address}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, address: event.target.value }))}
                 />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-state">State</Label>
+                  <Input
+                    id="signup-state"
+                    required
+                    autoComplete="address-level1"
+                    value={signupForm.state}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, state: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="signup-local-government">Local government</Label>
+                  <Input
+                    id="signup-local-government"
+                    required
+                    value={signupForm.localGovernment}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, localGovernment: event.target.value }))}
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="signup-password">Password</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  required
-                  value={signupForm.password}
-                  onChange={(event) => setSignupForm((current) => ({ ...current, password: event.target.value }))}
-                />
+                <div className="relative">
+                  <Input
+                    id="signup-password"
+                    type={showSignupPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="pr-20"
+                    value={signupForm.password}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, password: event.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowSignupPassword((visible) => !visible)}
+                    aria-label={showSignupPassword ? "Hide password" : "Show password"}
+                  >
+                    {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showSignupPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="signup-confirm-password">Confirm password</Label>
+                <div className="relative">
+                  <Input
+                    id="signup-confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="pr-20"
+                    value={signupForm.confirmPassword}
+                    onChange={(event) => setSignupForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-2 flex items-center gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy}>
                 {isBusy ? "Creating account..." : "Create shared Dajem account"}

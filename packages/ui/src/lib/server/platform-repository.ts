@@ -12,13 +12,20 @@ import type {
   InventoryStockStatus,
   Order,
   PaymentIntent,
+  PaymentApp,
+  PaymentProvider,
+  PaymentPurpose,
   PlatformState,
   PropertyCategory,
   PropertyListing,
   PropertyType,
+  HomesListingGroup,
+  ResidenceType,
+  AgentListingPaymentStatus,
   ServerUser,
   SurveyService,
   SurveyRequest,
+  SurveyDeliveryStatus,
   SurveyStatus,
   User,
 } from "../store";
@@ -44,8 +51,22 @@ function makeId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8).toUpperCase()}`;
 }
 
-function flutterwaveIsConfigured() {
-  return Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY);
+function invoicePrefix(app: PaymentApp) {
+  return app === "farms" ? "DF" : app === "homes" ? "DH" : "DS";
+}
+
+function makeInvoiceNumber(state: PlatformState, app: PaymentApp) {
+  const dateKey = nowIso().slice(0, 10).replace(/-/g, "");
+  const prefix = `${invoicePrefix(app)}${dateKey}`;
+  const serial = state.orders.filter((order) => order.invoiceNumber?.startsWith(prefix)).length + 1;
+  return `${prefix}${String(serial).padStart(6, "0")}`;
+}
+
+function listingGroupFor(type: PropertyType, category: PropertyCategory, group?: HomesListingGroup) {
+  if (group) return group;
+  if (category === "land") return type === "sale" ? "land-sale" : "land-lease";
+  if (type === "short-let" || category === "short-let" || category === "suite") return "short-let";
+  return type === "sale" ? "house-sale" : "house-rent";
 }
 
 function allowMockPayments() {
@@ -55,6 +76,7 @@ function allowMockPayments() {
 const farmsImageUrl = "/images/farms-hero-farm-v2.png";
 const homesImageUrl = "/images/homes-hero-suite-v2.png";
 const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
+const PROPERTY_LISTING_FEE = 20000;
 
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {
   if (!sessionEmail) return null;
@@ -139,6 +161,36 @@ function cleanVariant(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function positiveWholeNumber(value: unknown, field: string) {
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number <= 0) {
+    throw new Error(`${field} must be a whole number greater than zero.`);
+  }
+  return number;
+}
+
+function optionalNonNegativeWholeNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const number = Number(value);
+  if (!Number.isSafeInteger(number) || number < 0) {
+    throw new Error("Bedrooms and bathrooms must be whole numbers.");
+  }
+  return number;
+}
+
+function documentStoragePrefix(email: string) {
+  const safeEmail = normalizeEmail(email)
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "file";
+  return `survey-documents/${safeEmail}/`;
+}
+
+function isOwnedDocumentStoragePath(email: string, storagePath: string) {
+  const prefix = documentStoragePrefix(email);
+  return storagePath.startsWith(prefix) || storagePath.startsWith(`local-preview/${prefix}`);
+}
+
 function cloneCartItem(
   item: InventoryItem,
   quantity: number,
@@ -205,24 +257,28 @@ export async function registerUser(
     name: string;
     email: string;
     phone: string;
+    country: string;
+    address: string;
+    state: string;
+    localGovernment: string;
     password: string;
-    officialTitle?: string;
-    identificationType?: string;
-    identificationNumber?: string;
-    identificationImageUrl?: string;
   },
 ) {
   const email = normalizeEmail(String(payload.email ?? ""));
   const name = String(payload.name ?? "").trim();
   const phone = String(payload.phone ?? "").trim();
+  const country = String(payload.country ?? "").trim();
+  const address = String(payload.address ?? "").trim();
+  const stateName = String(payload.state ?? "").trim();
+  const localGovernment = String(payload.localGovernment ?? "").trim();
   const password = String(payload.password ?? "").trim();
-  const officialTitle = String(payload.officialTitle ?? "").trim();
-  const identificationType = String(payload.identificationType ?? "").trim();
-  const identificationNumber = String(payload.identificationNumber ?? "").trim();
-  const identificationImageUrl = String(payload.identificationImageUrl ?? "").trim();
 
-  if (!name || !email || !phone || !password) {
+  if (!name || !email || !phone || !country || !address || !stateName || !localGovernment || !password) {
     throw new Error("Please complete all signup fields.");
+  }
+
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    throw new Error("Please enter a valid phone number.");
   }
 
   if (password.length < 8) {
@@ -241,14 +297,14 @@ export async function registerUser(
       name,
       email,
       phone,
+      country,
+      address,
+      state: stateName,
+      localGovernment,
       role: "user",
       createdAt: nowIso(),
       passwordSalt,
       passwordHash: hashPassword(password, passwordSalt),
-      officialTitle: officialTitle || undefined,
-      identificationType: (identificationType as ServerUser["identificationType"]) || undefined,
-      identificationNumber: identificationNumber || undefined,
-      identificationImageUrl: identificationImageUrl || undefined,
     };
 
     draft.users.unshift(user);
@@ -301,7 +357,7 @@ export async function addToCart(
   sessionEmail: string | null,
   payload: { productId: string; quantity?: number; variantKey?: string; variantLabel?: string },
 ) {
-  const quantity = Math.max(1, payload.quantity ?? 1);
+  const quantity = positiveWholeNumber(payload.quantity ?? 1, "Quantity");
   const variantKey = cleanVariant(payload.variantKey) || undefined;
   const variantLabel = cleanVariant(payload.variantLabel) || undefined;
 
@@ -345,6 +401,10 @@ export async function updateCartItem(
   payload: { productId: string; quantity: number; variantKey?: string },
 ) {
   const variantKey = cleanVariant(payload.variantKey) || undefined;
+  const quantity = Number(payload.quantity);
+  if (!Number.isSafeInteger(quantity)) {
+    throw new Error("Quantity must be a whole number.");
+  }
 
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
@@ -352,7 +412,7 @@ export async function updateCartItem(
     const existing = cart.find((item) => cartLineMatches(item, payload.productId, variantKey));
     if (!existing) return;
 
-    if (payload.quantity <= 0) {
+    if (quantity <= 0) {
       draft.carts[user.email] = cart.filter((item) => !cartLineMatches(item, payload.productId, variantKey));
       return;
     }
@@ -363,7 +423,7 @@ export async function updateCartItem(
       return;
     }
 
-    existing.quantity = Math.min(payload.quantity, inventoryItem.availableUnits);
+    existing.quantity = Math.min(quantity, inventoryItem.availableUnits);
     existing.price = inventoryItem.promoPrice ?? inventoryItem.price;
     existing.stockStatus = inventoryItem.stockStatus;
   });
@@ -418,21 +478,21 @@ export async function submitBid(
 ) {
   const { state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
-    const propertyTitle = String(payload.propertyTitle ?? "").trim();
-    const propertyLocation = String(payload.propertyLocation ?? "").trim();
     const bidAmount = Number(payload.bidAmount);
-    const propertyPrice = Number(payload.propertyPrice);
+    const property = draft.propertyListings.find((listing) => (
+      listing.id === String(payload.propertyId ?? "").trim() && listing.status === "Approved"
+    ));
 
-    if (!propertyTitle || !propertyLocation || !Number.isFinite(bidAmount) || bidAmount <= 0) {
+    if (!property || !Number.isFinite(bidAmount) || bidAmount <= 0) {
       throw new Error("Please enter a valid bid.");
     }
 
     const bid: Bid = {
       id: makeId("BID"),
-      propertyId: payload.propertyId,
-      propertyTitle,
-      propertyLocation,
-      propertyPrice: Number.isFinite(propertyPrice) ? propertyPrice : 0,
+      propertyId: property.id,
+      propertyTitle: property.title,
+      propertyLocation: property.location,
+      propertyPrice: property.price,
       userName: user.name,
       userEmail: user.email,
       userPhone: user.phone,
@@ -446,7 +506,7 @@ export async function submitBid(
     draft.communicationLogs.unshift(buildEmailLog(
       user.email,
       "Property bid pending approval",
-      `Your bid for ${propertyTitle} has been received by Dajem Homes Limited and is pending approval.`,
+      `Your bid for ${property.title} has been received by Dajem Homes Limited and is pending approval.`,
     ));
   });
 
@@ -464,15 +524,19 @@ export async function submitPropertyListing(
     price: number;
     type: PropertyType;
     category: PropertyCategory;
+    listingGroup?: HomesListingGroup;
+    residenceType?: ResidenceType;
     beds?: number;
     baths?: number;
     size: number;
     summary: string;
     highlights?: string[];
     imageUrl?: string;
+    agentCompany?: string;
+    requestContactPublication?: boolean;
   },
 ) {
-  const { state } = await updatePlatformState((draft) => {
+  const { result, state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
     const title = String(payload.title ?? "").trim();
     const location = String(payload.location ?? "").trim();
@@ -491,8 +555,10 @@ export async function submitPropertyListing(
       price,
       type: payload.type ?? "sale",
       category: payload.category ?? "apartment",
-      beds: payload.beds ? Math.max(0, Number(payload.beds)) : undefined,
-      baths: payload.baths ? Math.max(0, Number(payload.baths)) : undefined,
+      listingGroup: listingGroupFor(payload.type ?? "sale", payload.category ?? "apartment", payload.listingGroup),
+      residenceType: payload.residenceType,
+      beds: optionalNonNegativeWholeNumber(payload.beds),
+      baths: optionalNonNegativeWholeNumber(payload.baths),
       size,
       featured: false,
       imageBg: "from-emerald-700/25 to-slate-900/10",
@@ -503,6 +569,11 @@ export async function submitPropertyListing(
       submittedByName: user.name,
       submittedByEmail: user.email,
       submittedByPhone: user.phone,
+      agentName: user.name,
+      agentEmail: user.email,
+      agentPhone: user.phone,
+      agentCompany: String(payload.agentCompany ?? "").trim().slice(0, 120) || undefined,
+      agentListingPaymentStatus: payload.requestContactPublication ? "Awaiting Payment" : "Not Requested",
       createdAt: nowIso(),
       date: formatDate(),
     };
@@ -513,11 +584,13 @@ export async function submitPropertyListing(
       "Property listing pending approval",
       `Your property submission, ${title}, has been received by Dajem Homes Limited and is pending approval.`,
     ));
+    return listing;
   });
 
   return {
     snapshot: snapshotFor(state, sessionEmail),
     message: "Property submitted and marked as pending approval.",
+    listing: result,
   };
 }
 
@@ -542,10 +615,10 @@ export async function submitSurvey(
       fileName: string;
       fileSizeKb: number;
       storagePath?: string;
-      fileUrl?: string;
     }[];
     missingDocuments?: string[];
     attested?: boolean;
+    delivery?: NonNullable<SurveyRequest["delivery"]>;
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
@@ -556,6 +629,19 @@ export async function submitSurvey(
 
     if (!location || !serviceType || !description) {
       throw new Error("Please complete the survey request details.");
+    }
+
+    if (payload.delivery && Number(payload.delivery.fee) > 0) {
+      const requiredDeliveryFields = [
+        payload.delivery.recipientName,
+        payload.delivery.phone,
+        payload.delivery.address,
+        payload.delivery.city,
+        payload.delivery.state,
+      ];
+      if (requiredDeliveryFields.some((value) => !String(value ?? "").trim())) {
+        throw new Error("Complete the DHL recipient and delivery address before submitting the survey request.");
+      }
     }
 
     const acquisitionSource = payload.acquisitionSource?.trim();
@@ -578,18 +664,43 @@ export async function submitSurvey(
       planNumber: payload.planNumber?.trim() || undefined,
       planYear: payload.planYear?.trim() || undefined,
       billingType: payload.billingType ?? "Service Request",
-      uploadedDocuments: payload.uploadedDocuments ?? [],
+      uploadedDocuments: (payload.uploadedDocuments ?? [])
+        .map((document) => String(document).trim().slice(0, 100))
+        .filter(Boolean)
+        .slice(0, 7),
       documentAttachments: (payload.documentAttachments ?? [])
-        .map((attachment) => ({
-          documentName: String(attachment.documentName ?? "").trim(),
-          fileName: String(attachment.fileName ?? "").trim().slice(0, 140),
-          fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)) || 0,
-          storagePath: String(attachment.storagePath ?? "").trim().slice(0, 240) || undefined,
-          fileUrl: String(attachment.fileUrl ?? "").trim().slice(0, 240) || undefined,
-        }))
-        .filter((attachment) => attachment.documentName && attachment.fileName),
+        .map((attachment) => {
+          const storagePath = String(attachment.storagePath ?? "").trim().slice(0, 240);
+          return {
+            documentName: String(attachment.documentName ?? "").trim().slice(0, 100),
+            fileName: String(attachment.fileName ?? "").trim().slice(0, 140),
+            fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)) || 0,
+            storagePath: storagePath && isOwnedDocumentStoragePath(user.email, storagePath) ? storagePath : undefined,
+          };
+        })
+        .filter((attachment) => attachment.documentName && attachment.fileName)
+        .slice(0, 7),
       missingDocuments: payload.missingDocuments ?? [],
       attested: Boolean(payload.attested),
+      delivery: payload.delivery && Number(payload.delivery.fee) > 0
+        ? {
+            provider: "DHL Express",
+            serviceName: String(payload.delivery.serviceName ?? "DHL Express Document Delivery").trim().slice(0, 120),
+            fee: Math.round(Math.max(0, Number(payload.delivery.fee))),
+            currency: "NGN",
+            rateSource: payload.delivery.rateSource === "dhl-live" ? "dhl-live" : "dajem-estimate",
+            estimatedDelivery: String(payload.delivery.estimatedDelivery ?? "").trim().slice(0, 120),
+            recipientName: String(payload.delivery.recipientName ?? "").trim().slice(0, 120),
+            phone: String(payload.delivery.phone ?? "").trim().slice(0, 40),
+            email: String(payload.delivery.email ?? "").trim().toLowerCase().slice(0, 180) || undefined,
+            address: String(payload.delivery.address ?? "").trim().slice(0, 240),
+            city: String(payload.delivery.city ?? "").trim().slice(0, 100),
+            state: String(payload.delivery.state ?? "").trim().slice(0, 100),
+            postalCode: String(payload.delivery.postalCode ?? "").trim().slice(0, 20) || undefined,
+            countryCode: "NG",
+            status: "Rate Added",
+          }
+        : undefined,
       paymentStatus: "Awaiting Review",
       processingNote: "Submitted for document verification. Processing update expected within 24 hours.",
       status: "Pending Approval",
@@ -600,7 +711,7 @@ export async function submitSurvey(
     draft.communicationLogs.unshift(buildEmailLog(
       user.email,
       "Survey request pending approval",
-      `Your ${serviceType} request for ${location} has been received by DAJEM Orbital Resources Limited and is pending approval. Application number: ${request.applicationNumber}.`,
+      `Your ${serviceType} request for ${location} has been received by DAJEM Orbital Resources Limited and is pending approval. Application number: ${request.applicationNumber}.${request.delivery ? ` DHL delivery to ${request.delivery.city}, ${request.delivery.state} has been added at ${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(request.delivery.fee)}.` : ""}`,
     ));
   });
 
@@ -648,6 +759,45 @@ export async function updateSurveyStatus(
   };
 }
 
+export async function updateSurveyDelivery(
+  sessionEmail: string | null,
+  payload: { surveyId: string; status: SurveyDeliveryStatus; trackingNumber?: string },
+) {
+  const allowedStatuses: SurveyDeliveryStatus[] = ["Rate Added", "Awaiting Dispatch", "Dispatched", "Delivered", "Cancelled"];
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const survey = draft.surveys.find((entry) => entry.id === payload.surveyId);
+    if (!survey) throw new Error("Survey request not found.");
+    if (!survey.delivery) throw new Error("This survey request does not include delivery.");
+    if (!allowedStatuses.includes(payload.status)) throw new Error("Select a valid delivery status.");
+
+    const trackingNumber = String(payload.trackingNumber ?? "").trim().slice(0, 80);
+    if ((payload.status === "Dispatched" || payload.status === "Delivered") && !trackingNumber) {
+      throw new Error("Add the DHL tracking number before marking this delivery as dispatched or delivered.");
+    }
+
+    survey.delivery.status = payload.status;
+    survey.delivery.trackingNumber = trackingNumber || undefined;
+    if (payload.status === "Dispatched" && !survey.delivery.dispatchedAt) {
+      survey.delivery.dispatchedAt = nowIso();
+    }
+    if (payload.status === "Delivered") {
+      survey.delivery.deliveredAt = nowIso();
+    }
+
+    draft.communicationLogs.unshift(buildEmailLog(
+      survey.userEmail,
+      `DHL delivery update: ${payload.status}`,
+      `Your survey plan delivery for ${survey.applicationNumber ?? survey.id} is now ${payload.status.toLowerCase()}.${trackingNumber ? ` DHL tracking number: ${trackingNumber}.` : ""}`,
+    ));
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Survey delivery updated.",
+  };
+}
+
 export async function updateInventoryItem(
   sessionEmail: string | null,
   payload: {
@@ -672,8 +822,12 @@ export async function updateInventoryItem(
     requireAdmin(draft, sessionEmail);
     const productId = payload.productId?.trim();
     const item = productId ? draft.inventory.find((entry) => entry.productId === productId) : null;
-    const price = Math.max(0, Number(payload.price));
-    const availableUnits = Math.max(0, Number(payload.availableUnits));
+    const price = Number(payload.price);
+    const availableUnits = Number(payload.availableUnits);
+
+    if (!Number.isFinite(price) || price < 0 || !Number.isSafeInteger(availableUnits) || availableUnits < 0) {
+      throw new Error("Price and available units must be valid non-negative values.");
+    }
 
     if (item) {
       item.name = payload.name?.trim() || item.name;
@@ -749,6 +903,62 @@ export async function updatePropertyListingStatus(
   };
 }
 
+export async function updatePropertyListingAgentPayment(
+  sessionEmail: string | null,
+  payload: { propertyId: string; status: AgentListingPaymentStatus; paymentProofPath?: string },
+) {
+  const allowedStatuses: AgentListingPaymentStatus[] = ["Not Requested", "Awaiting Payment", "Payment Submitted", "Paid"];
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    if (!allowedStatuses.includes(payload.status)) throw new Error("Select a valid agent payment status.");
+    const listing = draft.propertyListings.find((entry) => entry.id === payload.propertyId);
+    if (!listing) throw new Error("Property listing not found.");
+
+    listing.agentListingPaymentStatus = payload.status;
+    listing.agentPaymentProofPath = String(payload.paymentProofPath ?? "").trim().slice(0, 240) || undefined;
+    if (listing.submittedByEmail) {
+      draft.communicationLogs.unshift(buildEmailLog(
+        listing.submittedByEmail,
+        "Listing fee status updated",
+        `The listing-fee status for ${listing.title} is now ${payload.status}.`,
+      ));
+    }
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Agent listing payment status updated.",
+  };
+}
+
+export async function submitPropertyListingPaymentProof(
+  sessionEmail: string | null,
+  payload: { propertyId: string; paymentProofPath: string },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    const user = requireUser(draft, sessionEmail);
+    const listing = draft.propertyListings.find((entry) => entry.id === payload.propertyId);
+    if (!listing || normalizeEmail(listing.submittedByEmail ?? "") !== normalizeEmail(user.email)) {
+      throw new Error("Only the submitting agent can upload listing-payment proof.");
+    }
+    if (listing.agentListingPaymentStatus === "Paid") throw new Error("This listing fee has already been confirmed.");
+    const paymentProofPath = String(payload.paymentProofPath ?? "").trim().slice(0, 240);
+    if (!paymentProofPath) throw new Error("Upload a valid payment proof first.");
+    listing.agentPaymentProofPath = paymentProofPath;
+    listing.agentListingPaymentStatus = "Payment Submitted";
+    draft.communicationLogs.unshift(buildEmailLog(
+      user.email,
+      "Listing payment proof submitted",
+      `Your payment proof for ${listing.title} has been sent to DAJEM Homes for review.`,
+    ));
+  });
+
+  return {
+    snapshot: snapshotFor(state, sessionEmail),
+    message: "Payment proof submitted for admin confirmation.",
+  };
+}
+
 export async function upsertPropertyListing(
   sessionEmail: string | null,
   payload: {
@@ -758,6 +968,8 @@ export async function upsertPropertyListing(
     price: number;
     type: PropertyType;
     category: PropertyCategory;
+    listingGroup?: HomesListingGroup;
+    residenceType?: ResidenceType;
     beds?: number;
     baths?: number;
     size: number;
@@ -789,8 +1001,14 @@ export async function upsertPropertyListing(
       price,
       type: payload.type ?? existing?.type ?? "sale",
       category: payload.category ?? existing?.category ?? "apartment",
-      beds: payload.beds ? Math.max(0, Number(payload.beds)) : undefined,
-      baths: payload.baths ? Math.max(0, Number(payload.baths)) : undefined,
+      listingGroup: listingGroupFor(
+        payload.type ?? existing?.type ?? "sale",
+        payload.category ?? existing?.category ?? "apartment",
+        payload.listingGroup ?? existing?.listingGroup,
+      ),
+      residenceType: payload.residenceType ?? existing?.residenceType,
+      beds: optionalNonNegativeWholeNumber(payload.beds),
+      baths: optionalNonNegativeWholeNumber(payload.baths),
       size,
       featured: Boolean(payload.featured),
       imageBg: payload.imageBg?.trim() || existing?.imageBg || "from-emerald-700/25 to-slate-900/10",
@@ -801,6 +1019,12 @@ export async function upsertPropertyListing(
       submittedByName: existing?.submittedByName,
       submittedByEmail: existing?.submittedByEmail,
       submittedByPhone: existing?.submittedByPhone,
+      agentName: existing?.agentName,
+      agentEmail: existing?.agentEmail,
+      agentPhone: existing?.agentPhone,
+      agentCompany: existing?.agentCompany,
+      agentListingPaymentStatus: existing?.agentListingPaymentStatus,
+      agentPaymentProofPath: existing?.agentPaymentProofPath,
       createdAt: existing?.createdAt ?? nowIso(),
       date: existing?.date ?? formatDate(),
     };
@@ -836,9 +1060,9 @@ export async function upsertSurveyService(
     const title = String(payload.title ?? "").trim();
     const description = String(payload.description ?? "").trim();
     const timeline = String(payload.timeline ?? "").trim();
-    const priceFrom = Math.max(0, Number(payload.priceFrom));
+    const priceFrom = Number(payload.priceFrom);
 
-    if (!title || !description || !timeline) {
+    if (!title || !description || !timeline || !Number.isFinite(priceFrom) || priceFrom < 0) {
       throw new Error("Please complete the survey service details.");
     }
 
@@ -867,23 +1091,83 @@ export async function upsertSurveyService(
   };
 }
 
-export async function createPaymentIntent(sessionEmail: string | null) {
+export async function createPaymentIntent(
+  sessionEmail: string | null,
+  options: { provider?: PaymentProvider; purpose?: PaymentPurpose; propertyListingId?: string } = {},
+) {
   const { result, state } = await updatePlatformState((draft) => {
     const user = requireUser(draft, sessionEmail);
+    const provider = options.provider ?? "flutterwave";
+    const purpose = options.purpose ?? "farm-order";
+
+    if (purpose === "property-listing-fee") {
+      const propertyListingId = String(options.propertyListingId ?? "").trim();
+      const listing = draft.propertyListings.find((entry) => entry.id === propertyListingId);
+      if (!listing || normalizeEmail(listing.submittedByEmail ?? "") !== normalizeEmail(user.email)) {
+        throw new Error("Only the submitting agent can pay this listing fee.");
+      }
+      if (listing.agentListingPaymentStatus === "Paid") {
+        throw new Error("This listing fee has already been paid.");
+      }
+
+      const intent: PaymentIntent = {
+        txRef: `DJM-${randomUUID()}`,
+        userEmail: user.email,
+        amount: PROPERTY_LISTING_FEE,
+        currency: "NGN",
+        items: [cloneCartItem({
+          productId: `listing-fee-${listing.id}`,
+          name: "DAJEM Homes agent listing fee",
+          category: "consultancy",
+          price: PROPERTY_LISTING_FEE,
+          description: `Contact-publication fee for ${listing.title}.`,
+          stockStatus: "In Stock",
+          availableUnits: 1,
+          imageBg: "bg-blue-500/10 text-blue-700",
+          imageUrl: homesImageUrl,
+        }, 1)],
+        provider,
+        app: "homes",
+        purpose,
+        invoiceNumber: makeInvoiceNumber(draft, "homes"),
+        propertyListingId: listing.id,
+        status: "pending",
+        createdAt: nowIso(),
+      };
+
+      listing.agentListingPaymentStatus = "Awaiting Payment";
+      draft.paymentIntents.unshift(intent);
+      return intent;
+    }
+
     const cart = draft.carts[user.email] ?? [];
 
     if (cart.length === 0) {
       throw new Error("Your cart is empty.");
     }
 
-    const amount = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    const items = cart.map((cartItem) => {
+      const quantity = positiveWholeNumber(cartItem.quantity, "Cart quantity");
+      const inventoryItem = draft.inventory.find((item) => item.productId === cartItem.productId);
+      if (!inventoryItem || inventoryItem.availableUnits < quantity) {
+        throw new Error(`${cartItem.name} no longer has enough stock for checkout.`);
+      }
+      return cloneCartItem(inventoryItem, quantity, {
+        variantKey: cartItem.variantKey,
+        variantLabel: cartItem.variantLabel,
+      });
+    });
+    const amount = items.reduce((total, item) => total + item.price * item.quantity, 0);
     const intent: PaymentIntent = {
-      txRef: `DJM-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`,
+      txRef: `DJM-${randomUUID()}`,
       userEmail: user.email,
       amount,
       currency: "NGN",
-      items: cart.map((item) => ({ ...item })),
-      provider: flutterwaveIsConfigured() ? "flutterwave" : "mock",
+      items,
+      provider,
+      app: "farms",
+      purpose,
+      invoiceNumber: makeInvoiceNumber(draft, "farms"),
       status: "pending",
       createdAt: nowIso(),
     };
@@ -898,9 +1182,28 @@ export async function createPaymentIntent(sessionEmail: string | null) {
   };
 }
 
-export async function getPaymentIntent(txRef: string) {
+export async function getPaymentIntent(sessionEmail: string | null, txRef: string) {
+  const state = await readPlatformState();
+  const user = requireUser(state, sessionEmail);
+  return state.paymentIntents.find((intent) => (
+    intent.txRef === txRef && normalizeEmail(intent.userEmail) === normalizeEmail(user.email)
+  )) ?? null;
+}
+
+// Used only after Flutterwave has signed the webhook and the transaction is re-verified server-side.
+export async function getPaymentIntentForGateway(txRef: string) {
   const state = await readPlatformState();
   return state.paymentIntents.find((intent) => intent.txRef === txRef) ?? null;
+}
+
+export async function completePaymentIntentFromGateway(txRef: string, transactionId: string) {
+  const intent = await getPaymentIntentForGateway(txRef);
+  if (!intent) throw new Error("Payment session not found.");
+  return completePaymentIntent(intent.userEmail, {
+    txRef,
+    provider: "Flutterwave",
+    transactionId,
+  });
 }
 
 export async function completePaymentIntent(
@@ -912,10 +1215,14 @@ export async function completePaymentIntent(
   },
 ) {
   const { result, state } = await updatePlatformState((draft) => {
+    const user = requireUser(draft, sessionEmail);
     const intent = draft.paymentIntents.find((entry) => entry.txRef === payload.txRef);
     if (!intent) throw new Error("Payment session not found.");
+    if (normalizeEmail(intent.userEmail) !== normalizeEmail(user.email)) {
+      throw new Error("This payment session belongs to another account.");
+    }
 
-    if (payload.provider === "Simulation" && !allowMockPayments()) {
+    if ((payload.provider === "Flutterwave Mock" || payload.provider === "OPay Mock") && !allowMockPayments()) {
       throw new Error("Mock payments are disabled in production.");
     }
 
@@ -923,6 +1230,15 @@ export async function completePaymentIntent(
       const existing = draft.orders.find((order) => order.reference === intent.txRef);
       if (!existing) throw new Error("Order lookup failed.");
       return existing;
+    }
+
+    if (intent.purpose === "farm-order") {
+      for (const item of intent.items) {
+        const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
+        if (!inventoryItem || inventoryItem.availableUnits < item.quantity) {
+          throw new Error(`${item.name} is no longer available in the requested quantity.`);
+        }
+      }
     }
 
     intent.status = "paid";
@@ -938,16 +1254,33 @@ export async function completePaymentIntent(
       provider: payload.provider,
       paymentStatus: "Paid",
       status: "Processing",
+      invoiceNumber: intent.invoiceNumber,
+      app: intent.app,
+      purpose: intent.purpose,
+      propertyListingId: intent.propertyListingId,
     };
 
     draft.orders.unshift(order);
-    draft.carts[intent.userEmail] = [];
+    if (intent.purpose === "farm-order") {
+      draft.carts[intent.userEmail] = [];
 
-    for (const item of intent.items) {
-      const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
-      if (!inventoryItem) continue;
-      inventoryItem.availableUnits = Math.max(0, inventoryItem.availableUnits - item.quantity);
-      inventoryItem.stockStatus = deriveStockStatus(inventoryItem.availableUnits);
+      for (const item of intent.items) {
+        const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
+        if (!inventoryItem) continue;
+        inventoryItem.availableUnits = Math.max(0, inventoryItem.availableUnits - item.quantity);
+        inventoryItem.stockStatus = deriveStockStatus(inventoryItem.availableUnits);
+      }
+    }
+
+    if (intent.purpose === "property-listing-fee" && intent.propertyListingId) {
+      const listing = draft.propertyListings.find((entry) => entry.id === intent.propertyListingId);
+      if (!listing) throw new Error("Property listing no longer exists.");
+      listing.agentListingPaymentStatus = "Paid";
+      draft.communicationLogs.unshift(buildEmailLog(
+        listing.submittedByEmail ?? user.email,
+        "Agent contact details activated",
+        `Your listing fee for ${listing.title} was confirmed. Your contact details can appear once the listing is approved.`,
+      ));
     }
 
     return order;
@@ -956,6 +1289,8 @@ export async function completePaymentIntent(
   return {
     order: result,
     snapshot: snapshotFor(state, sessionEmail),
-    message: "Order paid and added to your dashboard.",
+    message: result.purpose === "property-listing-fee"
+      ? "Listing fee paid. Your contact details will appear after admin approval."
+      : "Order paid and added to your dashboard.",
   };
 }

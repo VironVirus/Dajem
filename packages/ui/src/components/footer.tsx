@@ -3,7 +3,11 @@ import { Landmark, Mail, MapPin, ExternalLink, Globe } from "lucide-react";
 import { dajemCompanyProfiles, getAppBaseUrl, getCompanyLinks } from "../lib/store";
 import { useDajem } from "./dajem-provider";
 
-export function Footer() {
+interface FooterProps {
+  compact?: boolean;
+}
+
+export function Footer({ compact = false }: FooterProps) {
   const currentYear = new Date().getFullYear();
   const companies = getCompanyLinks().filter((company) => company.id !== "landing");
   const landingUrl = getAppBaseUrl("landing");
@@ -25,6 +29,32 @@ export function Footer() {
     event.preventDefault();
     void navigateToUrl(href);
   }, [navigateToUrl]);
+
+  if (compact) {
+    return (
+      <footer className="border-t border-border/60 bg-card/70 text-card-foreground">
+        <div className="container mx-auto flex max-w-6xl flex-col gap-4 px-5 py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <p className="font-bold text-foreground">{group.displayName}</p>
+            <p className="mt-1">&copy; {currentYear} · {group.registrationNumber}</p>
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {companies.map((company) => (
+              <a
+                key={company.name}
+                href={company.url}
+                onClick={(event) => handleNavigate(event, company.url)}
+                className="font-semibold hover:text-foreground"
+              >
+                {company.name.replace(" Limited", "").replace("DAJEM ", "")}
+              </a>
+            ))}
+            <a href={`${landingUrl}#contact`} className="font-semibold hover:text-foreground">Contact</a>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="border-t border-border/50 bg-card/60 backdrop-blur-md text-card-foreground">
@@ -103,7 +133,7 @@ export function Footer() {
             <a href={`${landingUrl}#privacy`} className="hover:text-foreground transition-colors">
               Privacy Policy
             </a>
-            <a href={`${landingUrl}#terms`} className="hover:text-foreground transition-colors">
+            <a href="/terms" onClick={(event) => handleNavigate(event, "/terms")} className="hover:text-foreground transition-colors">
               Terms of Service
             </a>
             <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">

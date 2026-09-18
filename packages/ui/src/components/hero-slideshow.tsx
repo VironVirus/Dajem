@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface HeroSlideshowProps {
@@ -13,6 +13,8 @@ interface HeroSlideshowProps {
     src: string;
     position?: string;
     label?: string;
+    actionLabel?: string;
+    href?: string;
   }>;
 }
 
@@ -25,6 +27,7 @@ export function HeroSlideshow({
 }: HeroSlideshowProps) {
   const [activeSlide, setActiveSlide] = React.useState(0);
   const hasMultipleSlides = slides.length > 1;
+  const activeSlideContent = slides[activeSlide];
 
   React.useEffect(() => {
     if (!hasMultipleSlides) return;
@@ -88,8 +91,19 @@ export function HeroSlideshow({
       <div className={cn("relative", contentClassName)}>
         {children}
       </div>
-      {hasMultipleSlides && (
-        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full border border-border/50 bg-background/60 p-1.5 text-foreground shadow-xl backdrop-blur-xl dark:border-white/15 dark:bg-slate-950/60 dark:text-white sm:bottom-6 sm:right-6">
+      {(activeSlideContent?.href || hasMultipleSlides) && (
+        <div className="absolute inset-x-4 bottom-4 z-10 flex items-end justify-between gap-3 sm:inset-x-6 sm:bottom-6">
+          {activeSlideContent?.href && (
+            <a
+              href={activeSlideContent.href}
+              className="group inline-flex min-h-10 max-w-[calc(100%-8.5rem)] items-center gap-2 rounded-full border border-white/50 bg-slate-950/80 px-4 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-xl transition hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:max-w-sm sm:text-sm"
+            >
+              <span className="truncate">{activeSlideContent.actionLabel ?? activeSlideContent.label ?? "Explore"}</span>
+              <ArrowUpRight className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </a>
+          )}
+          {hasMultipleSlides && (
+          <div className="ml-auto flex shrink-0 items-center gap-2 rounded-full border border-border/50 bg-background/75 p-1.5 text-foreground shadow-xl backdrop-blur-xl dark:border-white/15 dark:bg-slate-950/75 dark:text-white">
           <button
             type="button"
             aria-label="Show previous image"
@@ -121,6 +135,8 @@ export function HeroSlideshow({
           >
             <ChevronRight className="h-4 w-4" />
           </button>
+          </div>
+          )}
         </div>
       )}
     </section>

@@ -37,7 +37,13 @@ export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
     const sessionEmail = readSessionEmail(request);
-    const { intent, snapshot } = await createPaymentIntent(sessionEmail);
+    const body = await request.json().catch(() => ({}));
+    const purpose = body?.purpose === "property-listing-fee" ? "property-listing-fee" : "farm-order";
+    const { intent, snapshot } = await createPaymentIntent(sessionEmail, {
+      provider: "flutterwave",
+      purpose,
+      propertyListingId: body?.propertyListingId,
+    });
 
     if (!flutterwaveIsConfigured()) {
       if (!allowMockPayments()) {
@@ -46,7 +52,7 @@ export async function POST(request: NextRequest) {
 
       const result = await completePaymentIntent(sessionEmail, {
         txRef: intent.txRef,
-        provider: "Simulation",
+        provider: "Flutterwave Mock",
       });
 
       return NextResponse.json({
@@ -55,6 +61,7 @@ export async function POST(request: NextRequest) {
         order: result.order,
         payment: {
           mode: "mock",
+          provider: "flutterwave",
           txRef: intent.txRef,
         },
       });
@@ -74,8 +81,8 @@ export async function POST(request: NextRequest) {
           email: customerEmail,
         },
         customizations: {
-          title: "DAJEM Farms Checkout",
-          description: "Shared DAJEM Farms checkout powered by Flutterwave test mode",
+          title: intent.app === "homes" ? "DAJEM Homes Payment" : "DAJEM Farms Payment",
+          description: "Secure payment for your DAJEM request.",
         },
       }),
       cache: "no-store",
@@ -91,6 +98,7 @@ export async function POST(request: NextRequest) {
       message: "Redirecting to Flutterwave checkout.",
       payment: {
         mode: "redirect",
+        provider: "flutterwave",
         txRef: intent.txRef,
         checkoutUrl: paymentPayload?.data?.link,
       },

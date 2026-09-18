@@ -14,7 +14,9 @@ import {
   HeroSlideshow,
   Input,
   Label,
-  SectionNav,
+  SubsidiaryNav,
+  SubsidiaryPageIntro,
+  SubsidiaryRouteGrid,
   TrustRibbon,
   Select,
   Sheet,
@@ -22,20 +24,27 @@ import {
   dajemCompanyProfiles,
   useDajem,
   type PropertyCategory,
+  type HomesListingGroup,
   type PropertyListing,
   type PropertyType,
+  type ResidenceType,
 } from "@repo/ui";
 import {
   Bath,
   BedDouble,
   Building,
   CheckCircle2,
+  ClipboardList,
+  Home,
+  LayoutDashboard,
+  ListFilter,
   MapPin,
   Maximize,
   Search,
   ShieldCheck,
   Tag,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -63,11 +72,56 @@ const propertyCategoryOptions: { value: PropertyCategory | "all"; label: string 
   { value: "short-let", label: "Short-Let" },
 ];
 
+const homesGroupOptions: { value: HomesListingGroup; label: string; type: PropertyType; category: PropertyCategory }[] = [
+  { value: "land-sale", label: "Lands for Sale", type: "sale", category: "land" },
+  { value: "land-lease", label: "Lands for Lease", type: "management", category: "land" },
+  { value: "house-rent", label: "House for Rent / Lease", type: "management", category: "apartment" },
+  { value: "house-sale", label: "House for Sale", type: "sale", category: "apartment" },
+  { value: "short-let", label: "Short-let Apartments", type: "short-let", category: "short-let" },
+];
+
+const residenceOptions: { value: ResidenceType; label: string }[] = [
+  { value: "self-contain", label: "Self contain" },
+  { value: "one-bedroom", label: "One bedroom" },
+  { value: "two-bedroom", label: "Two bedroom" },
+  { value: "three-bedroom", label: "Three bedroom" },
+  { value: "single-room", label: "Single room" },
+  { value: "bungalow", label: "Bungalow" },
+  { value: "duplex", label: "Duplex" },
+];
+
 function propertyTypeLabel(type: PropertyType) {
   return propertyTypeOptions.find((entry) => entry.value === type)?.label ?? type;
 }
 
+function propertyGroupLabel(group: HomesListingGroup | undefined, type: PropertyType) {
+  return homesGroupOptions.find((entry) => entry.value === group)?.label ?? propertyTypeLabel(type);
+}
+
+const homesNavItems = [
+  { href: "/properties", label: "Home", icon: Home },
+  { href: "/properties/listings", label: "Listings", icon: ListFilter },
+  { href: "/properties/submit", label: "Submit", icon: ClipboardList },
+];
+
+const homesPageMeta = {
+  listings: {
+    eyebrow: "Property discovery",
+    title: "Approved homes, land, short-lets, and hospitality",
+    description: "Search listings, compare prices, and submit a bid.",
+  },
+  submit: {
+    eyebrow: "Owner and agent desk",
+    title: "Submit a property for verification and approval",
+    description: "Add the property details for verification and approval.",
+  },
+} as const;
+
 export default function RealEstatePage() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const pageView = pathname === "/properties/listings" ? "listings" : pathname === "/properties/submit" ? "submit" : "home";
+  const activePageMeta = pageView === "home" ? null : homesPageMeta[pageView];
   const profile = dajemCompanyProfiles["real-estate"];
   const {
     currentUser,
@@ -77,20 +131,28 @@ export default function RealEstatePage() {
     snapshot,
     submitBid,
     submitPropertyListing,
+    submitPropertyListingPaymentProof,
+    startPaymentCheckout,
   } = useDajem();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedType, setSelectedType] = React.useState<PropertyType | "all">("all");
   const [selectedCategory, setSelectedCategory] = React.useState<PropertyCategory | "all">("all");
+  const [selectedGroup, setSelectedGroup] = React.useState<HomesListingGroup | "all">("all");
   const [selectedPrice, setSelectedPrice] = React.useState<string>("all");
   const [activeProperty, setActiveProperty] = React.useState<PropertyListing | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
   const [listSubmitted, setListSubmitted] = React.useState(false);
+  const [pendingListing, setPendingListing] = React.useState<PropertyListing | null>(null);
+  const [listingPaymentError, setListingPaymentError] = React.useState<string | null>(null);
+  const [listingProofPath, setListingProofPath] = React.useState("");
   const [bidForm, setBidForm] = React.useState({ amount: "", notes: "" });
   const [listingForm, setListingForm] = React.useState({
     title: "",
     location: "",
     type: "short-let" as PropertyType,
     category: "short-let" as PropertyCategory,
+    listingGroup: "short-let" as HomesListingGroup,
+    residenceType: "one-bedroom" as ResidenceType,
     price: "",
     size: "",
     beds: "",
@@ -98,6 +160,8 @@ export default function RealEstatePage() {
     summary: "",
     highlights: "",
     imageUrl: "",
+    agentCompany: "",
+    requestContactPublication: true,
   });
 
   const approvedProperties = snapshot.propertyListings.filter((property) => property.status === "Approved");
@@ -107,6 +171,7 @@ export default function RealEstatePage() {
       || property.summary.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "all" || property.type === selectedType;
     const matchesCategory = selectedCategory === "all" || property.category === selectedCategory;
+    const matchesGroup = selectedGroup === "all" || property.listingGroup === selectedGroup;
 
     let matchesPrice = true;
     if (selectedPrice !== "all") {
@@ -116,7 +181,7 @@ export default function RealEstatePage() {
       if (selectedPrice === "150m-plus") matchesPrice = property.price > 150000000;
     }
 
-    return matchesSearch && matchesType && matchesCategory && matchesPrice;
+    return matchesSearch && matchesType && matchesCategory && matchesGroup && matchesPrice;
   });
 
   const handleBidSubmit = async (event: React.FormEvent) => {
@@ -142,11 +207,13 @@ export default function RealEstatePage() {
     event.preventDefault();
     if (!requireAuth("signup")) return;
 
-    await submitPropertyListing({
+    const result = await submitPropertyListing({
       title: listingForm.title,
       location: listingForm.location,
       type: listingForm.type,
       category: listingForm.category,
+      listingGroup: listingForm.listingGroup,
+      residenceType: listingForm.listingGroup === "land-sale" || listingForm.listingGroup === "land-lease" ? undefined : listingForm.residenceType,
       price: Number(listingForm.price),
       size: Number(listingForm.size),
       beds: listingForm.beds ? Number(listingForm.beds) : undefined,
@@ -154,14 +221,19 @@ export default function RealEstatePage() {
       summary: listingForm.summary,
       highlights: listingForm.highlights.split(",").map((item) => item.trim()).filter(Boolean),
       imageUrl: listingForm.imageUrl || undefined,
+      agentCompany: listingForm.agentCompany || undefined,
+      requestContactPublication: listingForm.requestContactPublication,
     });
 
-    setListSubmitted(true);
+    setPendingListing(result.listing ?? null);
+    setListSubmitted(!listingForm.requestContactPublication);
     setListingForm({
       title: "",
       location: "",
       type: "short-let",
       category: "short-let",
+      listingGroup: "short-let",
+      residenceType: "one-bedroom",
       price: "",
       size: "",
       beds: "",
@@ -169,7 +241,62 @@ export default function RealEstatePage() {
       summary: "",
       highlights: "",
       imageUrl: "",
+      agentCompany: "",
+      requestContactPublication: true,
     });
+  };
+
+  const uploadPropertyImage = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5MB or less.");
+    const formData = new FormData();
+    formData.append("scope", "property");
+    formData.append("file", file);
+    const response = await fetch("/api/storage/images", { method: "POST", credentials: "include", body: formData });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error ?? "Image upload failed.");
+    setListingForm((current) => ({ ...current, imageUrl: data.imageUrl }));
+  };
+
+  const payListingFee = async () => {
+    if (!pendingListing) return;
+    setListingPaymentError(null);
+    try {
+      const result = await startPaymentCheckout("flutterwave", {
+        purpose: "property-listing-fee",
+        propertyListingId: pendingListing.id,
+      });
+      if (result.payment?.mode === "redirect" && result.payment.checkoutUrl) {
+        window.location.assign(result.payment.checkoutUrl);
+        return;
+      }
+      setPendingListing(null);
+      setListSubmitted(true);
+    } catch (error) {
+      setListingPaymentError(error instanceof Error ? error.message : "Listing fee checkout failed.");
+    }
+  };
+
+  const uploadListingPaymentProof = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) throw new Error("Payment proof must be 5MB or less.");
+    const formData = new FormData();
+    formData.append("scope", "property");
+    formData.append("file", file);
+    const response = await fetch("/api/storage/images", { method: "POST", credentials: "include", body: formData });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error ?? "Payment-proof upload failed.");
+    setListingProofPath(String(data.storagePath));
+  };
+
+  const submitListingProof = async () => {
+    if (!pendingListing || !listingProofPath) return;
+    setListingPaymentError(null);
+    try {
+      await submitPropertyListingPaymentProof(pendingListing.id, listingProofPath);
+      setPendingListing(null);
+      setListSubmitted(true);
+    } catch (error) {
+      setListingPaymentError(error instanceof Error ? error.message : "Unable to submit payment proof.");
+    }
   };
 
   return (
@@ -177,18 +304,25 @@ export default function RealEstatePage() {
       <Header activeApp="real-estate" />
 
       <main className="flex-1">
-        <SectionNav label="DAJEM Homes" items={[
-          { href: "#contact-details", label: "Office" },
-          { href: "#listings", label: "Listings" },
-          { href: "#submit-property", label: "Submit Property" },
-        ]} />
+        <SubsidiaryNav label="DAJEM Homes" items={homesNavItems} accent="blue" />
 
+        {activePageMeta && (
+          <SubsidiaryPageIntro
+            eyebrow={activePageMeta.eyebrow}
+            title={activePageMeta.title}
+            description={activePageMeta.description}
+            accent="blue"
+          />
+        )}
+
+        {pageView === "home" && (
+          <>
         <HeroSlideshow
           className="dajem-mobile-hero flex min-h-[31rem] items-center py-14 sm:min-h-0 sm:py-24"
           overlayClassName="bg-[linear-gradient(135deg,rgba(239,246,255,0.28),rgba(239,246,255,0.5),rgba(255,255,255,0.82))] dark:bg-[linear-gradient(135deg,rgba(30,64,175,0.24),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
           slides={[
-            { src: "/images/homes-hero-suite-v2.png", position: "center", label: "Homes and hospitality" },
-            { src: "/images/homes-hero-generated.png", position: "center", label: "Property management" },
+            { src: "/images/homes-hero-suite-v2.png", position: "center", label: "Verified homes and short-lets", actionLabel: "Browse available properties", href: "/properties/listings" },
+            { src: "/images/homes-hero-generated.png", position: "center", label: "Property sales and management", actionLabel: "Submit your property", href: "/properties/submit" },
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#1d4ed812_1px,transparent_1px),linear-gradient(to_bottom,#1d4ed812_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
@@ -205,13 +339,13 @@ export default function RealEstatePage() {
                 </span>
               </h1>
               <p className="dajem-hero-lede mx-auto max-w-3xl text-base leading-relaxed">
-                {profile.summary}
+                Verified homes, short-lets, hospitality, sales, and property management.
               </p>
               <div className="flex flex-col justify-center gap-3 pt-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
-                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => document.getElementById("listings")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => router.push("/properties/listings")}>
                   Browse Listings
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => document.getElementById("submit-property")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/properties/submit")}>
                   Submit Property
                 </Button>
               </div>
@@ -220,6 +354,17 @@ export default function RealEstatePage() {
         </HeroSlideshow>
 
         <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
+
+        <SubsidiaryRouteGrid
+          title="Open the right property workspace"
+          accent="blue"
+          items={[
+            { ...homesNavItems[1], meta: `${approvedProperties.length} approved`, description: "Browse available properties." },
+            { ...homesNavItems[2], meta: "Owners and agents", description: "Submit a property for approval." },
+            { href: "/dashboard", label: "My Activity", icon: LayoutDashboard, meta: "Shared dashboard", description: "Track bids and submissions." },
+            { href: `mailto:${profile.email}`, label: "Property Desk", icon: Building, meta: "Direct contact", description: "Contact DAJEM Homes." },
+          ]}
+        />
 
         <section id="contact-details" className="border-y border-border bg-muted/20 py-8 sm:py-12">
           <div className="container mx-auto grid max-w-6xl gap-3 px-5 sm:gap-4 sm:px-6 md:grid-cols-3">
@@ -233,21 +378,27 @@ export default function RealEstatePage() {
             </div>
             <div className="rounded-xl border bg-card p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Focus</p>
-              <p className="mt-2 text-sm text-foreground">Short-let, hospitality, development, sales, marketing, consultancy, and property management.</p>
+              <p className="mt-2 text-sm text-foreground">Hospitality, sales, development, and management.</p>
             </div>
           </div>
         </section>
+          </>
+        )}
 
+        {pageView === "listings" && (
         <section id="listings" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
-          <div className="mb-12 text-center">
+          <div className="mb-8 text-center">
             <Badge variant="secondary" className="mb-2">Dajem Homes Catalog</Badge>
-            <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Properties & Hospitality Offers</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Public listings are approved from the unified admin portal before they appear here.
-            </p>
+            <h2 className="text-3xl font-bold text-primary dark:text-foreground">Available Properties</h2>
           </div>
 
           <Card className="mb-10 border bg-card/60 p-6 backdrop-blur-sm">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <Button size="sm" variant={selectedGroup === "all" ? "default" : "outline"} onClick={() => setSelectedGroup("all")}>All</Button>
+              {homesGroupOptions.map((group) => (
+                <Button key={group.value} size="sm" variant={selectedGroup === group.value ? "default" : "outline"} className="h-auto min-h-10 whitespace-normal text-xs" onClick={() => setSelectedGroup(group.value)}>{group.label}</Button>
+              ))}
+            </div>
             <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="space-y-1.5 lg:col-span-2">
                 <Label htmlFor="search">Search Keywords</Label>
@@ -301,7 +452,7 @@ export default function RealEstatePage() {
                   >
                     <div className="flex items-center justify-between">
                       <Badge variant="default" className={property.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
-                        {propertyTypeLabel(property.type)}
+                        {propertyGroupLabel(property.listingGroup, property.type)}
                       </Badge>
                       {isOfficial && <Badge className="bg-blue-600 text-white">Official</Badge>}
                       {property.featured && (
@@ -322,7 +473,7 @@ export default function RealEstatePage() {
                       <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-500" />
                       <span className="line-clamp-1">{property.location}</span>
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-muted-foreground">Listed by {listedBy}</p>
+                    <p className="mt-2 text-xs font-semibold text-muted-foreground">{isOfficial || property.agentListingPaymentStatus === "Paid" ? `Listed by ${listedBy}` : "Verified listing - contact released after fee confirmation"}</p>
                   </CardHeader>
 
                   <CardContent className="px-5 pb-4 pt-0">
@@ -375,6 +526,7 @@ export default function RealEstatePage() {
                   setSearchTerm("");
                   setSelectedType("all");
                   setSelectedCategory("all");
+                  setSelectedGroup("all");
                   setSelectedPrice("all");
                 }}
               >
@@ -383,21 +535,20 @@ export default function RealEstatePage() {
             </div>
           )}
         </section>
+        )}
 
+        {pageView === "submit" && (
         <section id="submit-property" className="border-t border-border bg-muted/20 py-14 sm:py-20">
           <div className="container mx-auto max-w-4xl px-4">
             <Card className="border bg-card p-8 shadow-xl">
               <div className="mx-auto mb-8 max-w-2xl text-center">
                 <Badge variant="secondary" className="mb-2">Owners & Agents</Badge>
-                <h3 className="text-2xl font-bold text-primary dark:text-foreground">Submit Property for Approval</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Submit short-let, suite, hotel, development, sale, or management opportunities. They remain pending until admin approves them.
-                </p>
+                <h3 className="text-2xl font-bold text-primary dark:text-foreground">Submit a Property</h3>
               </div>
 
               {!currentUser && (
                 <div className="mb-5 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                  <p className="mb-3">Sign in first so your property submission can be tracked and approval notifications can be prepared.</p>
+                  <p className="mb-3">Sign in to submit and track this property.</p>
                   <div className="flex flex-wrap gap-3">
                     <Button type="button" onClick={() => openAuthModal("login")}>Login</Button>
                     <Button type="button" variant="outline" onClick={() => openAuthModal("signup")}>
@@ -419,8 +570,15 @@ export default function RealEstatePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                  <Select label="Listing Type" value={listingForm.type} onChange={(event) => setListingForm((current) => ({ ...current, type: event.target.value as PropertyType }))} options={propertyTypeOptions.filter((item) => item.value !== "all")} />
-                  <Select label="Category" value={listingForm.category} onChange={(event) => setListingForm((current) => ({ ...current, category: event.target.value as PropertyCategory }))} options={propertyCategoryOptions.filter((item) => item.value !== "all")} />
+                  <Select label="Property group" value={listingForm.listingGroup} onChange={(event) => {
+                    const selected = homesGroupOptions.find((entry) => entry.value === event.target.value);
+                    if (selected) setListingForm((current) => ({ ...current, listingGroup: selected.value, type: selected.type, category: selected.category }));
+                  }} options={homesGroupOptions.map((entry) => ({ value: entry.value, label: entry.label }))} />
+                  {listingForm.listingGroup === "land-sale" || listingForm.listingGroup === "land-lease" ? (
+                    <div className="rounded-xl border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">Land listing</div>
+                  ) : (
+                    <Select label="Home type" value={listingForm.residenceType} onChange={(event) => setListingForm((current) => ({ ...current, residenceType: event.target.value as ResidenceType }))} options={residenceOptions} />
+                  )}
                   <div className="space-y-1.5">
                     <Label htmlFor="p-price">Expected Price</Label>
                     <Input id="p-price" type="number" required value={listingForm.price} onChange={(event) => setListingForm((current) => ({ ...current, price: event.target.value }))} />
@@ -444,6 +602,10 @@ export default function RealEstatePage() {
                     <Input id="p-image" value={listingForm.imageUrl} onChange={(event) => setListingForm((current) => ({ ...current, imageUrl: event.target.value }))} />
                   </div>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label htmlFor="p-image-file">Property image (max 5MB)</Label><Input id="p-image-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadPropertyImage(file).catch((error) => setListingPaymentError(error instanceof Error ? error.message : "Image upload failed.")); }} /></div>
+                  <div className="space-y-1.5"><Label htmlFor="p-company">Agency / company</Label><Input id="p-company" value={listingForm.agentCompany} onChange={(event) => setListingForm((current) => ({ ...current, agentCompany: event.target.value }))} /></div>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="p-desc">Property Description</Label>
                   <Textarea id="p-desc" required rows={4} value={listingForm.summary} onChange={(event) => setListingForm((current) => ({ ...current, summary: event.target.value }))} />
@@ -452,6 +614,10 @@ export default function RealEstatePage() {
                   <Label htmlFor="p-highlights">Highlights</Label>
                   <Input id="p-highlights" value={listingForm.highlights} onChange={(event) => setListingForm((current) => ({ ...current, highlights: event.target.value }))} />
                 </div>
+                <label className="flex items-start gap-3 rounded-xl border bg-muted/25 p-4 text-sm">
+                  <input type="checkbox" className="mt-1 h-4 w-4" checked={listingForm.requestContactPublication} onChange={(event) => setListingForm((current) => ({ ...current, requestContactPublication: event.target.checked }))} />
+                  <span><strong className="text-foreground">Display my agent contact details after approval</strong><span className="mt-1 block text-muted-foreground">Requires a one-time N20,000 listing fee. Until payment is confirmed, the listing can appear but your contact details stay private.</span></span>
+                </label>
                 <Button type="submit" className="w-full bg-blue-600 font-semibold text-white hover:bg-blue-700" disabled={isBusy}>
                   Submit for Pending Approval
                 </Button>
@@ -459,9 +625,10 @@ export default function RealEstatePage() {
             </Card>
           </div>
         </section>
+        )}
       </main>
 
-      <Footer />
+      <Footer compact />
 
       <Sheet isOpen={activeProperty !== null} onClose={() => setActiveProperty(null)} title={activeProperty?.title ?? "Property Detail"} widthClassName="max-w-2xl">
         {activeProperty && (
@@ -472,7 +639,7 @@ export default function RealEstatePage() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <Badge variant="default" className={activeProperty.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
-                  {propertyTypeLabel(activeProperty.type)}
+                  {propertyGroupLabel(activeProperty.listingGroup, activeProperty.type)}
                 </Badge>
                 {!activeProperty.submittedByEmail && <Badge className="bg-blue-600 text-white">Official</Badge>}
                 {activeProperty.featured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
@@ -500,6 +667,21 @@ export default function RealEstatePage() {
                 <p className="mt-1 capitalize text-muted-foreground">{activeProperty.category}</p>
               </div>
             </div>
+
+            {(!activeProperty.submittedByEmail || activeProperty.agentListingPaymentStatus === "Paid") ? (
+              activeProperty.submittedByEmail && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-950 dark:bg-blue-950/20 dark:text-blue-100">
+                  <p className="font-bold">Agent contact</p>
+                  <p className="mt-1">{activeProperty.agentName ?? activeProperty.submittedByName} · {activeProperty.agentPhone ?? activeProperty.submittedByPhone}</p>
+                  <p>{activeProperty.agentEmail ?? activeProperty.submittedByEmail}</p>
+                </div>
+              )
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+                <p className="font-bold">Agent contact pending</p>
+                <p className="mt-1">This external listing is visible, but contact details unlock only after DAJEM confirms the listing fee.</p>
+              </div>
+            )}
 
             <div className="rounded-xl border p-5">
               <div className="mb-3 flex items-center gap-2 font-semibold text-foreground">
@@ -591,6 +773,16 @@ export default function RealEstatePage() {
           <Button className="bg-primary text-white" onClick={() => setListSubmitted(false)}>
             Close
           </Button>
+        </div>
+      </Dialog>
+
+      <Dialog isOpen={pendingListing !== null} onClose={() => setPendingListing(null)} title="Activate Agent Contact Details">
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-muted-foreground">Pay the N20,000 DAJEM Homes listing fee to publish your contact details when this property is approved. The property remains pending review.</p>
+          <div className="rounded-xl border bg-muted/30 p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Listing fee</p><p className="mt-1 text-2xl font-black text-foreground">{formatCurrency(20000)}</p></div>
+          {listingPaymentError && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{listingPaymentError}</p>}
+          <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={isBusy} onClick={() => void payListingFee()}>Pay N20,000 securely</Button>
+          <div className="border-t pt-4"><p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Already paid externally?</p><Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadListingPaymentProof(file).catch((error) => setListingPaymentError(error instanceof Error ? error.message : "Payment-proof upload failed.")); }} /><Button variant="outline" className="mt-2 w-full" disabled={isBusy || !listingProofPath} onClick={() => void submitListingProof()}>Submit payment proof for review</Button></div>
         </div>
       </Dialog>
     </div>
