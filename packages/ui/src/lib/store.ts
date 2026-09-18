@@ -433,14 +433,14 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
     path: "/",
   },
   {
-    id: "survey",
-    name: dajemCompanyProfiles.survey.displayName,
-    path: "/survey",
-  },
-  {
     id: "poultry",
     name: dajemCompanyProfiles.poultry.displayName,
     path: "/farms",
+  },
+  {
+    id: "survey",
+    name: dajemCompanyProfiles.survey.displayName,
+    path: "/survey",
   },
   {
     id: "real-estate",

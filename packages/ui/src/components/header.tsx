@@ -74,6 +74,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   const dashboardHref = currentOrigin ? new URL("/dashboard", currentOrigin).toString() : "/dashboard";
   const contactHref = currentOrigin ? new URL("/#contact", currentOrigin).toString() : "/#contact";
   const adminHref = currentOrigin ? new URL("/admin", currentOrigin).toString() : "/admin";
+  const farmsHref = currentOrigin ? new URL("/farms", currentOrigin).toString() : "/farms";
   const groupHref = apps.find((app) => app.id === "landing")?.url ?? "/";
   const showCartButton = Boolean(activeApp === "poultry" && currentUser && onCartClick);
   const notifications = currentUser ? snapshot.communicationLogs.slice(0, 8) : [];
@@ -141,6 +142,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                 )}
               </AnimatePresence>
             </div>
+            {activeApp !== "poultry" && <a href={farmsHref} onClick={(event) => handleNavigate(event, farmsHref)} className="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-500/20 dark:text-emerald-200"><Egg className="h-3.5 w-3.5" /> Farms</a>}
             {showCartButton && <Button variant="outline" size="sm" onClick={onCartClick} className="h-9 gap-2 rounded-full border-border/60 bg-card px-3.5 text-xs font-semibold shadow-sm hover:bg-accent"><ShoppingCart className="h-3.5 w-3.5" /> Cart ({cartCount})</Button>}
             </div>
             {currentUser && (

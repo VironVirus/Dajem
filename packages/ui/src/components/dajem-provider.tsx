@@ -165,6 +165,7 @@ interface DajemContextValue {
     imageBg?: string;
     age?: string;
     weight?: string;
+    shippingWeightKg?: number;
     originalPrice?: number;
     promoPrice?: number;
     promoEndsAt?: string;

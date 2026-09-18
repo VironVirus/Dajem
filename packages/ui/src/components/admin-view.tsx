@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, ClipboardList, Home, ImageIcon, Package, Shield, Truck, UploadCloud, Users } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, Download, FileText, Home, ImageIcon, Package, ReceiptText, Shield, Sprout, Truck, UploadCloud, Users } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
@@ -179,6 +179,63 @@ type SurveyDeliveryDraft = {
   trackingNumber: string;
 };
 
+type AdminArea = "overview" | "farms" | "orbital" | "homes" | "reports";
+type FarmsAction = "add-product" | "manage-products";
+type HomesAction = "add-listing" | "manage-listings" | "bids";
+type OrbitalAction = "services" | "inquiries";
+type ReportPeriod = "today" | "week" | "month" | "custom";
+
+type ActivityRow = {
+  id: string;
+  date: string;
+  area: "Farms" | "Orbital" | "Homes";
+  activity: string;
+  status: string;
+  amount?: number;
+};
+
+function dateValue(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : new Date(timestamp);
+}
+
+function startOfDay(value: Date) {
+  const result = new Date(value);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function reportBounds(period: ReportPeriod, customStart: string, customEnd: string) {
+  const now = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  if (period === "custom") {
+    const start = customStart ? startOfDay(new Date(`${customStart}T00:00:00`)) : startOfDay(now);
+    const customRangeEnd = customEnd ? new Date(`${customEnd}T23:59:59.999`) : end;
+    return { start, end: customRangeEnd };
+  }
+
+  const start = startOfDay(now);
+  if (period === "week") start.setDate(start.getDate() - 6);
+  if (period === "month") start.setDate(1);
+  return { start, end };
+}
+
+function downloadCsv(filename: string, rows: ActivityRow[]) {
+  const header = ["Date", "Business", "Activity", "Status", "Amount (NGN)"];
+  const escape = (value: string | number | undefined) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+  const content = [header, ...rows.map((row) => [row.date, row.area, row.activity, row.status, row.amount ?? ""])]
+    .map((row) => row.map(escape).join(","))
+    .join("\n");
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function AdminView() {
   const {
     currentUser,
@@ -196,10 +253,18 @@ export function AdminView() {
   } = useDajem();
   const [inventoryDrafts, setInventoryDrafts] = React.useState<Record<string, InventoryItem>>({});
   const [newInventory, setNewInventory] = React.useState<InventoryItem>(blankInventory);
+  const [selectedInventoryProductId, setSelectedInventoryProductId] = React.useState<string | null>(null);
   const [propertyDraft, setPropertyDraft] = React.useState<PropertyForm>(blankProperty);
   const [serviceDraft, setServiceDraft] = React.useState<SurveyService>(blankService);
   const [deliveryDrafts, setDeliveryDrafts] = React.useState<Record<string, SurveyDeliveryDraft>>({});
   const [mediaError, setMediaError] = React.useState<string | null>(null);
+  const [activeArea, setActiveArea] = React.useState<AdminArea>("overview");
+  const [farmsAction, setFarmsAction] = React.useState<FarmsAction>("manage-products");
+  const [homesAction, setHomesAction] = React.useState<HomesAction>("manage-listings");
+  const [orbitalAction, setOrbitalAction] = React.useState<OrbitalAction>("inquiries");
+  const [reportPeriod, setReportPeriod] = React.useState<ReportPeriod>("month");
+  const [reportStart, setReportStart] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const [reportEnd, setReportEnd] = React.useState(() => new Date().toISOString().slice(0, 10));
 
   React.useEffect(() => {
     const nextDrafts = Object.fromEntries(snapshot.inventory.map((item) => [item.productId, item]));
@@ -234,6 +299,7 @@ export function AdminView() {
       imageBg: item.imageBg,
       age: item.age,
       weight: item.weight,
+      shippingWeightKg: item.shippingWeightKg,
       originalPrice: item.originalPrice,
       promoPrice: item.promoPrice,
       promoEndsAt: item.promoEndsAt,
@@ -302,6 +368,43 @@ export function AdminView() {
     { label: "Pending Properties", value: snapshot.propertyListings.filter((item) => item.status === "Pending Approval").length, icon: Home },
     { label: "Survey Queue", value: snapshot.surveys.filter((survey) => survey.status !== "Completed & Sent").length, icon: ClipboardList },
   ];
+  const { start: activityStart, end: activityEnd } = reportBounds(reportPeriod, reportStart, reportEnd);
+  const activityRows = [
+    ...snapshot.orders.map((order): ActivityRow => ({
+      id: order.id,
+      date: order.date,
+      area: order.app === "farms" ? "Farms" : order.app === "homes" ? "Homes" : "Orbital",
+      activity: `Paid invoice ${order.invoiceNumber}`,
+      status: order.paymentStatus,
+      amount: order.total,
+    })),
+    ...snapshot.propertyListings.map((property): ActivityRow => ({
+      id: property.id,
+      date: property.createdAt,
+      area: "Homes",
+      activity: `Property listing: ${property.title}`,
+      status: property.status,
+    })),
+    ...snapshot.bids.map((bid): ActivityRow => ({
+      id: bid.id,
+      date: bid.date,
+      area: "Homes",
+      activity: `Bid: ${bid.propertyTitle}`,
+      status: bid.status,
+      amount: bid.bidAmount,
+    })),
+    ...snapshot.surveys.map((survey): ActivityRow => ({
+      id: survey.id,
+      date: survey.date,
+      area: "Orbital",
+      activity: `Inquiry: ${survey.serviceType}`,
+      status: survey.status,
+    })),
+  ].filter((row) => {
+    const date = dateValue(row.date);
+    return date !== null && date >= activityStart && date <= activityEnd;
+  }).sort((left, right) => (dateValue(right.date)?.getTime() ?? 0) - (dateValue(left.date)?.getTime() ?? 0));
+  const reportValue = activityRows.reduce((total, row) => total + (row.amount ?? 0), 0);
 
   return (
     <div className="space-y-8">
@@ -338,11 +441,76 @@ export function AdminView() {
         ))}
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
+        <CardContent className="p-3 sm:p-4">
+          <nav aria-label="Admin areas" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[
+              { id: "overview" as const, label: "Overview", icon: BarChart3, tone: "bg-slate-900 text-white" },
+              { id: "farms" as const, label: "Farms admin", icon: Sprout, tone: "bg-emerald-600 text-white" },
+              { id: "orbital" as const, label: "Orbital admin", icon: ClipboardList, tone: "bg-cyan-700 text-white" },
+              { id: "homes" as const, label: "Homes admin", icon: Building2, tone: "bg-blue-700 text-white" },
+              { id: "reports" as const, label: "Reports", icon: FileText, tone: "bg-amber-500 text-slate-950" },
+            ].map((area) => (
+              <button
+                key={area.id}
+                type="button"
+                onClick={() => setActiveArea(area.id)}
+                className={`flex min-h-16 items-center gap-2 rounded-xl px-3 text-left text-xs font-extrabold transition ${activeArea === area.id ? `${area.tone} shadow-lg` : "bg-muted/65 text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+              >
+                <area.icon className="h-4 w-4 shrink-0" />
+                <span>{area.label}</span>
+              </button>
+            ))}
+          </nav>
+        </CardContent>
+      </Card>
+
+      {activeArea === "overview" && (
+        <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+          <Card>
+            <CardHeader><CardTitle>Operations at a glance</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-xl bg-emerald-500/10 p-4"><p className="text-xs font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">Farm products</p><p className="mt-1 text-2xl font-black text-foreground">{snapshot.inventory.length}</p></div>
+              <div className="rounded-xl bg-cyan-500/10 p-4"><p className="text-xs font-bold uppercase tracking-wide text-cyan-800 dark:text-cyan-200">Open inquiries</p><p className="mt-1 text-2xl font-black text-foreground">{snapshot.surveys.filter((survey) => survey.status !== "Completed & Sent").length}</p></div>
+              <div className="rounded-xl bg-blue-500/10 p-4"><p className="text-xs font-bold uppercase tracking-wide text-blue-800 dark:text-blue-200">Pending listings</p><p className="mt-1 text-2xl font-black text-foreground">{snapshot.propertyListings.filter((property) => property.status === "Pending Approval").length}</p></div>
+              <div className="rounded-xl bg-amber-500/10 p-4"><p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">Paid transactions</p><p className="mt-1 text-2xl font-black text-foreground">{snapshot.orders.filter((order) => order.paymentStatus === "Paid").length}</p></div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Recent transactions and activity</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {activityRows.slice(0, 6).map((row) => <div key={`${row.area}-${row.id}`} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3 rounded-xl border border-border/70 px-3 py-3 text-sm"><span className="text-[11px] font-bold text-muted-foreground">{dateValue(row.date)?.toLocaleDateString("en-NG", { day: "2-digit", month: "short" }) ?? row.date}</span><span className="min-w-0"><span className="block truncate font-bold text-foreground">{row.activity}</span><span className="block text-xs text-muted-foreground">{row.area} · {row.status}</span></span>{row.amount !== undefined && <span className="text-right text-xs font-black text-foreground">{formatCurrency(row.amount)}</span>}</div>)}
+              {activityRows.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No recorded activity in this period.</p>}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {activeArea === "reports" && (
+        <Card>
+          <CardHeader><CardTitle>Activity reports</CardTitle><p className="text-sm text-muted-foreground">Generate a clean activity register across Farms, Orbital, and Homes.</p></CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-[12rem_1fr_1fr_auto] sm:items-end">
+              <Select label="Report period" value={reportPeriod} onChange={(event) => setReportPeriod(event.target.value as ReportPeriod)} options={[{ value: "today", label: "Today" }, { value: "week", label: "Last 7 days" }, { value: "month", label: "This month" }, { value: "custom", label: "Custom range" }]} />
+              {reportPeriod === "custom" && <><div className="space-y-1.5"><Label htmlFor="report-start">From</Label><Input id="report-start" type="date" value={reportStart} onChange={(event) => setReportStart(event.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="report-end">To</Label><Input id="report-end" type="date" value={reportEnd} onChange={(event) => setReportEnd(event.target.value)} /></div></>}
+              <div className="flex gap-2"><Button variant="outline" onClick={() => window.print()}><ReceiptText className="h-4 w-4" />Print</Button><Button className="bg-amber-500 text-slate-950 hover:bg-amber-400" onClick={() => downloadCsv(`dajem-activity-${reportPeriod}.csv`, activityRows)}><Download className="h-4 w-4" />Download</Button></div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border bg-muted/35 p-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Activities</p><p className="mt-1 text-2xl font-black text-foreground">{activityRows.length}</p></div><div className="rounded-xl border bg-muted/35 p-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Recorded value</p><p className="mt-1 text-2xl font-black text-foreground">{formatCurrency(reportValue)}</p></div><div className="rounded-xl border bg-muted/35 p-4"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Period</p><p className="mt-1 text-sm font-black text-foreground">{activityStart.toLocaleDateString("en-NG", { day: "2-digit", month: "short" })} - {activityEnd.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}</p></div></div>
+            <div className="overflow-x-auto rounded-xl border"><div className="min-w-[42rem] divide-y"><div className="grid grid-cols-[7rem_7rem_1fr_8rem_9rem] gap-3 bg-muted/50 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground"><span>Date</span><span>Business</span><span>Activity</span><span>Status</span><span className="text-right">Value</span></div>{activityRows.map((row) => <div key={`report-${row.area}-${row.id}`} className="grid grid-cols-[7rem_7rem_1fr_8rem_9rem] gap-3 px-4 py-3 text-sm"><span className="text-muted-foreground">{dateValue(row.date)?.toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" }) ?? row.date}</span><span className="font-bold text-foreground">{row.area}</span><span className="font-semibold text-foreground">{row.activity}</span><span><Badge variant={row.status === "Paid" || row.status === "Approved" || row.status === "Completed & Sent" ? "default" : row.status === "Rejected" || row.status === "Failed" ? "destructive" : "secondary"}>{row.status}</Badge></span><span className="text-right font-bold text-foreground">{row.amount !== undefined ? formatCurrency(row.amount) : "-"}</span></div>)}{activityRows.length === 0 && <p className="px-4 py-10 text-center text-sm text-muted-foreground">No activity was recorded in the selected period.</p>}</div></div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeArea === "farms" && <Card>
         <CardHeader>
-          <CardTitle>Dajem Farms Product Uploads</CardTitle>
+          <CardTitle>Farms admin</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="flex flex-wrap gap-2 rounded-xl bg-emerald-500/10 p-2">
+            <Button size="sm" variant={farmsAction === "manage-products" ? "default" : "ghost"} className={farmsAction === "manage-products" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("manage-products")}>Product listing</Button>
+            <Button size="sm" variant={farmsAction === "add-product" ? "default" : "ghost"} className={farmsAction === "add-product" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("add-product")}>Add product</Button>
+          </div>
+          {farmsAction === "add-product" && (
           <form
             className="grid gap-4 rounded-2xl border bg-muted/20 p-4 md:grid-cols-4"
             onSubmit={(event) => {
@@ -494,154 +662,66 @@ export function AdminView() {
               </Button>
             </div>
           </form>
+          )}
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          {farmsAction === "manage-products" && (
+          <div className="space-y-3">
             {snapshot.inventory.map((item) => {
               const draft = inventoryDrafts[item.productId] ?? item;
+              const isEditing = selectedInventoryProductId === item.productId;
               return (
-                <div key={item.productId} className="rounded-xl border p-4">
-                  <div className="grid gap-4 md:grid-cols-[140px_1fr]">
+                <div key={item.productId} className={`overflow-hidden rounded-xl border transition ${isEditing ? "border-emerald-500/50 shadow-md shadow-emerald-950/5" : "border-border/80"}`}>
+                  <div className="grid gap-3 p-3 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:items-center sm:p-4">
                     <ImagePreview imageUrl={draft.imageUrl} fallbackClass={draft.imageBg} />
-                    <div className="space-y-4">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <Input
-                          value={draft.name}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, name: event.target.value },
-                          }))}
-                        />
-                        <Select
-                          value={draft.category}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, category: event.target.value as InventoryCategory },
-                          }))}
-                          options={inventoryCategories}
-                        />
-                      </div>
-                      <Textarea
-                        value={draft.description}
-                        onChange={(event) => setInventoryDrafts((current) => ({
-                          ...current,
-                          [item.productId]: { ...draft, description: event.target.value },
-                        }))}
-                      />
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <Input
-                          type="number"
-                          value={draft.price}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, price: Number(event.target.value) },
-                          }))} 
-                        />
-                        <Input
-                          value={draft.age ?? ""}
-                          aria-label="Age"
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, age: event.target.value },
-                          }))}
-                        />
-                        <Input
-                          value={draft.weight ?? ""}
-                          aria-label="Weight"
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, weight: event.target.value },
-                          }))}
-                        />
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={draft.shippingWeightKg ?? ""}
-                          aria-label="Courier weight in kilograms"
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) },
-                          }))}
-                        />
-                        <Input
-                          type="number"
-                          value={draft.availableUnits}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, availableUnits: Number(event.target.value) },
-                          }))}
-                        />
-                        <Select
-                          value={draft.stockStatus}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, stockStatus: event.target.value as InventoryItem["stockStatus"] },
-                          }))}
-                          options={stockStatuses}
-                        />
-                        <Button disabled={isBusy} onClick={() => void saveInventory(draft)}>
-                          Save
-                        </Button>
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-4">
-                        <Input
-                          type="number"
-                          aria-label="Price before slash"
-                          value={draft.originalPrice ?? ""}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, originalPrice: event.target.value ? Number(event.target.value) : undefined },
-                          }))}
-                        />
-                        <Input
-                          type="number"
-                          aria-label="Promo price"
-                          value={draft.promoPrice ?? ""}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, promoPrice: event.target.value ? Number(event.target.value) : undefined },
-                          }))}
-                        />
-                        <Input
-                          type="date"
-                          aria-label="Promo end date"
-                          value={draft.promoEndsAt ?? ""}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, promoEndsAt: event.target.value },
-                          }))}
-                        />
-                        <Input
-                          aria-label="Promo label"
-                          value={draft.promoLabel ?? ""}
-                          onChange={(event) => setInventoryDrafts((current) => ({
-                            ...current,
-                            [item.productId]: { ...draft, promoLabel: event.target.value },
-                          }))}
-                        />
-                      </div>
-                      <Input
-                        value={draft.imageUrl ?? ""}
-                        onChange={(event) => setInventoryDrafts((current) => ({
-                          ...current,
-                          [item.productId]: { ...draft, imageUrl: event.target.value },
-                        }))}
-                      />
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2"><p className="truncate font-bold text-foreground">{draft.name}</p><Badge variant={draft.stockStatus === "In Stock" ? "default" : draft.stockStatus === "Out of Stock" ? "destructive" : "secondary"}>{draft.stockStatus}</Badge></div>
+                      <p className="mt-1 text-xs text-muted-foreground">{inventoryCategories.find((category) => category.value === draft.category)?.label} · {formatCurrency(draft.promoPrice ?? draft.price)} · {draft.availableUnits} available</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <Button size="sm" variant="outline" onClick={() => setSelectedInventoryProductId(isEditing ? null : item.productId)}>{isEditing ? "Close" : "Edit product"}</Button>
+                      {draft.stockStatus !== "Out of Stock" && <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void saveInventory({ ...draft, availableUnits: 0, stockStatus: "Out of Stock" })}>Remove from shop</Button>}
                     </div>
                   </div>
+                  {isEditing && <div className="border-t bg-emerald-500/[0.035] p-4">
+                    <div className="mb-4 flex items-center justify-between gap-3"><p className="text-sm font-extrabold text-foreground">Edit {draft.name}</p><span className="text-xs text-muted-foreground">Changes are saved only when you select Save product.</span></div>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <Input aria-label="Product name" value={draft.name} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, name: event.target.value } }))} />
+                      <Select aria-label="Product category" value={draft.category} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, category: event.target.value as InventoryCategory } }))} options={inventoryCategories} />
+                      <Input aria-label="Price" type="number" min={0} value={draft.price} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, price: Number(event.target.value) } }))} />
+                      <Input aria-label="Available units" type="number" min={0} value={draft.availableUnits} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, availableUnits: Number(event.target.value) } }))} />
+                      <Input aria-label="Age" value={draft.age ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, age: event.target.value } }))} />
+                      <Input aria-label="Item weight" value={draft.weight ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, weight: event.target.value } }))} />
+                      <Input aria-label="Courier weight in kilograms" type="number" min={0} step="0.01" value={draft.shippingWeightKg ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) } }))} />
+                      <Select aria-label="Stock status" value={draft.stockStatus} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, stockStatus: event.target.value as InventoryItem["stockStatus"] } }))} options={stockStatuses} />
+                      <Input aria-label="Price before slash" type="number" min={0} value={draft.originalPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, originalPrice: event.target.value ? Number(event.target.value) : undefined } }))} />
+                      <Input aria-label="Promo price" type="number" min={0} value={draft.promoPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoPrice: event.target.value ? Number(event.target.value) : undefined } }))} />
+                      <Input aria-label="Promo end date" type="date" value={draft.promoEndsAt ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoEndsAt: event.target.value } }))} />
+                      <Input aria-label="Promo label" value={draft.promoLabel ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoLabel: event.target.value } }))} />
+                    </div>
+                    <Textarea className="mt-3" aria-label="Product description" value={draft.description} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, description: event.target.value } }))} />
+                    <Input className="mt-3" aria-label="Product image URL" value={draft.imageUrl ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, imageUrl: event.target.value } }))} />
+                    <div className="mt-3 flex justify-end"><Button disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void saveInventory(draft).then(() => setSelectedInventoryProductId(null))}>Save product</Button></div>
+                  </div>}
                 </div>
               );
             })}
           </div>
+          )}
         </CardContent>
-      </Card>
+      </Card>}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <Card>
+        {activeArea === "homes" && <Card>
           <CardHeader>
-            <CardTitle>Dajem Homes Listings & Approvals</CardTitle>
+            <CardTitle>Homes admin</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="flex flex-wrap gap-2 rounded-xl bg-blue-500/10 p-2">
+              <Button size="sm" variant={homesAction === "manage-listings" ? "default" : "ghost"} className={homesAction === "manage-listings" ? "bg-blue-700 text-white hover:bg-blue-800" : "text-blue-800 dark:text-blue-200"} onClick={() => setHomesAction("manage-listings")}>Property listings</Button>
+              <Button size="sm" variant={homesAction === "add-listing" ? "default" : "ghost"} className={homesAction === "add-listing" ? "bg-blue-700 text-white hover:bg-blue-800" : "text-blue-800 dark:text-blue-200"} onClick={() => setHomesAction("add-listing")}>Add listing</Button>
+              <Button size="sm" variant={homesAction === "bids" ? "default" : "ghost"} className={homesAction === "bids" ? "bg-blue-700 text-white hover:bg-blue-800" : "text-blue-800 dark:text-blue-200"} onClick={() => setHomesAction("bids")}>Bids</Button>
+            </div>
+            {homesAction === "add-listing" && (
             <form
               className="space-y-4 rounded-2xl border bg-muted/20 p-4"
               onSubmit={(event) => {
@@ -721,7 +801,10 @@ export function AdminView() {
                 Save Property Listing
               </Button>
             </form>
+            )}
 
+            {homesAction === "manage-listings" && (
+              <>
             {snapshot.propertyListings.map((property) => (
               <div key={property.id} className="rounded-xl border p-4">
                 <div className="grid gap-4 md:grid-cols-[120px_1fr]">
@@ -775,14 +858,22 @@ export function AdminView() {
                 </div>
               </div>
             ))}
+              </>
+            )}
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {activeArea === "orbital" && <Card>
           <CardHeader>
-            <CardTitle>Dajem Orbital Services & Requests</CardTitle>
+            <CardTitle>Orbital admin</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="flex flex-wrap gap-2 rounded-xl bg-cyan-500/10 p-2">
+              <Button size="sm" variant={orbitalAction === "inquiries" ? "default" : "ghost"} className={orbitalAction === "inquiries" ? "bg-cyan-700 text-white hover:bg-cyan-800" : "text-cyan-800 dark:text-cyan-200"} onClick={() => setOrbitalAction("inquiries")}>Inquiry desk</Button>
+              <Button size="sm" variant={orbitalAction === "services" ? "default" : "ghost"} className={orbitalAction === "services" ? "bg-cyan-700 text-white hover:bg-cyan-800" : "text-cyan-800 dark:text-cyan-200"} onClick={() => setOrbitalAction("services")}>Survey services</Button>
+            </div>
+            {orbitalAction === "services" && (
+              <>
             <form
               className="space-y-4 rounded-2xl border bg-muted/20 p-4"
               onSubmit={(event) => {
@@ -860,12 +951,14 @@ export function AdminView() {
                 </Button>
               </div>
             ))}
+              </>
+            )}
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card>
+        {activeArea === "overview" && <Card>
           <CardHeader>
             <CardTitle>Registered Users</CardTitle>
           </CardHeader>
@@ -883,9 +976,9 @@ export function AdminView() {
               </div>
             ))}
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {activeArea === "homes" && homesAction === "bids" && <Card>
           <CardHeader>
             <CardTitle>Property Bids</CardTitle>
           </CardHeader>
@@ -916,10 +1009,10 @@ export function AdminView() {
               ))
             )}
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
-      <Card>
+      {activeArea === "orbital" && orbitalAction === "inquiries" && <Card>
         <CardHeader>
           <CardTitle>Survey Request Tracker</CardTitle>
         </CardHeader>
@@ -1037,7 +1130,7 @@ export function AdminView() {
             ))
           )}
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }
