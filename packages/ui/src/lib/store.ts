@@ -85,6 +85,23 @@ export interface Order {
   app: PaymentApp;
   purpose: PaymentPurpose;
   propertyListingId?: string;
+  delivery?: CheckoutDelivery;
+}
+
+export interface CheckoutDelivery {
+  provider: string;
+  serviceName: string;
+  fee: number;
+  currency: "NGN";
+  rateSource: "dajem-estimate" | "dhl-live";
+  estimatedDelivery: string;
+  recipientName: string;
+  phone: string;
+  email?: string;
+  address: string;
+  state: string;
+  localGovernment: string;
+  postalCode?: string;
 }
 
 export interface PropertyListing {
@@ -229,6 +246,7 @@ export interface PaymentIntent {
   purpose: PaymentPurpose;
   invoiceNumber: string;
   propertyListingId?: string;
+  delivery?: CheckoutDelivery;
   status: "pending" | "paid" | "failed";
   checkoutUrl?: string;
   transactionId?: string;

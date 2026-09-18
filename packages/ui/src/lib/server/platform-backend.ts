@@ -414,7 +414,8 @@ export function getIntegrationStatus(): IntegrationStatus {
     backend,
     supabaseConfigured,
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY),
-    opayMockAvailable: process.env.OPAY_MOCK_ENABLED !== "false",
+    opayMockAvailable: process.env.OPAY_MOCK_ENABLED !== "false"
+      && (process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true"),
     hostingConfigured: Boolean(process.env.NEXT_PUBLIC_DAJEM_SITE_URL || process.env.URL || process.env.HOSTINGER || process.env.NETLIFY),
   };
 }

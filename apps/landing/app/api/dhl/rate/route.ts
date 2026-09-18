@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 type DeliveryZone = "enugu" | "southeast" | "other";
 
 const fallbackRates: Record<DeliveryZone, { amount: number; estimatedDelivery: string }> = {
-  enugu: { amount: 10000, estimatedDelivery: "1-2 business days after dispatch" },
+  enugu: { amount: 5000, estimatedDelivery: "Same day or next business day" },
   southeast: { amount: 15000, estimatedDelivery: "2-3 business days after dispatch" },
   other: { amount: 20000, estimatedDelivery: "3-5 business days after dispatch" },
 };
@@ -143,6 +143,10 @@ export async function POST(request: NextRequest) {
     }
     if (!destination.city || !destination.state || destination.countryCode !== "NG") {
       return NextResponse.json({ error: "Enter a valid Nigerian destination city and state." }, { status: 400 });
+    }
+
+    if (destination.state.toLowerCase() === "enugu") {
+      return NextResponse.json(buildFallbackRate("enugu", "Flat Enugu delivery charge."));
     }
 
     try {

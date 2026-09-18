@@ -19,6 +19,7 @@ import type {
   SurveyDeliveryStatus,
   SurveyStatus,
 } from "../lib/store";
+import type { CheckoutDeliveryInput } from "../lib/dhl-delivery";
 import { emptySnapshot } from "../lib/store";
 
 type AuthMode = "login" | "signup";
@@ -170,7 +171,7 @@ interface DajemContextValue {
     promoLabel?: string;
   }) => Promise<void>;
   updatePropertyListingAgentPayment: (propertyId: string, status: NonNullable<PropertyListing["agentListingPaymentStatus"]>, paymentProofPath?: string) => Promise<void>;
-  startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
+  startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   verifyFlutterwaveCheckout: (params: { txRef: string; transactionId?: string }) => Promise<{ order?: Order }>;
 }
@@ -323,9 +324,11 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     localGovernment: string;
     password: string;
   }) => {
-    const result = await postAction("register", payload);
-    setAuthPreview(result.preview ?? null);
-  }, [postAction]);
+    await postAction("register", payload);
+    setAuthModalOpen(false);
+    setAuthPreview(null);
+    navigateToDashboard();
+  }, [navigateToDashboard, postAction]);
 
   const login = React.useCallback(async (payload: { email: string; password: string }) => {
     await postAction("login", payload);
@@ -349,7 +352,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
 
   const startPaymentCheckout = React.useCallback(async (
     provider: PaymentProvider,
-    options: { purpose?: PaymentPurpose; propertyListingId?: string } = {},
+    options: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput } = {},
   ) => {
     setBusyAction(`${provider}-checkout`);
     try {

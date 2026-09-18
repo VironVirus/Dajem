@@ -12,6 +12,7 @@
     "./lib/flutterwave-verify-route": "./src/lib/flutterwave-verify-route.ts",
     "./lib/flutterwave-webhook-route": "./src/lib/flutterwave-webhook-route.ts",
     "./lib/opay-checkout-route": "./src/lib/opay-checkout-route.ts",
+    "./lib/nigeria-locations": "./src/lib/nigeria-locations.ts",
     "./lib/image-upload-route": "./src/lib/image-upload-route.ts",
     "./lib/survey-document-upload-route": "./src/lib/survey-document-upload-route.ts",
     "./lib/*": "./src/lib/*",
@@ -25,6 +26,7 @@
     "lucide-react": "^0.470.0",
     "next": "16.3.5",
     "next-themes": "^0.4.4",
+    "nigeria-state-lga-data": "^1.1.5",
     "sharp": "0.35.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"

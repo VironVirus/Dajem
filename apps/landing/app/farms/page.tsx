@@ -25,6 +25,7 @@ import {
   dajemCompanyProfiles,
   useDajem,
 } from "@repo/ui";
+import { localGovernmentsForState, nigeriaStates } from "@repo/ui/lib/nigeria-locations";
 import {
   CheckCircle2,
   CreditCard,
@@ -130,6 +131,18 @@ export default function PoultryPage() {
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [invoiceOpen, setInvoiceOpen] = React.useState(false);
   const [invoiceReference, setInvoiceReference] = React.useState("");
+  const [deliveryRequested, setDeliveryRequested] = React.useState(false);
+  const [deliveryQuote, setDeliveryQuote] = React.useState<{ provider: string; serviceName: string; amount: number; estimatedDelivery: string; note: string } | null>(null);
+  const [deliveryError, setDeliveryError] = React.useState<string | null>(null);
+  const [isCalculatingDelivery, setIsCalculatingDelivery] = React.useState(false);
+  const [deliveryDetails, setDeliveryDetails] = React.useState({
+    recipientName: "",
+    phone: "",
+    address: "",
+    state: "",
+    localGovernment: "",
+    postalCode: "",
+  });
   const [chickenType, setChickenType] = React.useState<ChickenType>("live");
   const [chickenCut, setChickenCut] = React.useState("Whole");
 
@@ -149,6 +162,22 @@ export default function PoultryPage() {
   const chickenCutOptions = chickenType === "processed" ? processedChickenCuts : chickenType === "grilled" ? grilledChickenCuts : [];
   const selectedChickenVariantLabel = getChickenVariantLabel(chickenType, chickenCut);
   const cartTotal = snapshot.cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const selectedLocalGovernments = localGovernmentsForState(deliveryDetails.state);
+  const checkoutTotal = cartTotal + (deliveryQuote?.amount ?? 0);
+
+  const useSavedDeliveryAddress = React.useCallback(() => {
+    if (!currentUser) return;
+    setDeliveryDetails({
+      recipientName: currentUser.name,
+      phone: currentUser.phone,
+      address: currentUser.address ?? "",
+      state: currentUser.state ?? "",
+      localGovernment: currentUser.localGovernment ?? "",
+      postalCode: "",
+    });
+    setDeliveryQuote(null);
+    setDeliveryError(null);
+  }, [currentUser]);
 
   const handleAddToCart = async (productId: string) => {
     if (!requireAuth("signup")) return;
@@ -171,25 +200,63 @@ export default function PoultryPage() {
     if (!requireAuth("login")) return;
     if (snapshot.cart.length === 0) return;
     setCheckoutError(null);
+    if (currentUser) useSavedDeliveryAddress();
     setInvoiceReference("DFYYYYMMDDXXXXXX (issued when payment is created)");
     setInvoiceOpen(true);
   };
 
-  const handleCheckout = async () => {
-    if (!requireAuth("login")) return;
-    setCheckoutError(null);
-    setInvoiceOpen(false);
+  const calculateDelivery = async () => {
+    setDeliveryError(null);
+    setDeliveryQuote(null);
+    setIsCalculatingDelivery(true);
 
     try {
-      const result = await startPaymentCheckout("flutterwave");
+      const response = await fetch("/api/dhl/rate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          destination: {
+            ...deliveryDetails,
+            city: deliveryDetails.localGovernment,
+            countryCode: "NG",
+          },
+          zone: deliveryDetails.state === "Enugu" ? "enugu" : ["Abia", "Anambra", "Ebonyi", "Imo"].includes(deliveryDetails.state) ? "southeast" : "other",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error ?? "Unable to calculate delivery.");
+      setDeliveryQuote(data);
+    } catch (error) {
+      setDeliveryError(error instanceof Error ? error.message : "Unable to calculate delivery.");
+    } finally {
+      setIsCalculatingDelivery(false);
+    }
+  };
+
+  const handleCheckout = async (provider: "flutterwave" | "opay") => {
+    if (!requireAuth("login")) return;
+    if (deliveryRequested && !deliveryQuote) {
+      setCheckoutError("Calculate delivery before proceeding to payment.");
+      return;
+    }
+    setCheckoutError(null);
+
+    try {
+      const result = await startPaymentCheckout(provider, {
+        delivery: deliveryRequested ? deliveryDetails : undefined,
+      });
       if (result.payment?.mode === "redirect" && result.payment.checkoutUrl) {
+        setInvoiceOpen(false);
         window.location.href = result.payment.checkoutUrl;
         return;
       }
 
       if (result.order) {
+        setInvoiceOpen(false);
         setLastOrder(result.order);
         setCartOpen(false);
+        await navigateToUrl("/dashboard#billing");
       }
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Checkout failed.");
@@ -694,6 +761,41 @@ export default function PoultryPage() {
             ))}
           </div>
 
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-foreground">Delivery</p>
+                <p className="mt-1 text-xs text-muted-foreground">Within Enugu is N5,000. Other locations are priced through DHL.</p>
+              </div>
+              <div className="flex rounded-xl border bg-background p-1 text-xs font-bold">
+                <button type="button" onClick={() => { setDeliveryRequested(false); setDeliveryQuote(null); setDeliveryError(null); }} className={`rounded-lg px-3 py-2 ${!deliveryRequested ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>No</button>
+                <button type="button" onClick={() => setDeliveryRequested(true)} className={`rounded-lg px-3 py-2 ${deliveryRequested ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Yes</button>
+              </div>
+            </div>
+
+            {deliveryRequested && (
+              <div className="mt-4 space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">Delivery address</p>
+                  <Button type="button" size="sm" variant="outline" onClick={useSavedDeliveryAddress}>Use my saved address</Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5"><Label htmlFor="delivery-recipient">Recipient name</Label><Input id="delivery-recipient" required value={deliveryDetails.recipientName} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, recipientName: event.target.value })); setDeliveryQuote(null); }} /></div>
+                  <div className="space-y-1.5"><Label htmlFor="delivery-phone">Phone number</Label><Input id="delivery-phone" type="tel" required value={deliveryDetails.phone} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, phone: event.target.value })); setDeliveryQuote(null); }} /></div>
+                </div>
+                <div className="space-y-1.5"><Label htmlFor="delivery-address">Address</Label><Input id="delivery-address" required value={deliveryDetails.address} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, address: event.target.value })); setDeliveryQuote(null); }} /></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Select label="State" value={deliveryDetails.state} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, state: event.target.value, localGovernment: "" })); setDeliveryQuote(null); }} options={[{ value: "", label: "Select state" }, ...nigeriaStates.map((state) => ({ value: state, label: state }))]} />
+                  <Select label="Local government" disabled={!deliveryDetails.state} value={deliveryDetails.localGovernment} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, localGovernment: event.target.value })); setDeliveryQuote(null); }} options={[{ value: "", label: deliveryDetails.state ? "Select local government" : "Choose a state first" }, ...selectedLocalGovernments.map((localGovernment) => ({ value: localGovernment, label: localGovernment }))]} />
+                </div>
+                {deliveryDetails.state && deliveryDetails.state !== "Enugu" && <div className="space-y-1.5"><Label htmlFor="delivery-postal-code">Postal code <span className="font-normal text-muted-foreground">(helps DHL price precisely)</span></Label><Input id="delivery-postal-code" inputMode="numeric" value={deliveryDetails.postalCode} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, postalCode: event.target.value })); setDeliveryQuote(null); }} /></div>}
+                <Button type="button" variant="outline" className="w-full" disabled={isCalculatingDelivery} onClick={() => void calculateDelivery()}><Truck className="h-4 w-4" />{isCalculatingDelivery ? "Calculating delivery..." : "Calculate delivery"}</Button>
+                {deliveryError && <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{deliveryError}</p>}
+                {deliveryQuote && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-bold text-foreground">{deliveryQuote.serviceName}</span><span className="font-black text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.estimatedDelivery}</p><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.note}</p></div>}
+              </div>
+            )}
+          </div>
+
           <div className="rounded-xl border bg-muted/30 p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total Items</span>
@@ -701,8 +803,9 @@ export default function PoultryPage() {
             </div>
             <div className="mt-2 flex items-center justify-between text-lg font-bold text-foreground">
               <span>Amount Due</span>
-              <span>{formatCurrency(cartTotal)}</span>
+              <span>{formatCurrency(checkoutTotal)}</span>
             </div>
+            {deliveryQuote && <div className="mt-2 flex items-center justify-between text-sm"><span className="text-muted-foreground">Delivery</span><span className="font-semibold text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div>}
           </div>
 
           {checkoutError && (
@@ -711,14 +814,15 @@ export default function PoultryPage() {
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Button variant="outline" onClick={printInvoice}>
               Print Invoice
             </Button>
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout()}>
+            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout("flutterwave")}>
               <CreditCard className="h-4 w-4" />
-              Proceed To Payment
+              Pay with Flutterwave
             </Button>
+            {snapshot.integrations.opayMockAvailable && <Button className="bg-slate-950 text-white hover:bg-slate-800" disabled={isBusy} onClick={() => void handleCheckout("opay")}><CreditCard className="h-4 w-4" />Pay with OPay</Button>}
           </div>
         </div>
       </Dialog>

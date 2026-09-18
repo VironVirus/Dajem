@@ -29,6 +29,7 @@ import type {
   SurveyStatus,
   User,
 } from "../store";
+import { normalizeCheckoutDelivery, quoteDhlDelivery, type CheckoutDeliveryInput } from "../dhl-delivery";
 import { getIntegrationStatus, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
 
 function nowIso() {
@@ -285,7 +286,7 @@ export async function registerUser(
     throw new Error("Please use a password with at least 8 characters.");
   }
 
-  const { result, state } = await updatePlatformState((draft) => {
+  const { result, state } = await updatePlatformState(async (draft) => {
     const exists = draft.users.some((user) => normalizeEmail(user.email) === email);
     if (exists) {
       throw new Error("An account already exists for that email.");
@@ -1093,9 +1094,9 @@ export async function upsertSurveyService(
 
 export async function createPaymentIntent(
   sessionEmail: string | null,
-  options: { provider?: PaymentProvider; purpose?: PaymentPurpose; propertyListingId?: string } = {},
+  options: { provider?: PaymentProvider; purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput } = {},
 ) {
-  const { result, state } = await updatePlatformState((draft) => {
+  const { result, state } = await updatePlatformState(async (draft) => {
     const user = requireUser(draft, sessionEmail);
     const provider = options.provider ?? "flutterwave";
     const purpose = options.purpose ?? "farm-order";
@@ -1157,7 +1158,24 @@ export async function createPaymentIntent(
         variantLabel: cartItem.variantLabel,
       });
     });
-    const amount = items.reduce((total, item) => total + item.price * item.quantity, 0);
+    const deliveryInput = options.delivery ? normalizeCheckoutDelivery(options.delivery) : undefined;
+    const deliveryRate = deliveryInput ? await quoteDhlDelivery(deliveryInput) : undefined;
+    const delivery = deliveryInput && deliveryRate ? {
+      provider: deliveryRate.provider,
+      serviceName: deliveryRate.serviceName,
+      fee: deliveryRate.amount,
+      currency: deliveryRate.currency,
+      rateSource: deliveryRate.source,
+      estimatedDelivery: deliveryRate.estimatedDelivery,
+      recipientName: deliveryInput.recipientName,
+      phone: deliveryInput.phone,
+      email: deliveryInput.email,
+      address: deliveryInput.address,
+      state: deliveryInput.state,
+      localGovernment: deliveryInput.localGovernment,
+      postalCode: deliveryInput.postalCode,
+    } : undefined;
+    const amount = items.reduce((total, item) => total + item.price * item.quantity, 0) + (delivery?.fee ?? 0);
     const intent: PaymentIntent = {
       txRef: `DJM-${randomUUID()}`,
       userEmail: user.email,
@@ -1168,6 +1186,7 @@ export async function createPaymentIntent(
       app: "farms",
       purpose,
       invoiceNumber: makeInvoiceNumber(draft, "farms"),
+      delivery,
       status: "pending",
       createdAt: nowIso(),
     };
@@ -1258,6 +1277,7 @@ export async function completePaymentIntent(
       app: intent.app,
       purpose: intent.purpose,
       propertyListingId: intent.propertyListingId,
+      delivery: intent.delivery,
     };
 
     draft.orders.unshift(order);

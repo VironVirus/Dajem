@@ -21,6 +21,7 @@ function CallbackContent() {
   const [orderTotal, setOrderTotal] = React.useState<number | null>(null);
 
   React.useEffect(() => {
+    let redirectTimer: number | undefined;
     const txRef = searchParams.get("tx_ref");
     const transactionId = searchParams.get("transaction_id") ?? undefined;
 
@@ -34,13 +35,19 @@ function CallbackContent() {
       .then((result) => {
         setOrderTotal(result.order?.total ?? null);
         setStatus("success");
-        setMessage("Payment verified and order added to your shared dashboard.");
+        setMessage("Payment verified. Opening your order dashboard...");
+        redirectTimer = window.setTimeout(() => {
+          void navigateToUrl("/dashboard#billing");
+        }, 1500);
       })
       .catch((error) => {
         setStatus("error");
         setMessage(error instanceof Error ? error.message : "Unable to verify the payment.");
       });
-  }, [searchParams, verifyFlutterwaveCheckout]);
+    return () => {
+      if (redirectTimer) window.clearTimeout(redirectTimer);
+    };
+  }, [navigateToUrl, searchParams, verifyFlutterwaveCheckout]);
 
   return (
     <Card className="w-full">

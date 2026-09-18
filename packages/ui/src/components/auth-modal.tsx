@@ -8,6 +8,7 @@ import { Dialog } from "./dialog";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Select } from "./select";
+import { localGovernmentsForState, nigeriaStates } from "../lib/nigeria-locations";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -78,6 +79,7 @@ export function AuthModal({
   const [showSignupPassword, setShowSignupPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const selectedLocalGovernments = localGovernmentsForState(signupForm.state);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -251,27 +253,16 @@ export function AuthModal({
                   onChange={(event) => setSignupForm((current) => ({ ...current, name: event.target.value }))}
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    required
-                    value={signupForm.email}
-                    onChange={(event) => setSignupForm((current) => ({ ...current, email: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-phone">Phone</Label>
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    required
-                    value={signupForm.phone}
-                    onChange={(event) => setSignupForm((current) => ({ ...current, phone: event.target.value }))}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={signupForm.email}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, email: event.target.value }))}
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
                 <Select
@@ -304,25 +295,27 @@ export function AuthModal({
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-state">State</Label>
-                  <Input
-                    id="signup-state"
-                    required
-                    autoComplete="address-level1"
-                    value={signupForm.state}
-                    onChange={(event) => setSignupForm((current) => ({ ...current, state: event.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="signup-local-government">Local government</Label>
-                  <Input
-                    id="signup-local-government"
-                    required
-                    value={signupForm.localGovernment}
-                    onChange={(event) => setSignupForm((current) => ({ ...current, localGovernment: event.target.value }))}
-                  />
-                </div>
+                <Select
+                  label="State"
+                  required
+                  value={signupForm.state}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, state: event.target.value, localGovernment: "" }))}
+                  options={[
+                    { value: "", label: "Select your state" },
+                    ...nigeriaStates.map((state) => ({ value: state, label: state })),
+                  ]}
+                />
+                <Select
+                  label="Local government"
+                  required
+                  disabled={!signupForm.state}
+                  value={signupForm.localGovernment}
+                  onChange={(event) => setSignupForm((current) => ({ ...current, localGovernment: event.target.value }))}
+                  options={[
+                    { value: "", label: signupForm.state ? "Select your local government" : "Choose a state first" },
+                    ...selectedLocalGovernments.map((localGovernment) => ({ value: localGovernment, label: localGovernment })),
+                  ]}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="signup-password">Password</Label>

@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       provider: "flutterwave",
       purpose,
       propertyListingId: body?.propertyListingId,
+      delivery: body?.delivery,
     });
 
     if (!flutterwaveIsConfigured()) {

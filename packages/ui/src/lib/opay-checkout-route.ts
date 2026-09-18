@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       provider: "opay",
       purpose,
       propertyListingId: body?.propertyListingId,
+      delivery: body?.delivery,
     });
     const result = await completePaymentIntent(sessionEmail, {
       txRef: intent.txRef,

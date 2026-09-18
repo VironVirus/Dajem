@@ -5,14 +5,14 @@
 @layer base {
   :root {
     color-scheme: light;
-    --background: 210 32% 98.5%;
-    --foreground: 222 47% 11%;
+    --background: 210 36% 97%;
+    --foreground: 222 52% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 52% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 222 52% 10%;
 
     --primary: 222 65% 12%;
     --primary-foreground: 210 40% 98%;
@@ -20,17 +20,17 @@
     --secondary: 160 84% 34%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 214 30% 95%;
-    --muted-foreground: 215 18% 42%;
+    --muted: 214 32% 93%;
+    --muted-foreground: 215 25% 32%;
 
-    --accent: 212 36% 94%;
-    --accent-foreground: 222 47% 15%;
+    --accent: 212 34% 92%;
+    --accent-foreground: 222 52% 12%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 216 22% 89%;
-    --input: 216 22% 87%;
+    --border: 216 24% 84%;
+    --input: 216 24% 82%;
     --ring: 222 65% 24%;
 
     --radius: 1rem;
