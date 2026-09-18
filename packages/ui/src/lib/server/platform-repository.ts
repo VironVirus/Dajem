@@ -1255,7 +1255,7 @@ export async function completePaymentIntent(
       throw new Error("This payment session belongs to another account.");
     }
 
-    if ((payload.provider === "Flutterwave Mock" || payload.provider === "OPay Mock") && !allowMockPayments()) {
+    if (payload.provider === "Flutterwave Mock" && !allowMockPayments()) {
       throw new Error("Mock payments are disabled in production.");
     }
 

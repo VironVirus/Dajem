@@ -257,11 +257,11 @@ export default function RealEstatePage() {
     setListingForm((current) => ({ ...current, imageUrl: data.imageUrl }));
   };
 
-  const payListingFee = async (provider: "flutterwave" | "opay") => {
+  const payListingFee = async () => {
     if (!pendingListing) return;
     setListingPaymentError(null);
     try {
-      const result = await startPaymentCheckout(provider, {
+      const result = await startPaymentCheckout("flutterwave", {
         purpose: "property-listing-fee",
         propertyListingId: pendingListing.id,
       });
@@ -782,7 +782,7 @@ export default function RealEstatePage() {
           <p className="text-sm text-muted-foreground">Pay the N20,000 DAJEM Homes listing fee to publish your contact details when this property is approved. The property remains pending review.</p>
           <div className="rounded-xl border bg-muted/30 p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Listing fee</p><p className="mt-1 text-2xl font-black text-foreground">{formatCurrency(20000)}</p></div>
           {listingPaymentError && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{listingPaymentError}</p>}
-          <div className="grid gap-3 sm:grid-cols-2"><Button className="bg-blue-600 text-white hover:bg-blue-700" disabled={isBusy} onClick={() => void payListingFee("flutterwave")}>Pay with Flutterwave</Button>{snapshot.integrations.opayMockAvailable && <Button className="bg-slate-950 text-white hover:bg-slate-800" disabled={isBusy} onClick={() => void payListingFee("opay")}>Pay with OPay</Button>}</div>
+          <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" disabled={isBusy} onClick={() => void payListingFee()}>Pay with Flutterwave</Button>
           <div className="border-t pt-4"><p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Already paid externally?</p><Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadListingPaymentProof(file).catch((error) => setListingPaymentError(error instanceof Error ? error.message : "Payment-proof upload failed.")); }} /><Button variant="outline" className="mt-2 w-full" disabled={isBusy || !listingProofPath} onClick={() => void submitListingProof()}>Submit payment proof for review</Button></div>
         </div>
       </Dialog>

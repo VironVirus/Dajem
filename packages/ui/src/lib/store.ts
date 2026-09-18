@@ -11,7 +11,7 @@ export type PropertyCategory = "apartment" | "suite" | "hotel" | "land" | "comme
 export type HomesListingGroup = "land-sale" | "land-lease" | "house-rent" | "house-sale" | "short-let";
 export type ResidenceType = "self-contain" | "one-bedroom" | "two-bedroom" | "three-bedroom" | "single-room" | "bungalow" | "duplex";
 export type AgentListingPaymentStatus = "Not Requested" | "Awaiting Payment" | "Payment Submitted" | "Paid";
-export type PaymentProvider = "flutterwave" | "opay";
+export type PaymentProvider = "flutterwave";
 export type PaymentApp = "farms" | "homes" | "survey";
 export type PaymentPurpose = "farm-order" | "property-listing-fee" | "survey-payment";
 
@@ -81,7 +81,7 @@ export interface Order {
   total: number;
   date: string;
   reference: string;
-  provider: "Flutterwave" | "OPay" | "Flutterwave Mock" | "OPay Mock";
+  provider: "Flutterwave" | "Flutterwave Mock";
   paymentStatus: "Paid" | "Pending" | "Failed";
   status: "Processing" | "Completed";
   invoiceNumber: string;
@@ -274,7 +274,6 @@ export interface IntegrationStatus {
   backend: "filesystem" | "supabase" | "unconfigured";
   supabaseConfigured: boolean;
   flutterwaveConfigured: boolean;
-  opayMockAvailable: boolean;
   hostingConfigured: boolean;
 }
 
@@ -727,7 +726,6 @@ export const emptySnapshot: DashboardSnapshot = {
     backend: "filesystem",
     supabaseConfigured: false,
     flutterwaveConfigured: false,
-    opayMockAvailable: true,
     hostingConfigured: false,
   },
 };

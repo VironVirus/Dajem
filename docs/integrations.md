@@ -59,10 +59,6 @@ Set these environment variables in Hostinger:
 
 The app validates the signed webhook and independently verifies the transaction with Flutterwave before issuing the order and receipt. The browser return page is a customer confirmation page; the webhook lets DAJEM record a verified payment even if the customer closes that page.
 
-## OPay Test Adapter
-
-The current OPay option is a deliberately labelled local mock, not a live OPay integration. It can be enabled only for a private test deployment with `DAJEM_ALLOW_MOCK_PAYMENTS=true` and `OPAY_MOCK_ENABLED=true`; it records a mock payment but collects no money. Keep both values false on the public production site until DAJEM has approved OPay merchant credentials and a verified server-side integration specification.
-
 ## Managed Images
 
 Run `supabase/dajem_media.sql` once in Supabase SQL Editor. Images uploaded through the Homes and admin workflows are limited to 5 MB, verified as JPG/PNG/WebP, converted to WebP, and watermarked with DAJEM before server-side Storage upload.

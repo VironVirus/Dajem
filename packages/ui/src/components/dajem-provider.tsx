@@ -356,7 +356,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
   ) => {
     setBusyAction(`${provider}-checkout`);
     try {
-      const response = await fetch(provider === "opay" ? "/api/opay/checkout" : "/api/flutterwave/checkout", {
+      const response = await fetch("/api/flutterwave/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

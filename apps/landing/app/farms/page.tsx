@@ -237,7 +237,7 @@ export default function PoultryPage() {
     }
   };
 
-  const handleCheckout = async (provider: "flutterwave" | "opay") => {
+  const handleCheckout = async () => {
     if (!requireAuth("login")) return;
     if (deliveryRequested && !deliveryQuote) {
       setCheckoutError("Calculate delivery before proceeding to payment.");
@@ -246,7 +246,7 @@ export default function PoultryPage() {
     setCheckoutError(null);
 
     try {
-      const result = await startPaymentCheckout(provider, {
+      const result = await startPaymentCheckout("flutterwave", {
         delivery: deliveryRequested ? deliveryDetails : undefined,
       });
       if (result.payment?.mode === "redirect" && result.payment.checkoutUrl) {
@@ -826,15 +826,14 @@ export default function PoultryPage() {
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Button variant="outline" onClick={printInvoice}>
               Print Invoice
             </Button>
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout("flutterwave")}>
+            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={isBusy} onClick={() => void handleCheckout()}>
               <CreditCard className="h-4 w-4" />
               Pay with Flutterwave
             </Button>
-            {snapshot.integrations.opayMockAvailable && <Button className="bg-slate-950 text-white hover:bg-slate-800" disabled={isBusy} onClick={() => void handleCheckout("opay")}><CreditCard className="h-4 w-4" />Pay with OPay</Button>}
           </div>
         </div>
       </Dialog>

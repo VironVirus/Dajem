@@ -68,7 +68,6 @@ Optional values to add later only when those features are ready:
 NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY=
 FLUTTERWAVE_SECRET_KEY=
 DAJEM_ALLOW_MOCK_PAYMENTS=false
-OPAY_MOCK_ENABLED=false
 DHL_API_KEY=
 DHL_API_SECRET=
 DHL_ACCOUNT_NUMBER=
@@ -83,7 +82,7 @@ The DHL values are not required for deployment. Until they are added, the survey
 
 Run `supabase/dajem_media.sql` in Supabase SQL Editor once before using image uploads. It creates the public `dajem-media` bucket used by the server to store 5 MB-or-smaller, WebP-converted, DAJEM-watermarked images. Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser code.
 
-For a private test deployment only, set `DAJEM_ALLOW_MOCK_PAYMENTS=true` and `OPAY_MOCK_ENABLED=true`. These switches create paid test records without collecting money; set both back to `false` before making the site public.
+For a private test deployment only, set `DAJEM_ALLOW_MOCK_PAYMENTS=true`. This enables Flutterwave's local mock checkout without collecting money; set it back to `false` before making the site public.
 
 ## 4. Push The Repo To GitHub
 
@@ -206,7 +205,7 @@ Complete these steps after the new code is pushed and the Hostinger deployment h
 8. Save the Hostinger variables, redeploy, then restart the app.
 9. Make a small controlled payment and confirm that a receipt appears in `/dashboard` under **Bills**.
 
-Do not enable `DAJEM_ALLOW_MOCK_PAYMENTS` or `OPAY_MOCK_ENABLED` on the public website. They are reserved for a private test environment and should remain `false` in production.
+Do not enable `DAJEM_ALLOW_MOCK_PAYMENTS` on the public website. It is reserved for a private Flutterwave test environment and should remain `false` in production.
 
 ### Flutterwave Test Mode
 
@@ -217,12 +216,6 @@ Do not enable `DAJEM_ALLOW_MOCK_PAYMENTS` or `OPAY_MOCK_ENABLED` on the public w
 5. Redeploy, sign in as a normal client, add a Farms item to cart, and pay using a Flutterwave test payment method from the Flutterwave test dashboard documentation.
 6. Confirm the transaction redirects to the DAJEM payment status page, then open `/dashboard#billing` and confirm the receipt is present.
 7. Before accepting real money, replace the test keys with live keys, keep the same redirect/webhook URLs, rotate the webhook hash, redeploy, and complete one controlled live transaction.
-
-### OPay
-
-1. Keep OPay disabled on the public website until DAJEM has received approved merchant credentials and a live server-side integration is added.
-2. The current app retains the internal OPay test adapter only for controlled development checks; it is not shown to customers and must not be used to accept real money.
-3. When the live OPay integration is ready, add its credentials only in Hostinger Environment Variables, then complete a controlled payment and receipt test before enabling it for customers.
 
 ### Image Uploads
 
