@@ -80,6 +80,10 @@ Keep the DHL credentials server-side. The checkout rates a 0.5 kg document envel
 
 Live shipment creation, label purchase, and courier pickup remain separate fulfillment steps to enable after DAJEM confirms its DHL account workflow. Until then, the administrator creates the shipment in the DHL business portal and records the issued tracking number in DAJEM.
 
+## DAJEM Farms Delivery
+
+DHL is used only for survey-plan delivery. Farm checkout uses the Farms admin delivery table: **Farms admin** → **Delivery fees**. Add or adjust a fee for each state, set the rest-of-country fee, and enter the support WhatsApp number. Customers in listed states receive that state fee at checkout. Customers in other states receive the rest-of-country fee and see a WhatsApp confirmation button in their paid-order dashboard; its message includes the order ID and payment status.
+
 ## Cloudflare Setup
 
 Cloudflare is optional but recommended in front of Hostinger.

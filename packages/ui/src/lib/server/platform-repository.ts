@@ -22,7 +22,10 @@ import type {
   HomesListingGroup,
   ResidenceType,
   AgentListingPaymentStatus,
+  FarmDeliverySettings,
   ServerUser,
+  SupportTicketCategory,
+  SupportTicketStatus,
   SurveyService,
   SurveyRequest,
   SurveyDeliveryStatus,
@@ -30,7 +33,7 @@ import type {
   User,
 } from "../store";
 import { shippingWeightKg } from "../store";
-import { normalizeCheckoutDelivery, quoteDhlDelivery, type CheckoutDeliveryInput } from "../dhl-delivery";
+import { normalizeFarmDeliveryInput, quoteFarmDelivery, type FarmDeliveryInput } from "../farm-delivery";
 import { getIntegrationStatus, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
 
 function nowIso() {
@@ -100,6 +103,9 @@ function requireAdmin(state: PlatformState, sessionEmail: string | null) {
   }
   return currentUser;
 }
+
+const supportTicketCategories: SupportTicketCategory[] = ["Order & Delivery", "Survey", "Homes", "Account", "General"];
+const supportTicketStatuses: SupportTicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
 function buildRegistrationPreview(user: User): CommunicationPreview {
   return {
@@ -245,6 +251,10 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
     communicationLogs: isAdmin
       ? state.communicationLogs
       : state.communicationLogs.filter((log) => normalizeEmail(log.userEmail) === normalizeEmail(email)),
+    farmDeliverySettings: state.farmDeliverySettings,
+    supportTickets: isAdmin
+      ? state.supportTickets
+      : state.supportTickets.filter((ticket) => normalizeEmail(ticket.userEmail) === normalizeEmail(email)),
     integrations: getIntegrationStatus(),
   };
 }
@@ -252,6 +262,79 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
 export async function getSnapshot(sessionEmail: string | null) {
   const state = await readPlatformState();
   return snapshotFor(state, sessionEmail);
+}
+
+export async function quoteFarmDeliveryForCheckout(sessionEmail: string | null, payload: FarmDeliveryInput) {
+  const state = await readPlatformState();
+  requireUser(state, sessionEmail);
+  return {
+    quote: quoteFarmDelivery(payload, state.farmDeliverySettings),
+    snapshot: snapshotFor(state, sessionEmail),
+  };
+}
+
+export async function updateFarmDeliverySettings(sessionEmail: string | null, payload: FarmDeliverySettings) {
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const restOfCountryFee = Number(payload.restOfCountryFee);
+    if (!Number.isFinite(restOfCountryFee) || restOfCountryFee < 0) {
+      throw new Error("Enter a valid rest-of-country delivery fee.");
+    }
+    const stateRates = Array.isArray(payload.stateRates)
+      ? payload.stateRates.map((rate) => ({ state: String(rate.state ?? "").trim().slice(0, 100), fee: Number(rate.fee) }))
+        .filter((rate) => rate.state && Number.isFinite(rate.fee) && rate.fee >= 0)
+        .slice(0, 37)
+      : [];
+    draft.farmDeliverySettings = {
+      stateRates,
+      restOfCountryFee,
+      whatsappNumber: String(payload.whatsappNumber ?? "").replace(/\D/g, "").slice(0, 15),
+    };
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Farm delivery fees saved." };
+}
+
+export async function createSupportTicket(
+  sessionEmail: string | null,
+  payload: { category: SupportTicketCategory; subject: string; message: string; orderId?: string },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    const user = requireUser(draft, sessionEmail);
+    const subject = String(payload.subject ?? "").trim().slice(0, 140);
+    const message = String(payload.message ?? "").trim().slice(0, 3000);
+    if (!subject || !message) throw new Error("Add a subject and describe how we can help.");
+    if (!supportTicketCategories.includes(payload.category)) throw new Error("Select a valid support category.");
+    const createdAt = nowIso();
+    draft.supportTickets.unshift({
+      id: makeId("SUP"),
+      userEmail: user.email,
+      userName: user.name,
+      category: payload.category,
+      subject,
+      message,
+      orderId: String(payload.orderId ?? "").trim().slice(0, 80) || undefined,
+      status: "Open",
+      createdAt,
+      updatedAt: createdAt,
+    });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Support ticket submitted." };
+}
+
+export async function updateSupportTicket(
+  sessionEmail: string | null,
+  payload: { ticketId: string; status: SupportTicketStatus; adminNote?: string },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    requireAdmin(draft, sessionEmail);
+    const ticket = draft.supportTickets.find((entry) => entry.id === payload.ticketId);
+    if (!ticket) throw new Error("Support ticket not found.");
+    if (!supportTicketStatuses.includes(payload.status)) throw new Error("Select a valid ticket status.");
+    ticket.status = payload.status;
+    ticket.adminNote = String(payload.adminNote ?? "").trim().slice(0, 3000) || undefined;
+    ticket.updatedAt = nowIso();
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Support ticket updated." };
 }
 
 export async function registerUser(
@@ -1103,7 +1186,7 @@ export async function upsertSurveyService(
 
 export async function createPaymentIntent(
   sessionEmail: string | null,
-  options: { provider?: PaymentProvider; purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput } = {},
+  options: { provider?: PaymentProvider; purpose?: PaymentPurpose; propertyListingId?: string; delivery?: FarmDeliveryInput } = {},
 ) {
   const { result, state } = await updatePlatformState(async (draft) => {
     const user = requireUser(draft, sessionEmail);
@@ -1170,9 +1253,9 @@ export async function createPaymentIntent(
     // Rebuild the delivery weight from inventory so the browser cannot alter it.
     const shipmentWeightKg = items.reduce((total, item) => total + (shippingWeightKg(item) * item.quantity), 0);
     const deliveryInput = options.delivery
-      ? normalizeCheckoutDelivery({ ...options.delivery, weightKg: shipmentWeightKg })
+      ? normalizeFarmDeliveryInput({ ...options.delivery, weightKg: shipmentWeightKg })
       : undefined;
-    const deliveryRate = deliveryInput ? await quoteDhlDelivery(deliveryInput) : undefined;
+    const deliveryRate = deliveryInput ? quoteFarmDelivery(deliveryInput, draft.farmDeliverySettings) : undefined;
     const delivery = deliveryInput && deliveryRate ? {
       provider: deliveryRate.provider,
       serviceName: deliveryRate.serviceName,
@@ -1180,6 +1263,7 @@ export async function createPaymentIntent(
       currency: deliveryRate.currency,
       rateSource: deliveryRate.source,
       estimatedDelivery: deliveryRate.estimatedDelivery,
+      requiresWhatsAppConfirmation: deliveryRate.requiresWhatsAppConfirmation,
       recipientName: deliveryInput.recipientName,
       phone: deliveryInput.phone,
       email: deliveryInput.email,

@@ -96,8 +96,9 @@ export interface CheckoutDelivery {
   serviceName: string;
   fee: number;
   currency: "NGN";
-  rateSource: "dajem-estimate" | "dhl-live";
+  rateSource: "dajem-estimate" | "dhl-live" | "farm-state-rate" | "farm-rest-of-country";
   estimatedDelivery: string;
+  requiresWhatsAppConfirmation?: boolean;
   recipientName: string;
   phone: string;
   email?: string;
@@ -252,6 +253,34 @@ export interface CommunicationPreview {
   };
 }
 
+export interface FarmDeliveryRate {
+  state: string;
+  fee: number;
+}
+
+export interface FarmDeliverySettings {
+  stateRates: FarmDeliveryRate[];
+  restOfCountryFee: number;
+  whatsappNumber: string;
+}
+
+export type SupportTicketCategory = "Order & Delivery" | "Survey" | "Homes" | "Account" | "General";
+export type SupportTicketStatus = "Open" | "In Progress" | "Resolved" | "Closed";
+
+export interface SupportTicket {
+  id: string;
+  userEmail: string;
+  userName: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  orderId?: string;
+  status: SupportTicketStatus;
+  adminNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaymentIntent {
   txRef: string;
   userEmail: string;
@@ -288,6 +317,8 @@ export interface DashboardSnapshot {
   propertyListings: PropertyListing[];
   surveyServices: SurveyService[];
   communicationLogs: CommunicationLog[];
+  farmDeliverySettings: FarmDeliverySettings;
+  supportTickets: SupportTicket[];
   integrations: IntegrationStatus;
 }
 
@@ -302,6 +333,8 @@ export interface PlatformState {
   surveyServices: SurveyService[];
   paymentIntents: PaymentIntent[];
   communicationLogs: CommunicationLog[];
+  farmDeliverySettings: FarmDeliverySettings;
+  supportTickets: SupportTicket[];
 }
 
 export interface DajemActionResponse {
@@ -722,6 +755,18 @@ export const emptySnapshot: DashboardSnapshot = {
   propertyListings: seedPropertyListings,
   surveyServices: seedSurveyServices,
   communicationLogs: [],
+  farmDeliverySettings: {
+    stateRates: [
+      { state: "Enugu", fee: 5000 },
+      { state: "Abia", fee: 15000 },
+      { state: "Anambra", fee: 15000 },
+      { state: "Ebonyi", fee: 15000 },
+      { state: "Imo", fee: 15000 },
+    ],
+    restOfCountryFee: 20000,
+    whatsappNumber: "",
+  },
+  supportTickets: [],
   integrations: {
     backend: "filesystem",
     supabaseConfigured: false,

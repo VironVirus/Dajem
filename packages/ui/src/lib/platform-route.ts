@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   addToCart,
   clearCart,
+  createSupportTicket,
   getSnapshot,
   loginUser,
   registerUser,
@@ -12,13 +13,16 @@ import {
   submitSurvey,
   updateBidStatus,
   updateCartItem,
+  updateFarmDeliverySettings,
   updateInventoryItem,
   updatePropertyListingStatus,
   updatePropertyListingAgentPayment,
   updateSurveyDelivery,
   updateSurveyStatus,
+  updateSupportTicket,
   upsertPropertyListing,
   upsertSurveyService,
+  quoteFarmDeliveryForCheckout,
 } from "./server/platform-repository";
 import {
   clearSessionCookie,
@@ -97,6 +101,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await removeCartItem(sessionEmail, payload));
       case "clear-cart":
         return NextResponse.json(await clearCart(sessionEmail));
+      case "quote-farm-delivery":
+        return NextResponse.json(await quoteFarmDeliveryForCheckout(sessionEmail, payload));
+      case "create-support-ticket":
+        return NextResponse.json(await createSupportTicket(sessionEmail, payload));
       case "submit-bid":
         return NextResponse.json(await submitBid(sessionEmail, payload));
       case "submit-property-listing":
@@ -121,6 +129,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await updateSurveyDelivery(sessionEmail, payload));
       case "update-inventory-item":
         return NextResponse.json(await updateInventoryItem(sessionEmail, payload));
+      case "update-farm-delivery-settings":
+        return NextResponse.json(await updateFarmDeliverySettings(sessionEmail, payload));
+      case "update-support-ticket":
+        return NextResponse.json(await updateSupportTicket(sessionEmail, payload));
       default:
         return jsonError(new Error("Unsupported platform action."), 404);
     }

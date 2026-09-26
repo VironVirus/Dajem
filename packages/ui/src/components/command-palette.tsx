@@ -7,6 +7,7 @@ import {
   Calculator,
   Command,
   House,
+  LifeBuoy,
   Map,
   Search,
   ShoppingBasket,
@@ -38,6 +39,7 @@ const commands: CommandItem[] = [
   { label: "Chicken orders", description: "Choose live, processed, grilled, and cut options", href: "/farms/chicken", icon: ShoppingBasket, tone: "bg-emerald-700 text-white" },
   { label: "DAJEM Homes listings", description: "Browse verified homes and hospitality", href: "/properties/listings", icon: House, tone: "bg-blue-700 text-white" },
   { label: "Submit a property", description: "Send a property for verification and approval", href: "/properties/submit", icon: House, tone: "bg-blue-800 text-white" },
+  { label: "Customer support", description: "Open and track a support ticket", href: "/support", icon: LifeBuoy, tone: "bg-violet-700 text-white" },
 ];
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {

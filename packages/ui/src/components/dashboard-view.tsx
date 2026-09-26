@@ -36,6 +36,18 @@ function paymentMethod() {
   return "Flutterwave";
 }
 
+function deliveryConfirmationUrl(order: Order, whatsappNumber: string) {
+  const number = whatsappNumber.replace(/\D/g, "");
+  if (!number) return null;
+  const message = [
+    "Hello DAJEM Farms, I need to confirm my delivery charge.",
+    `Order ID: ${order.id}`,
+    `Invoice: ${order.invoiceNumber}`,
+    `Payment status: ${order.paymentStatus}`,
+  ].join("\n");
+  return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+}
+
 function receiptDocument(order: Order) {
   const items = order.items.map((item) => `<tr><td>${escapeHtml(item.name)}${item.variantLabel ? `<br><small>${escapeHtml(item.variantLabel)}</small>` : ""}</td><td>${item.quantity}</td><td>${formatCurrency(item.price * item.quantity)}</td></tr>`).join("");
   const delivery = order.delivery
@@ -52,12 +64,27 @@ function receiptDownloadHref(order: Order) {
 }
 
 function printReceipt(order: Order) {
-  const popup = window.open("", "_blank", "noopener,noreferrer,width=820,height=760");
-  if (!popup) return;
+  // Keep the newly opened page reachable until the receipt markup has loaded.
+  // Chrome can return an unusable window when `noopener` is passed here.
+  const popup = window.open("", "_blank", "popup,width=820,height=760");
+  if (!popup) {
+    window.alert("Your browser blocked the receipt window. Please allow pop-ups for this site and try again.");
+    return;
+  }
+
+  let didPrint = false;
+  const openPrintDialog = () => {
+    if (didPrint || popup.closed) return;
+    didPrint = true;
+    popup.focus();
+    popup.print();
+  };
+
+  popup.addEventListener("load", openPrintDialog, { once: true });
+  popup.document.open();
   popup.document.write(receiptDocument(order));
   popup.document.close();
-  popup.focus();
-  window.setTimeout(() => popup.print(), 250);
+  window.setTimeout(openPrintDialog, 400);
 }
 
 function isDashboardSection(value: string): value is DashboardSection {
@@ -109,7 +136,10 @@ export function DashboardView() {
 
   const DashboardNav = ({ mobile = false }: { mobile?: boolean }) => <nav aria-label="Account sections" className={cn(mobile ? "grid grid-cols-5 gap-1 rounded-2xl border bg-card/90 p-1.5 shadow-sm lg:hidden" : "space-y-1")}>{dashboardSections.map((section) => <button key={section.id} type="button" onClick={() => selectSection(section.id)} className={cn("flex items-center rounded-xl font-semibold transition", mobile ? "min-h-14 flex-col justify-center gap-1 px-1 text-[10px]" : "w-full gap-3 px-3 py-2.5 text-sm", activeSection === section.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground")} aria-current={activeSection === section.id ? "page" : undefined}><section.icon className="h-4 w-4" /><span>{section.label}</span></button>)}</nav>;
 
-  const BillingCard = ({ order }: { order: Order }) => <article className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{order.invoiceNumber}</p><p className="text-xs text-muted-foreground">{order.date} · {serviceName(order)}</p></div><Badge className="bg-emerald-600 text-white">Paid</Badge></div><p className="mt-4 text-xl font-black text-foreground">{formatCurrency(order.total)}</p><p className="mt-1 text-xs text-muted-foreground">{paymentMethod()}</p>{order.delivery && <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs"><p className="font-bold text-foreground">{order.delivery.serviceName} · {formatCurrency(order.delivery.fee)}</p><p className="mt-1 text-muted-foreground">{order.delivery.localGovernment}, {order.delivery.state} · {order.delivery.estimatedDelivery}</p></div>}<div className="mt-4 grid grid-cols-2 gap-2"><a href={receiptDownloadHref(order)} download={`${order.invoiceNumber}-receipt.html`} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-bold text-foreground hover:bg-accent"><Download className="h-3.5 w-3.5" />Download</a><Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="h-3.5 w-3.5" />Print</Button></div></article>;
+  const BillingCard = ({ order }: { order: Order }) => {
+    const whatsappUrl = order.delivery?.requiresWhatsAppConfirmation ? deliveryConfirmationUrl(order, snapshot.farmDeliverySettings.whatsappNumber) : null;
+    return <article className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{order.invoiceNumber}</p><p className="text-xs text-muted-foreground">{order.date} · {serviceName(order)}</p></div><Badge className="bg-emerald-600 text-white">Paid</Badge></div><p className="mt-4 text-xl font-black text-foreground">{formatCurrency(order.total)}</p><p className="mt-1 text-xs text-muted-foreground">{paymentMethod()}</p>{order.delivery && <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs"><p className="font-bold text-foreground">{order.delivery.serviceName} · {formatCurrency(order.delivery.fee)}</p><p className="mt-1 text-muted-foreground">{order.delivery.localGovernment}, {order.delivery.state} · {order.delivery.estimatedDelivery}</p>{order.delivery.requiresWhatsAppConfirmation && <div className="mt-3 rounded-lg bg-amber-100 p-2.5 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100"><p className="font-bold">Delivery confirmation required</p><p className="mt-1">Order ID: {order.id} · Payment status: {order.paymentStatus}</p>{whatsappUrl ? <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex font-bold text-primary hover:underline">Confirm on WhatsApp</a> : <p className="mt-2 font-semibold">The support WhatsApp number is being configured. Please open a support ticket.</p>}</div>}</div>}<div className="mt-4 grid grid-cols-2 gap-2"><a href={receiptDownloadHref(order)} download={`${order.invoiceNumber}-receipt.html`} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-bold text-foreground hover:bg-accent"><Download className="h-3.5 w-3.5" />Download</a><Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="h-3.5 w-3.5" />Print</Button></div></article>;
+  };
 
   return <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
     <aside className="hidden lg:block"><div className="sticky top-24 rounded-[1.5rem] border bg-card/85 p-3 shadow-sm backdrop-blur-xl"><div className="mb-3 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-800 p-4 text-white"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-sm font-black ring-1 ring-white/15">{currentUser.name.slice(0, 2).toUpperCase()}</div><p className="mt-3 truncate text-sm font-bold">{currentUser.name}</p><p className="truncate text-xs text-slate-300">My DAJEM account</p></div><DashboardNav /></div></aside>

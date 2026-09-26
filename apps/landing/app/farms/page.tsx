@@ -119,6 +119,7 @@ export default function PoultryPage() {
     isBusy,
     navigateToUrl,
     openAuthModal,
+    quoteFarmDelivery,
     removeCartItem,
     requireAuth,
     startPaymentCheckout,
@@ -133,7 +134,7 @@ export default function PoultryPage() {
   const [invoiceOpen, setInvoiceOpen] = React.useState(false);
   const [invoiceReference, setInvoiceReference] = React.useState("");
   const [deliveryRequested, setDeliveryRequested] = React.useState(false);
-  const [deliveryQuote, setDeliveryQuote] = React.useState<{ provider: string; serviceName: string; amount: number; estimatedDelivery: string; note: string } | null>(null);
+  const [deliveryQuote, setDeliveryQuote] = React.useState<{ provider: string; serviceName: string; amount: number; estimatedDelivery: string; note: string; requiresWhatsAppConfirmation: boolean } | null>(null);
   const [deliveryError, setDeliveryError] = React.useState<string | null>(null);
   const [isCalculatingDelivery, setIsCalculatingDelivery] = React.useState(false);
   const [deliveryDetails, setDeliveryDetails] = React.useState({
@@ -213,23 +214,8 @@ export default function PoultryPage() {
     setIsCalculatingDelivery(true);
 
     try {
-      const response = await fetch("/api/dhl/rate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          destination: {
-            ...deliveryDetails,
-            city: deliveryDetails.localGovernment,
-            countryCode: "NG",
-            weightKg: cartWeightKg,
-          },
-          zone: deliveryDetails.state === "Enugu" ? "enugu" : ["Abia", "Anambra", "Ebonyi", "Imo"].includes(deliveryDetails.state) ? "southeast" : "other",
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error ?? "Unable to calculate delivery.");
-      setDeliveryQuote(data);
+      const quote = await quoteFarmDelivery(deliveryDetails);
+      setDeliveryQuote(quote);
     } catch (error) {
       setDeliveryError(error instanceof Error ? error.message : "Unable to calculate delivery.");
     } finally {
@@ -773,7 +759,7 @@ export default function PoultryPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-bold text-foreground">Delivery</p>
-                <p className="mt-1 text-xs text-muted-foreground">{cartWeightKg.toFixed(2)} kg shipment. Within Enugu is N5,000; other locations are priced through DHL.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cartWeightKg.toFixed(2)} kg shipment. DAJEM Farms delivery is priced by state; DHL is reserved for survey plan dispatch.</p>
               </div>
               <div className="flex rounded-xl border bg-background p-1 text-xs font-bold">
                 <button type="button" onClick={() => { setDeliveryRequested(false); setDeliveryQuote(null); setDeliveryError(null); }} className={`rounded-lg px-3 py-2 ${!deliveryRequested ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>No</button>
@@ -796,10 +782,10 @@ export default function PoultryPage() {
                   <Select label="State" value={deliveryDetails.state} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, state: event.target.value, localGovernment: "" })); setDeliveryQuote(null); }} options={[{ value: "", label: "Select state" }, ...nigeriaStates.map((state) => ({ value: state, label: state }))]} />
                   <Select label="Local government" disabled={!deliveryDetails.state} value={deliveryDetails.localGovernment} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, localGovernment: event.target.value })); setDeliveryQuote(null); }} options={[{ value: "", label: deliveryDetails.state ? "Select local government" : "Choose a state first" }, ...selectedLocalGovernments.map((localGovernment) => ({ value: localGovernment, label: localGovernment }))]} />
                 </div>
-                {deliveryDetails.state && deliveryDetails.state !== "Enugu" && <div className="space-y-1.5"><Label htmlFor="delivery-postal-code">Postal code <span className="font-normal text-muted-foreground">(helps DHL price precisely)</span></Label><Input id="delivery-postal-code" inputMode="numeric" value={deliveryDetails.postalCode} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, postalCode: event.target.value })); setDeliveryQuote(null); }} /></div>}
+                {deliveryDetails.state && deliveryDetails.state !== "Enugu" && <div className="space-y-1.5"><Label htmlFor="delivery-postal-code">Postal code <span className="font-normal text-muted-foreground">(optional)</span></Label><Input id="delivery-postal-code" inputMode="numeric" value={deliveryDetails.postalCode} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, postalCode: event.target.value })); setDeliveryQuote(null); }} /></div>}
                 <Button type="button" variant="outline" className="w-full" disabled={isCalculatingDelivery} onClick={() => void calculateDelivery()}><Truck className="h-4 w-4" />{isCalculatingDelivery ? "Calculating delivery..." : "Calculate delivery"}</Button>
                 {deliveryError && <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{deliveryError}</p>}
-                {deliveryQuote && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-bold text-foreground">{deliveryQuote.serviceName}</span><span className="font-black text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.estimatedDelivery}</p><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.note}</p></div>}
+                {deliveryQuote && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-bold text-foreground">{deliveryQuote.serviceName}</span><span className="font-black text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.estimatedDelivery}</p><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.note}</p>{deliveryQuote.requiresWhatsAppConfirmation && <p className="mt-2 rounded-lg bg-amber-100 px-2 py-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">After payment, confirm your order through the WhatsApp button in your dashboard so the team can confirm any delivery adjustment.</p>}</div>}
               </div>
             )}
           </div>

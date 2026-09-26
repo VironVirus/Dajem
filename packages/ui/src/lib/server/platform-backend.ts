@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import type {
   IntegrationStatus,
   InventoryItem,
+  FarmDeliverySettings,
   PlatformState,
   PropertyListing,
   ServerUser,
@@ -84,6 +85,39 @@ function createAdminUser(): ServerUser | null {
   };
 }
 
+function defaultFarmDeliverySettings(): FarmDeliverySettings {
+  const supportNumber = (process.env.DAJEM_SUPPORT_WHATSAPP ?? getConfiguredAdminSeed()?.phone ?? "").replace(/\D/g, "");
+  return {
+    stateRates: [
+      { state: "Enugu", fee: 5000 },
+      { state: "Abia", fee: 15000 },
+      { state: "Anambra", fee: 15000 },
+      { state: "Ebonyi", fee: 15000 },
+      { state: "Imo", fee: 15000 },
+    ],
+    restOfCountryFee: 20000,
+    whatsappNumber: supportNumber,
+  };
+}
+
+function normalizeFarmDeliverySettings(value: unknown): FarmDeliverySettings {
+  const defaults = defaultFarmDeliverySettings();
+  if (!value || typeof value !== "object") return defaults;
+  const candidate = value as Partial<FarmDeliverySettings>;
+  const stateRates = Array.isArray(candidate.stateRates)
+    ? candidate.stateRates
+      .map((rate) => ({ state: String(rate?.state ?? "").trim().slice(0, 100), fee: Number(rate?.fee) }))
+      .filter((rate) => rate.state && Number.isFinite(rate.fee) && rate.fee >= 0)
+      .slice(0, 37)
+    : defaults.stateRates;
+  const restOfCountryFee = Number(candidate.restOfCountryFee);
+  return {
+    stateRates: stateRates.length > 0 ? stateRates : defaults.stateRates,
+    restOfCountryFee: Number.isFinite(restOfCountryFee) && restOfCountryFee >= 0 ? restOfCountryFee : defaults.restOfCountryFee,
+    whatsappNumber: String(candidate.whatsappNumber ?? defaults.whatsappNumber).replace(/\D/g, "").slice(0, 15),
+  };
+}
+
 function createDefaultState(): PlatformState {
   const admin = createAdminUser();
 
@@ -98,6 +132,8 @@ function createDefaultState(): PlatformState {
     surveyServices: seedSurveyServices,
     paymentIntents: [],
     communicationLogs: [],
+    farmDeliverySettings: defaultFarmDeliverySettings(),
+    supportTickets: [],
   };
 }
 
@@ -187,6 +223,8 @@ function sanitizeState(raw: unknown): PlatformState {
     surveyServices: normalizeSurveyServices(Array.isArray(candidate.surveyServices) ? candidate.surveyServices : []),
     paymentIntents: Array.isArray(candidate.paymentIntents) ? candidate.paymentIntents : [],
     communicationLogs: Array.isArray(candidate.communicationLogs) ? candidate.communicationLogs : [],
+    farmDeliverySettings: normalizeFarmDeliverySettings(candidate.farmDeliverySettings),
+    supportTickets: Array.isArray(candidate.supportTickets) ? candidate.supportTickets : [],
   };
 }
 

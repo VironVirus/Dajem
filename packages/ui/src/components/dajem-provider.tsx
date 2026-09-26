@@ -18,8 +18,11 @@ import type {
   PropertyType,
   SurveyDeliveryStatus,
   SurveyStatus,
+  FarmDeliverySettings,
+  SupportTicketCategory,
+  SupportTicketStatus,
 } from "../lib/store";
-import type { CheckoutDeliveryInput } from "../lib/dhl-delivery";
+import type { FarmDeliveryInput, FarmDeliveryQuote } from "../lib/farm-delivery";
 import { emptySnapshot } from "../lib/store";
 
 type AuthMode = "login" | "signup";
@@ -54,6 +57,9 @@ interface DajemContextValue {
   updateCartItem: (productId: string, quantity: number, variant?: { variantKey?: string }) => Promise<void>;
   removeCartItem: (productId: string, variant?: { variantKey?: string }) => Promise<void>;
   clearCart: () => Promise<void>;
+  quoteFarmDelivery: (payload: FarmDeliveryInput) => Promise<FarmDeliveryQuote>;
+  createSupportTicket: (payload: { category: SupportTicketCategory; subject: string; message: string; orderId?: string }) => Promise<void>;
+  updateSupportTicket: (payload: { ticketId: string; status: SupportTicketStatus; adminNote?: string }) => Promise<void>;
   submitBid: (payload: {
     propertyId: string;
     propertyTitle: string;
@@ -171,8 +177,9 @@ interface DajemContextValue {
     promoEndsAt?: string;
     promoLabel?: string;
   }) => Promise<void>;
+  updateFarmDeliverySettings: (payload: FarmDeliverySettings) => Promise<void>;
   updatePropertyListingAgentPayment: (propertyId: string, status: NonNullable<PropertyListing["agentListingPaymentStatus"]>, paymentProofPath?: string) => Promise<void>;
-  startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
+  startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: FarmDeliveryInput }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   verifyFlutterwaveCheckout: (params: { txRef: string; transactionId?: string }) => Promise<{ order?: Order }>;
 }
@@ -353,7 +360,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
 
   const startPaymentCheckout = React.useCallback(async (
     provider: PaymentProvider,
-    options: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: CheckoutDeliveryInput } = {},
+    options: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: FarmDeliveryInput } = {},
   ) => {
     setBusyAction(`${provider}-checkout`);
     try {
@@ -439,6 +446,16 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     clearCart: async () => {
       await postAction("clear-cart");
     },
+    quoteFarmDelivery: async (payload) => {
+      const result = await postAction("quote-farm-delivery", payload) as unknown as { quote: FarmDeliveryQuote };
+      return result.quote as FarmDeliveryQuote;
+    },
+    createSupportTicket: async (payload) => {
+      await postAction("create-support-ticket", payload);
+    },
+    updateSupportTicket: async (payload) => {
+      await postAction("update-support-ticket", payload);
+    },
     submitBid: async (payload) => {
       await postAction("submit-bid", payload);
     },
@@ -472,6 +489,9 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     },
     updateInventoryItem: async (payload) => {
       await postAction("update-inventory-item", payload);
+    },
+    updateFarmDeliverySettings: async (payload) => {
+      await postAction("update-farm-delivery-settings", payload);
     },
     updatePropertyListingAgentPayment: async (propertyId, status, paymentProofPath) => {
       await postAction("update-property-listing-agent-payment", { propertyId, status, paymentProofPath });

@@ -4,7 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell, Boxes, CalendarDays, ChevronDown, Command, Egg, Grid2X2, House, Landmark,
-  LayoutDashboard, LogOut, Mail, Map, Search, ShieldCheck, ShoppingCart, UserCircle2,
+  Headphones, LayoutDashboard, LogOut, Map, Search, ShieldCheck, ShoppingCart, UserCircle2,
 } from "lucide-react";
 import { Button } from "./button";
 import { CommandPalette } from "./command-palette";
@@ -72,9 +72,9 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   const apps = getCompanyLinks(activeApp, currentOrigin).map((company) => ({ ...company, ...appVisuals[company.id] }));
   const currentApp = apps.find((app) => app.id === activeApp) ?? apps[0];
   const dashboardHref = currentOrigin ? new URL("/dashboard", currentOrigin).toString() : "/dashboard";
-  const contactHref = currentOrigin ? new URL("/#contact", currentOrigin).toString() : "/#contact";
   const adminHref = currentOrigin ? new URL("/admin", currentOrigin).toString() : "/admin";
   const farmsHref = currentOrigin ? new URL("/farms", currentOrigin).toString() : "/farms";
+  const supportHref = currentOrigin ? new URL("/support", currentOrigin).toString() : "/support";
   const groupHref = apps.find((app) => app.id === "landing")?.url ?? "/";
   const showCartButton = Boolean(activeApp === "poultry" && currentUser && onCartClick);
   const notifications = currentUser ? snapshot.communicationLogs.slice(0, 8) : [];
@@ -206,6 +206,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                 </AnimatePresence>
               </div>
             )}
+            <a href={supportHref} onClick={(event) => handleNavigate(event, supportHref)} aria-label="Open customer support" title="Customer support" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-card text-foreground shadow-sm transition hover:bg-accent"><Headphones className="h-4 w-4" /></a>
             <Button
               variant="outline"
               size="icon"
@@ -256,7 +257,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
           <button type="button" onClick={() => setMobileCompaniesOpen((current) => !current)} className={cn("dajem-dock-item", mobileCompaniesOpen && "is-active")}><Grid2X2 className="h-5 w-5" /><span>Companies</span></button>
           {showCartButton ? <button type="button" onClick={onCartClick} className="dajem-dock-item"><ShoppingCart className="h-5 w-5" /><span>Cart {cartCount ? `(${cartCount})` : ""}</span></button> : <button type="button" onClick={() => void navigateToUrl(dashboardHref)} className="dajem-dock-item"><CalendarDays className="h-5 w-5" /><span>Bookings</span></button>}
           {currentUser ? <a href={dashboardHref} onClick={(event) => handleNavigate(event, dashboardHref)} className="dajem-dock-item"><LayoutDashboard className="h-5 w-5" /><span>Dashboard</span></a> : <button type="button" onClick={() => openAuthModal("login")} className="dajem-dock-item"><LayoutDashboard className="h-5 w-5" /><span>Dashboard</span></button>}
-          <a href={contactHref} onClick={(event) => handleNavigate(event, contactHref)} className="dajem-dock-item"><Mail className="h-5 w-5" /><span>Contact</span></a>
+          <a href={supportHref} onClick={(event) => handleNavigate(event, supportHref)} className="dajem-dock-item"><Headphones className="h-5 w-5" /><span>Support</span></a>
         </div>
       </nav>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

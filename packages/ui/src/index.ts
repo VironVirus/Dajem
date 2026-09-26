@@ -21,5 +21,6 @@ export * from "./components/dajem-provider";
 export * from "./components/auth-modal";
 export * from "./components/dashboard-view";
 export * from "./components/admin-view";
+export * from "./components/support-view";
 export * from "./lib/utils";
 export * from "./lib/store";

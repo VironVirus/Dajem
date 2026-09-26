@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, Building2, ClipboardList, Download, FileText, Home, ImageIcon, Package, ReceiptText, Shield, Sprout, Truck, UploadCloud, Users } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, Download, FileText, Headphones, Home, ImageIcon, Package, Plus, ReceiptText, Shield, Sprout, Trash2, Truck, UploadCloud, Users } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
@@ -10,9 +10,11 @@ import { Label } from "./label";
 import { Select } from "./select";
 import { Textarea } from "./textarea";
 import { useDajem } from "./dajem-provider";
+import { nigeriaStates } from "../lib/nigeria-locations";
 import type {
   AgentListingPaymentStatus,
   ApprovalStatus,
+  FarmDeliverySettings,
   InventoryCategory,
   InventoryItem,
   InventoryStockStatus,
@@ -21,6 +23,7 @@ import type {
   PropertyType,
   SurveyDeliveryStatus,
   SurveyService,
+  SupportTicketStatus,
 } from "../lib/store";
 
 function formatCurrency(amount: number) {
@@ -174,13 +177,15 @@ const surveyDeliveryStatuses: SurveyDeliveryStatus[] = [
   "Cancelled",
 ];
 
+const supportTicketStatuses: SupportTicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
+
 type SurveyDeliveryDraft = {
   status: SurveyDeliveryStatus;
   trackingNumber: string;
 };
 
-type AdminArea = "overview" | "farms" | "orbital" | "homes" | "reports";
-type FarmsAction = "add-product" | "manage-products";
+type AdminArea = "overview" | "farms" | "orbital" | "homes" | "reports" | "support";
+type FarmsAction = "add-product" | "manage-products" | "delivery-fees";
 type HomesAction = "add-listing" | "manage-listings" | "bids";
 type OrbitalAction = "services" | "inquiries";
 type ReportPeriod = "today" | "week" | "month" | "custom";
@@ -242,11 +247,13 @@ export function AdminView() {
     snapshot,
     isBusy,
     updateBidStatus,
+    updateFarmDeliverySettings,
     updateInventoryItem,
     updatePropertyListingStatus,
     updatePropertyListingAgentPayment,
     updateSurveyDelivery,
     updateSurveyStatus,
+    updateSupportTicket,
     upsertPropertyListing,
     upsertSurveyService,
     openAuthModal,
@@ -254,10 +261,14 @@ export function AdminView() {
   const [inventoryDrafts, setInventoryDrafts] = React.useState<Record<string, InventoryItem>>({});
   const [newInventory, setNewInventory] = React.useState<InventoryItem>(blankInventory);
   const [selectedInventoryProductId, setSelectedInventoryProductId] = React.useState<string | null>(null);
+  const [farmDeliveryDraft, setFarmDeliveryDraft] = React.useState<FarmDeliverySettings>(snapshot.farmDeliverySettings);
+  const [ticketNotes, setTicketNotes] = React.useState<Record<string, string>>({});
   const [propertyDraft, setPropertyDraft] = React.useState<PropertyForm>(blankProperty);
   const [serviceDraft, setServiceDraft] = React.useState<SurveyService>(blankService);
+  const [serviceEditorOpen, setServiceEditorOpen] = React.useState(false);
   const [deliveryDrafts, setDeliveryDrafts] = React.useState<Record<string, SurveyDeliveryDraft>>({});
   const [mediaError, setMediaError] = React.useState<string | null>(null);
+  const [adminFeedback, setAdminFeedback] = React.useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [activeArea, setActiveArea] = React.useState<AdminArea>("overview");
   const [farmsAction, setFarmsAction] = React.useState<FarmsAction>("manage-products");
   const [homesAction, setHomesAction] = React.useState<HomesAction>("manage-listings");
@@ -285,6 +296,10 @@ export function AdminView() {
     );
     setDeliveryDrafts(nextDrafts);
   }, [snapshot.surveys]);
+
+  React.useEffect(() => {
+    setFarmDeliveryDraft(snapshot.farmDeliverySettings);
+  }, [snapshot.farmDeliverySettings]);
 
   const saveInventory = async (item: InventoryItem) => {
     await updateInventoryItem({
@@ -331,6 +346,23 @@ export function AdminView() {
   const saveService = async (draft: SurveyService) => {
     await upsertSurveyService(draft);
     setServiceDraft(blankService);
+    setServiceEditorOpen(false);
+  };
+
+  const handleBidStatus = async (bidId: string, status: "Connected" | "Rejected") => {
+    setAdminFeedback(null);
+    try {
+      await updateBidStatus(bidId, status);
+      setAdminFeedback({
+        kind: "success",
+        message: status === "Connected" ? "Client connection marked as complete." : "Bid marked as rejected.",
+      });
+    } catch (error) {
+      setAdminFeedback({
+        kind: "error",
+        message: error instanceof Error ? error.message : "The bid status could not be updated.",
+      });
+    }
   };
 
   if (!currentUser) {
@@ -424,6 +456,7 @@ export function AdminView() {
       </div>
 
       {mediaError && <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">{mediaError}</div>}
+      {adminFeedback && <div className={`rounded-xl border p-4 text-sm ${adminFeedback.kind === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>{adminFeedback.message}</div>}
 
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.map((metric) => (
@@ -443,13 +476,14 @@ export function AdminView() {
 
       <Card className="overflow-hidden">
         <CardContent className="p-3 sm:p-4">
-          <nav aria-label="Admin areas" className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <nav aria-label="Admin areas" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             {[
               { id: "overview" as const, label: "Overview", icon: BarChart3, tone: "bg-slate-900 text-white" },
               { id: "farms" as const, label: "Farms admin", icon: Sprout, tone: "bg-emerald-600 text-white" },
               { id: "orbital" as const, label: "Orbital admin", icon: ClipboardList, tone: "bg-cyan-700 text-white" },
               { id: "homes" as const, label: "Homes admin", icon: Building2, tone: "bg-blue-700 text-white" },
               { id: "reports" as const, label: "Reports", icon: FileText, tone: "bg-amber-500 text-slate-950" },
+              { id: "support" as const, label: "Support", icon: Headphones, tone: "bg-violet-700 text-white" },
             ].map((area) => (
               <button
                 key={area.id}
@@ -501,6 +535,11 @@ export function AdminView() {
         </Card>
       )}
 
+      {activeArea === "support" && <Card>
+        <CardHeader><CardTitle>Customer support tickets</CardTitle><p className="text-sm text-muted-foreground">Review and respond to tickets raised from any DAJEM business.</p></CardHeader>
+        <CardContent className="space-y-3">{snapshot.supportTickets.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No support tickets have been opened yet.</p> : snapshot.supportTickets.map((ticket) => <div key={ticket.id} className="rounded-2xl border p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-foreground">{ticket.subject}</p><Badge variant={ticket.status === "Resolved" || ticket.status === "Closed" ? "default" : ticket.status === "In Progress" ? "secondary" : "outline"}>{ticket.status}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{ticket.userName} · {ticket.userEmail} · {ticket.category} · {new Date(ticket.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</p>{ticket.orderId && <p className="mt-1 text-xs font-bold text-primary">Related order: {ticket.orderId}</p>}</div><Select aria-label={`Ticket status for ${ticket.subject}`} className="w-full sm:w-40" value={ticket.status} onChange={(event) => void updateSupportTicket({ ticketId: ticket.id, status: event.target.value as SupportTicketStatus, adminNote: ticketNotes[ticket.id] ?? ticket.adminNote })} options={supportTicketStatuses.map((status) => ({ value: status, label: status }))} /></div><p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{ticket.message}</p><div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]"><Textarea aria-label={`Support response for ${ticket.subject}`} value={ticketNotes[ticket.id] ?? ticket.adminNote ?? ""} onChange={(event) => setTicketNotes((current) => ({ ...current, [ticket.id]: event.target.value }))} placeholder="Write a response visible to the customer" /><Button disabled={isBusy} className="bg-violet-700 text-white hover:bg-violet-800" onClick={() => void updateSupportTicket({ ticketId: ticket.id, status: ticket.status, adminNote: ticketNotes[ticket.id] ?? ticket.adminNote })}>Save response</Button></div></div>)}</CardContent>
+      </Card>}
+
       {activeArea === "farms" && <Card>
         <CardHeader>
           <CardTitle>Farms admin</CardTitle>
@@ -509,7 +548,14 @@ export function AdminView() {
           <div className="flex flex-wrap gap-2 rounded-xl bg-emerald-500/10 p-2">
             <Button size="sm" variant={farmsAction === "manage-products" ? "default" : "ghost"} className={farmsAction === "manage-products" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("manage-products")}>Product listing</Button>
             <Button size="sm" variant={farmsAction === "add-product" ? "default" : "ghost"} className={farmsAction === "add-product" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("add-product")}>Add product</Button>
+            <Button size="sm" variant={farmsAction === "delivery-fees" ? "default" : "ghost"} className={farmsAction === "delivery-fees" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("delivery-fees")}>Delivery fees</Button>
           </div>
+          {farmsAction === "delivery-fees" && <form className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.035] p-4" onSubmit={(event) => { event.preventDefault(); void updateFarmDeliverySettings(farmDeliveryDraft); }}>
+            <div><p className="font-bold text-foreground">Farm delivery fees</p><p className="mt-1 text-sm text-muted-foreground">A listed state receives its exact fee. All other Nigerian states use the rest-of-country fee and require WhatsApp confirmation after payment.</p></div>
+            <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="farm-rest-fee">Rest of country fee</Label><Input id="farm-rest-fee" type="number" min={0} value={farmDeliveryDraft.restOfCountryFee} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, restOfCountryFee: Number(event.target.value) }))} /></div><div className="space-y-1.5"><Label htmlFor="farm-support-whatsapp">Support WhatsApp number</Label><Input id="farm-support-whatsapp" inputMode="tel" value={farmDeliveryDraft.whatsappNumber} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, whatsappNumber: event.target.value.replace(/\D/g, "") }))} placeholder="234XXXXXXXXXX" /><p className="text-xs text-muted-foreground">Used for paid orders requiring delivery confirmation.</p></div></div>
+            <div className="overflow-hidden rounded-xl border"><div className="grid grid-cols-[minmax(0,1fr)_8rem_2.5rem] gap-2 bg-muted/60 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground"><span>State</span><span>Fee</span><span /></div>{farmDeliveryDraft.stateRates.map((rate, index) => <div key={`${rate.state}-${index}`} className="grid grid-cols-[minmax(0,1fr)_8rem_2.5rem] gap-2 border-t px-3 py-2"><Select aria-label={`Delivery state ${index + 1}`} value={rate.state} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.map((item, itemIndex) => itemIndex === index ? { ...item, state: event.target.value } : item) }))} options={nigeriaStates.map((state) => ({ value: state, label: state }))} /><Input aria-label={`Delivery fee for ${rate.state}`} type="number" min={0} value={rate.fee} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.map((item, itemIndex) => itemIndex === index ? { ...item, fee: Number(event.target.value) } : item) }))} /><Button type="button" size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.filter((_, itemIndex) => itemIndex !== index) }))}><Trash2 className="h-4 w-4" /></Button></div>)}</div>
+            <div className="flex flex-wrap justify-between gap-3"><Button type="button" variant="outline" onClick={() => { const nextState = nigeriaStates.find((state) => !farmDeliveryDraft.stateRates.some((rate) => rate.state === state)); if (nextState) setFarmDeliveryDraft((current) => ({ ...current, stateRates: [...current.stateRates, { state: nextState, fee: 0 }] })); }}><Plus className="h-4 w-4" />Add state fee</Button><Button type="submit" disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">Save delivery fees</Button></div>
+          </form>}
           {farmsAction === "add-product" && (
           <form
             className="grid gap-4 rounded-2xl border bg-muted/20 p-4 md:grid-cols-4"
@@ -665,8 +711,18 @@ export function AdminView() {
           )}
 
           {farmsAction === "manage-products" && (
-          <div className="space-y-3">
-            {snapshot.inventory.map((item) => {
+          <div className="space-y-6">
+            {inventoryCategories.map((category) => {
+              const categoryItems = snapshot.inventory.filter((item) => item.category === category.value);
+              if (categoryItems.length === 0) return null;
+              return (
+              <section key={category.value} className="overflow-hidden rounded-2xl border bg-card/55">
+                <div className="flex items-center justify-between border-b bg-emerald-500/[0.055] px-4 py-3">
+                  <h3 className="font-bold text-foreground">{category.label}</h3>
+                  <Badge variant="secondary">{categoryItems.length} {categoryItems.length === 1 ? "item" : "items"}</Badge>
+                </div>
+                <div className="divide-y divide-border/80">
+            {categoryItems.map((item) => {
               const draft = inventoryDrafts[item.productId] ?? item;
               const isEditing = selectedInventoryProductId === item.productId;
               return (
@@ -685,32 +741,37 @@ export function AdminView() {
                   {isEditing && <div className="border-t bg-emerald-500/[0.035] p-4">
                     <div className="mb-4 flex items-center justify-between gap-3"><p className="text-sm font-extrabold text-foreground">Edit {draft.name}</p><span className="text-xs text-muted-foreground">Changes are saved only when you select Save product.</span></div>
                     <div className="grid gap-3 md:grid-cols-4">
-                      <Input aria-label="Product name" value={draft.name} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, name: event.target.value } }))} />
-                      <Select aria-label="Product category" value={draft.category} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, category: event.target.value as InventoryCategory } }))} options={inventoryCategories} />
-                      <Input aria-label="Price" type="number" min={0} value={draft.price} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, price: Number(event.target.value) } }))} />
-                      <Input aria-label="Available units" type="number" min={0} value={draft.availableUnits} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, availableUnits: Number(event.target.value) } }))} />
-                      <Input aria-label="Age" value={draft.age ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, age: event.target.value } }))} />
-                      <Input aria-label="Item weight" value={draft.weight ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, weight: event.target.value } }))} />
-                      <Input aria-label="Courier weight in kilograms" type="number" min={0} step="0.01" value={draft.shippingWeightKg ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) } }))} />
-                      <Select aria-label="Stock status" value={draft.stockStatus} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, stockStatus: event.target.value as InventoryItem["stockStatus"] } }))} options={stockStatuses} />
-                      <Input aria-label="Price before slash" type="number" min={0} value={draft.originalPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, originalPrice: event.target.value ? Number(event.target.value) : undefined } }))} />
-                      <Input aria-label="Promo price" type="number" min={0} value={draft.promoPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoPrice: event.target.value ? Number(event.target.value) : undefined } }))} />
-                      <Input aria-label="Promo end date" type="date" value={draft.promoEndsAt ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoEndsAt: event.target.value } }))} />
-                      <Input aria-label="Promo label" value={draft.promoLabel ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoLabel: event.target.value } }))} />
+                      <div className="space-y-1.5"><Label>Product name</Label><Input value={draft.name} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, name: event.target.value } }))} /></div>
+                      <Select label="Product category" value={draft.category} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, category: event.target.value as InventoryCategory } }))} options={inventoryCategories} />
+                      <div className="space-y-1.5"><Label>Price (NGN)</Label><Input type="number" min={0} value={draft.price} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, price: Number(event.target.value) } }))} /></div>
+                      <div className="space-y-1.5"><Label>Available units</Label><Input type="number" min={0} value={draft.availableUnits} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, availableUnits: Number(event.target.value) } }))} /></div>
+                      <div className="space-y-1.5"><Label>Age</Label><Input value={draft.age ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, age: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label>Product weight</Label><Input value={draft.weight ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, weight: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label>Courier weight (kg)</Label><Input type="number" min={0} step="0.01" value={draft.shippingWeightKg ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, shippingWeightKg: event.target.value === "" ? undefined : Number(event.target.value) } }))} /></div>
+                      <Select label="Stock status" value={draft.stockStatus} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, stockStatus: event.target.value as InventoryItem["stockStatus"] } }))} options={stockStatuses} />
+                      <div className="space-y-1.5"><Label>Price before slash (NGN)</Label><Input type="number" min={0} value={draft.originalPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, originalPrice: event.target.value ? Number(event.target.value) : undefined } }))} /></div>
+                      <div className="space-y-1.5"><Label>Promo price (NGN)</Label><Input type="number" min={0} value={draft.promoPrice ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoPrice: event.target.value ? Number(event.target.value) : undefined } }))} /></div>
+                      <div className="space-y-1.5"><Label>Promo end date</Label><Input type="date" value={draft.promoEndsAt ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoEndsAt: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label>Promo label</Label><Input value={draft.promoLabel ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, promoLabel: event.target.value } }))} /></div>
                     </div>
-                    <Textarea className="mt-3" aria-label="Product description" value={draft.description} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, description: event.target.value } }))} />
-                    <Input className="mt-3" aria-label="Product image URL" value={draft.imageUrl ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, imageUrl: event.target.value } }))} />
+                    <div className="mt-3 space-y-1.5"><Label>Product description</Label><Textarea value={draft.description} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, description: event.target.value } }))} /></div>
+                    <div className="mt-3 space-y-1.5"><Label>Product image URL</Label><Input value={draft.imageUrl ?? ""} onChange={(event) => setInventoryDrafts((current) => ({ ...current, [item.productId]: { ...draft, imageUrl: event.target.value } }))} /></div>
                     <div className="mt-3 flex justify-end"><Button disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => void saveInventory(draft).then(() => setSelectedInventoryProductId(null))}>Save product</Button></div>
                   </div>}
                 </div>
               );
             })}
+                </div>
+              </section>
+              );
+            })}
+            {snapshot.inventory.length === 0 && <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No farm products have been added yet.</p>}
           </div>
           )}
         </CardContent>
       </Card>}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+      <div className="grid gap-6">
         {activeArea === "homes" && <Card>
           <CardHeader>
             <CardTitle>Homes admin</CardTitle>
@@ -874,6 +935,16 @@ export function AdminView() {
             </div>
             {orbitalAction === "services" && (
               <>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-500/20 bg-cyan-500/[0.045] p-4">
+              <div>
+                <p className="font-bold text-foreground">All survey services</p>
+                <p className="text-sm text-muted-foreground">{snapshot.surveyServices.length} service{snapshot.surveyServices.length === 1 ? "" : "s"} available to manage.</p>
+              </div>
+              <Button size="sm" className="bg-cyan-700 text-white hover:bg-cyan-800" onClick={() => { setServiceDraft(blankService); setServiceEditorOpen(true); }}>
+                <Plus className="h-4 w-4" /> Add service
+              </Button>
+            </div>
+            {serviceEditorOpen && (
             <form
               className="space-y-4 rounded-2xl border bg-muted/20 p-4"
               onSubmit={(event) => {
@@ -928,6 +999,7 @@ export function AdminView() {
                 Save Survey Service
               </Button>
             </form>
+            )}
 
             {snapshot.surveyServices.map((service) => (
               <div key={service.id} className="rounded-xl border p-4">
@@ -945,12 +1017,13 @@ export function AdminView() {
                   className="mt-3"
                   size="sm"
                   variant="outline"
-                  onClick={() => setServiceDraft(service)}
+                  onClick={() => { setServiceDraft(service); setServiceEditorOpen(true); }}
                 >
                   Edit in Form
                 </Button>
               </div>
             ))}
+            {snapshot.surveyServices.length === 0 && <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No survey services have been added yet.</p>}
               </>
             )}
           </CardContent>
@@ -990,17 +1063,17 @@ export function AdminView() {
                 <div key={bid.id} className="rounded-xl border p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="font-semibold text-foreground">{bid.propertyTitle}</p>
+                      <div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-foreground">{bid.propertyTitle}</p><Badge variant={bid.status === "Connected" ? "default" : bid.status === "Rejected" ? "destructive" : "secondary"}>{bid.status}</Badge></div>
                       <p className="text-xs text-muted-foreground">{bid.userName} - {bid.userEmail}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {formatCurrency(bid.bidAmount)} against {formatCurrency(bid.propertyPrice)}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" disabled={isBusy} onClick={() => void updateBidStatus(bid.id, "Connected")}>
-                        Connect
+                      <Button size="sm" variant="secondary" disabled={isBusy || bid.status === "Connected"} onClick={() => void handleBidStatus(bid.id, "Connected")}>
+                        {bid.status === "Connected" ? "Connected" : "Connect"}
                       </Button>
-                      <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void updateBidStatus(bid.id, "Rejected")}>
+                      <Button size="sm" variant="destructive" disabled={isBusy} onClick={() => void handleBidStatus(bid.id, "Rejected")}>
                         Reject
                       </Button>
                     </div>

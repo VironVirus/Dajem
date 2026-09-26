@@ -54,6 +54,7 @@ DAJEM_SESSION_SECRET=replace-with-a-long-random-secret
 DAJEM_ADMIN_EMAIL=group@dajemgroup.com
 DAJEM_ADMIN_PASSWORD=replace-with-a-strong-password
 DAJEM_ADMIN_PHONE=+2347032608449
+DAJEM_SUPPORT_WHATSAPP=2347032608449
 NEXT_PUBLIC_DAJEM_SITE_URL=https://dajem.consolish.com
 NEXT_PUBLIC_DAJEM_REFRESH_INTERVAL_MS=0
 NEXT_PUBLIC_SUPABASE_URL=https://inkttilgzxkqhviejglb.supabase.co
