@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, Building2, ClipboardList, Download, FileText, Headphones, Home, ImageIcon, Package, Plus, ReceiptText, Shield, Sprout, Trash2, Truck, UploadCloud, Users } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, Download, FileText, Headphones, Home, ImageIcon, Package, Plus, ReceiptText, Shield, Sprout, Truck, UploadCloud, Users } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
@@ -10,7 +10,6 @@ import { Label } from "./label";
 import { Select } from "./select";
 import { Textarea } from "./textarea";
 import { useDajem } from "./dajem-provider";
-import { nigeriaStates } from "../lib/nigeria-locations";
 import type {
   AgentListingPaymentStatus,
   ApprovalStatus,
@@ -185,7 +184,7 @@ type SurveyDeliveryDraft = {
 };
 
 type AdminArea = "overview" | "farms" | "orbital" | "homes" | "reports" | "support";
-type FarmsAction = "add-product" | "manage-products" | "delivery-fees";
+type FarmsAction = "add-product" | "manage-products" | "orders" | "delivery-contact";
 type HomesAction = "add-listing" | "manage-listings" | "bids";
 type OrbitalAction = "services" | "inquiries";
 type ReportPeriod = "today" | "week" | "month" | "custom";
@@ -239,6 +238,88 @@ function downloadCsv(filename: string, rows: ActivityRow[]) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function BackupCard() {
+  const [passphrase, setPassphrase] = React.useState("");
+  const [confirmation, setConfirmation] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+  const [restoreFile, setRestoreFile] = React.useState<File | null>(null);
+  const [restorePassphrase, setRestorePassphrase] = React.useState("");
+  const [restoreMessage, setRestoreMessage] = React.useState("");
+
+  async function downloadBackup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (passphrase.length < 16 || passphrase.length > 256 || passphrase !== confirmation) {
+      setMessage("Enter matching passphrases of 16 to 256 characters.");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/backup", {
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passphrase }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Backup download failed. Please try again.");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `dajem-records-${new Date().toISOString().slice(0, 10)}.encrypted.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPassphrase("");
+      setConfirmation("");
+      setMessage("Your encrypted backup has been downloaded. Keep its passphrase and file in separate secure locations.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Backup download failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reviewBackup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!restoreFile) return;
+    setBusy(true);
+    setRestoreMessage("");
+    try {
+      const body = new FormData();
+      body.append("file", restoreFile);
+      body.append("passphrase", restorePassphrase);
+      const response = await fetch("/api/admin/backup-review", { method: "POST", credentials: "same-origin", body });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || "Unable to check backup.");
+      setRestoreMessage(`Backup verified: ${result.createdAt}; ${result.includesUploads ? `${result.fileCount} uploaded files included` : "records only"}. Nothing has been restored.`);
+      setRestorePassphrase("");
+    } catch (error) {
+      setRestoreMessage(error instanceof Error ? error.message : "Unable to check backup.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <Card><CardHeader><CardTitle>Back up business records</CardTitle>
+    <p className="text-sm text-muted-foreground">Download encrypted account and business records, uploaded images, and survey documents. Uploads are limited to 20 MB in total and the encrypted backup to 32 MB; website code and hosting settings require separate backups.</p>
+  </CardHeader><CardContent><form onSubmit={downloadBackup} className="space-y-4">
+    <p className="text-sm text-muted-foreground">Choose a unique passphrase of at least 16 characters. It cannot be recovered if lost. This download is manual; automatic backups are not yet configured.</p>
+    <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="backup-passphrase">Backup passphrase</Label><Input id="backup-passphrase" type="password" autoComplete="new-password" value={passphrase} onChange={(event) => setPassphrase(event.target.value)} minLength={16} maxLength={256} required /></div>
+      <div className="space-y-2"><Label htmlFor="backup-confirmation">Confirm passphrase</Label><Input id="backup-confirmation" type="password" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} minLength={16} maxLength={256} required /></div></div>
+    <Button type="submit" disabled={busy}><Download className="mr-2 h-4 w-4" />{busy ? "Preparing backup..." : "Download encrypted backup"}</Button>
+    {message && <p role="status" className="text-sm text-foreground">{message}</p>}
+  </form><form onSubmit={reviewBackup} className="mt-6 space-y-4 border-t pt-6">
+    <div><h3 className="font-bold text-foreground">Review a backup for recovery</h3><p className="mt-1 text-sm text-muted-foreground">Check an encrypted file and its passphrase before recovery. This does not replace or restore data.</p></div>
+    <div className="space-y-2"><Label htmlFor="restore-file">Encrypted backup file</Label><Input id="restore-file" type="file" accept="application/json,.json" required onChange={(event) => setRestoreFile(event.target.files?.[0] ?? null)} /></div>
+    <div className="space-y-2"><Label htmlFor="restore-passphrase">Backup passphrase</Label><Input id="restore-passphrase" type="password" autoComplete="off" value={restorePassphrase} onChange={(event) => setRestorePassphrase(event.target.value)} required /></div>
+    <Button type="submit" variant="outline" disabled={busy || !restoreFile}>Check backup</Button>
+    {restoreMessage && <p role="status" className="text-sm text-foreground">{restoreMessage}</p>}
+  </form></CardContent></Card>;
 }
 
 export function AdminView() {
@@ -437,6 +518,7 @@ export function AdminView() {
     return date !== null && date >= activityStart && date <= activityEnd;
   }).sort((left, right) => (dateValue(right.date)?.getTime() ?? 0) - (dateValue(left.date)?.getTime() ?? 0));
   const reportValue = activityRows.reduce((total, row) => total + (row.amount ?? 0), 0);
+  const farmOrders = snapshot.orders.filter((order) => order.app === "farms");
 
   return (
     <div className="space-y-8">
@@ -520,6 +602,8 @@ export function AdminView() {
         </div>
       )}
 
+      {activeArea === "overview" && <BackupCard />}
+
       {activeArea === "reports" && (
         <Card>
           <CardHeader><CardTitle>Activity reports</CardTitle><p className="text-sm text-muted-foreground">Generate a clean activity register across Farms, Orbital, and Homes.</p></CardHeader>
@@ -548,14 +632,15 @@ export function AdminView() {
           <div className="flex flex-wrap gap-2 rounded-xl bg-emerald-500/10 p-2">
             <Button size="sm" variant={farmsAction === "manage-products" ? "default" : "ghost"} className={farmsAction === "manage-products" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("manage-products")}>Product listing</Button>
             <Button size="sm" variant={farmsAction === "add-product" ? "default" : "ghost"} className={farmsAction === "add-product" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("add-product")}>Add product</Button>
-            <Button size="sm" variant={farmsAction === "delivery-fees" ? "default" : "ghost"} className={farmsAction === "delivery-fees" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("delivery-fees")}>Delivery fees</Button>
+            <Button size="sm" variant={farmsAction === "orders" ? "default" : "ghost"} className={farmsAction === "orders" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("orders")}>Farm orders</Button>
+            <Button size="sm" variant={farmsAction === "delivery-contact" ? "default" : "ghost"} className={farmsAction === "delivery-contact" ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-emerald-800 dark:text-emerald-200"} onClick={() => setFarmsAction("delivery-contact")}>Delivery contact</Button>
           </div>
-          {farmsAction === "delivery-fees" && <form className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.035] p-4" onSubmit={(event) => { event.preventDefault(); void updateFarmDeliverySettings(farmDeliveryDraft); }}>
-            <div><p className="font-bold text-foreground">Farm delivery fees</p><p className="mt-1 text-sm text-muted-foreground">A listed state receives its exact fee. All other Nigerian states use the rest-of-country fee and require WhatsApp confirmation after payment.</p></div>
-            <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="farm-rest-fee">Rest of country fee</Label><Input id="farm-rest-fee" type="number" min={0} value={farmDeliveryDraft.restOfCountryFee} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, restOfCountryFee: Number(event.target.value) }))} /></div><div className="space-y-1.5"><Label htmlFor="farm-support-whatsapp">Support WhatsApp number</Label><Input id="farm-support-whatsapp" inputMode="tel" value={farmDeliveryDraft.whatsappNumber} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, whatsappNumber: event.target.value.replace(/\D/g, "") }))} placeholder="234XXXXXXXXXX" /><p className="text-xs text-muted-foreground">Used for paid orders requiring delivery confirmation.</p></div></div>
-            <div className="overflow-hidden rounded-xl border"><div className="grid grid-cols-[minmax(0,1fr)_8rem_2.5rem] gap-2 bg-muted/60 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground"><span>State</span><span>Fee</span><span /></div>{farmDeliveryDraft.stateRates.map((rate, index) => <div key={`${rate.state}-${index}`} className="grid grid-cols-[minmax(0,1fr)_8rem_2.5rem] gap-2 border-t px-3 py-2"><Select aria-label={`Delivery state ${index + 1}`} value={rate.state} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.map((item, itemIndex) => itemIndex === index ? { ...item, state: event.target.value } : item) }))} options={nigeriaStates.map((state) => ({ value: state, label: state }))} /><Input aria-label={`Delivery fee for ${rate.state}`} type="number" min={0} value={rate.fee} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.map((item, itemIndex) => itemIndex === index ? { ...item, fee: Number(event.target.value) } : item) }))} /><Button type="button" size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setFarmDeliveryDraft((current) => ({ ...current, stateRates: current.stateRates.filter((_, itemIndex) => itemIndex !== index) }))}><Trash2 className="h-4 w-4" /></Button></div>)}</div>
-            <div className="flex flex-wrap justify-between gap-3"><Button type="button" variant="outline" onClick={() => { const nextState = nigeriaStates.find((state) => !farmDeliveryDraft.stateRates.some((rate) => rate.state === state)); if (nextState) setFarmDeliveryDraft((current) => ({ ...current, stateRates: [...current.stateRates, { state: nextState, fee: 0 }] })); }}><Plus className="h-4 w-4" />Add state fee</Button><Button type="submit" disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">Save delivery fees</Button></div>
+          {farmsAction === "delivery-contact" && <form className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.035] p-4" onSubmit={(event) => { event.preventDefault(); void updateFarmDeliverySettings({ ...farmDeliveryDraft, stateRates: [], restOfCountryFee: 0 }); }}>
+            <div><p className="font-bold text-foreground">Farm delivery policy</p><p className="mt-1 text-sm text-muted-foreground">Delivery is free only within Enugu East, Enugu North, and Enugu South. Every other destination is arranged after payment; no delivery charge is collected at checkout.</p></div>
+            <div className="max-w-md space-y-1.5"><Label htmlFor="farm-support-whatsapp">Delivery WhatsApp number</Label><Input id="farm-support-whatsapp" inputMode="tel" value={farmDeliveryDraft.whatsappNumber} onChange={(event) => setFarmDeliveryDraft((current) => ({ ...current, whatsappNumber: event.target.value.replace(/\D/g, "") }))} placeholder="234XXXXXXXXXX" /><p className="text-xs text-muted-foreground">Customers outside Enugu metropolis are sent here after payment to arrange delivery.</p></div>
+            <Button type="submit" disabled={isBusy} className="bg-emerald-600 text-white hover:bg-emerald-700">Save delivery contact</Button>
           </form>}
+          {farmsAction === "orders" && <div className="space-y-3">{farmOrders.length === 0 ? <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No farm orders have been paid yet.</p> : farmOrders.map((order) => <article key={order.id} className="rounded-2xl border p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-foreground">{order.invoiceNumber}</p><Badge variant={order.status === "Completed" ? "default" : "secondary"}>{order.status}</Badge>{order.delivery?.requiresWhatsAppConfirmation && <Badge variant="outline">Delivery arrangement needed</Badge>}</div><p className="mt-1 text-xs text-muted-foreground">{order.userEmail} · {order.date} · {formatCurrency(order.total)}</p></div><p className="text-xs font-semibold text-muted-foreground">Order ID: {order.id}</p></div><div className="mt-3 grid gap-3 text-sm sm:grid-cols-2"><div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Items</p><p className="mt-1 font-semibold text-foreground">{order.items.map((item) => `${item.quantity} × ${item.name}`).join(", ")}</p></div>{order.delivery ? <div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Delivery</p><p className="mt-1 font-semibold text-foreground">{order.delivery.serviceName}</p><p className="mt-1 text-xs text-muted-foreground">{order.delivery.recipientName} · {order.delivery.phone}<br />{order.delivery.address}, {order.delivery.localGovernment}, {order.delivery.state}</p></div> : <div className="rounded-xl bg-muted/45 p-3"><p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Delivery</p><p className="mt-1 font-semibold text-foreground">Customer pickup</p></div>}</div></article>)}</div>}
           {farmsAction === "add-product" && (
           <form
             className="grid gap-4 rounded-2xl border bg-muted/20 p-4 md:grid-cols-4"

@@ -268,7 +268,7 @@ export async function quoteFarmDeliveryForCheckout(sessionEmail: string | null, 
   const state = await readPlatformState();
   requireUser(state, sessionEmail);
   return {
-    quote: quoteFarmDelivery(payload, state.farmDeliverySettings),
+    quote: quoteFarmDelivery(payload),
     snapshot: snapshotFor(state, sessionEmail),
   };
 }
@@ -276,22 +276,13 @@ export async function quoteFarmDeliveryForCheckout(sessionEmail: string | null, 
 export async function updateFarmDeliverySettings(sessionEmail: string | null, payload: FarmDeliverySettings) {
   const { state } = await updatePlatformState((draft) => {
     requireAdmin(draft, sessionEmail);
-    const restOfCountryFee = Number(payload.restOfCountryFee);
-    if (!Number.isFinite(restOfCountryFee) || restOfCountryFee < 0) {
-      throw new Error("Enter a valid rest-of-country delivery fee.");
-    }
-    const stateRates = Array.isArray(payload.stateRates)
-      ? payload.stateRates.map((rate) => ({ state: String(rate.state ?? "").trim().slice(0, 100), fee: Number(rate.fee) }))
-        .filter((rate) => rate.state && Number.isFinite(rate.fee) && rate.fee >= 0)
-        .slice(0, 37)
-      : [];
     draft.farmDeliverySettings = {
-      stateRates,
-      restOfCountryFee,
+      stateRates: [],
+      restOfCountryFee: 0,
       whatsappNumber: String(payload.whatsappNumber ?? "").replace(/\D/g, "").slice(0, 15),
     };
   });
-  return { snapshot: snapshotFor(state, sessionEmail), message: "Farm delivery fees saved." };
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Farm delivery contact saved." };
 }
 
 export async function createSupportTicket(
@@ -1255,7 +1246,7 @@ export async function createPaymentIntent(
     const deliveryInput = options.delivery
       ? normalizeFarmDeliveryInput({ ...options.delivery, weightKg: shipmentWeightKg })
       : undefined;
-    const deliveryRate = deliveryInput ? quoteFarmDelivery(deliveryInput, draft.farmDeliverySettings) : undefined;
+    const deliveryRate = deliveryInput ? quoteFarmDelivery(deliveryInput) : undefined;
     const delivery = deliveryInput && deliveryRate ? {
       provider: deliveryRate.provider,
       serviceName: deliveryRate.serviceName,

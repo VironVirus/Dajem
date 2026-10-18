@@ -217,7 +217,7 @@ export default function PoultryPage() {
       const quote = await quoteFarmDelivery(deliveryDetails);
       setDeliveryQuote(quote);
     } catch (error) {
-      setDeliveryError(error instanceof Error ? error.message : "Unable to calculate delivery.");
+      setDeliveryError(error instanceof Error ? error.message : "Unable to check delivery availability.");
     } finally {
       setIsCalculatingDelivery(false);
     }
@@ -226,7 +226,7 @@ export default function PoultryPage() {
   const handleCheckout = async () => {
     if (!requireAuth("login")) return;
     if (deliveryRequested && !deliveryQuote) {
-      setCheckoutError("Calculate delivery before proceeding to payment.");
+      setCheckoutError("Check delivery availability before proceeding to payment.");
       return;
     }
     setCheckoutError(null);
@@ -288,16 +288,16 @@ export default function PoultryPage() {
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 md:grid-cols-2 md:gap-12">
             <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
               <Badge variant="secondary" className="border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15">
-                Started {profile.startDate}
+                From our farm to you
               </Badge>
               <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
                 <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
-                  Food, livestock, grills, and farm supplies from one trusted source
+                  Fresh food, raised with care.
                 </span>
               </h1>
               <p className="dajem-hero-lede text-base leading-relaxed">
-                Fresh livestock, poultry, grills, eggs, produce, and farm supplies.
+                Shop poultry, livestock, eggs, grills and farm supplies in one place.
               </p>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4">
@@ -307,7 +307,7 @@ export default function PoultryPage() {
                   onClick={() => router.push("/farms/shop")}
                 >
                   <ShoppingCart className="h-5 w-5 mr-1" />
-                  Shop Farm Catalog
+                  Shop farm products
                 </Button>
                 <Button
                   size="lg"
@@ -315,7 +315,7 @@ export default function PoultryPage() {
                   className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all"
                   onClick={() => cartOpen ? setCartOpen(false) : setCartOpen(true)}
                 >
-                  Shared Cart ({cartCount})
+                  View cart ({cartCount})
                 </Button>
               </div>
             </div>
@@ -614,15 +614,18 @@ export default function PoultryPage() {
 
       <Footer compact />
 
-      <button
-        type="button"
-        className="fixed bottom-[calc(6.75rem+env(safe-area-inset-bottom))] right-4 z-40 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-600 px-4 font-bold text-white shadow-2xl shadow-emerald-900/30 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 lg:bottom-5 lg:right-5"
-        onClick={() => setCartOpen(true)}
-      >
-        <ShoppingCart className="h-5 w-5" />
-        <span className="text-sm">Cart</span>
-        <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs tabular-nums">{cartCount}</span>
-      </button>
+      {cartCount > 0 && (
+        <button
+          type="button"
+          className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom,16px))] right-4 z-40 inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-emerald-300/35 bg-emerald-600 px-4 font-bold text-white shadow-2xl shadow-emerald-950/40 transition hover:-translate-y-0.5 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 lg:bottom-6 lg:right-6 mobile-tap-target"
+          onClick={() => setCartOpen(true)}
+          aria-label={`View cart with ${cartCount} items`}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          <span className="text-xs font-bold">Cart</span>
+          <span className="rounded-full bg-white/25 px-2 py-0.5 text-xs font-black tabular-nums">{cartCount}</span>
+        </button>
+      )}
 
       <Sheet
         isOpen={cartOpen}
@@ -759,7 +762,7 @@ export default function PoultryPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-bold text-foreground">Delivery</p>
-                <p className="mt-1 text-xs text-muted-foreground">{cartWeightKg.toFixed(2)} kg shipment. DAJEM Farms delivery is priced by state; DHL is reserved for survey plan dispatch.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cartWeightKg.toFixed(2)} kg shipment. Delivery is free only within Enugu metropolis. Other destinations are arranged with the Farms team after payment.</p>
               </div>
               <div className="flex rounded-xl border bg-background p-1 text-xs font-bold">
                 <button type="button" onClick={() => { setDeliveryRequested(false); setDeliveryQuote(null); setDeliveryError(null); }} className={`rounded-lg px-3 py-2 ${!deliveryRequested ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>No</button>
@@ -783,9 +786,9 @@ export default function PoultryPage() {
                   <Select label="Local government" disabled={!deliveryDetails.state} value={deliveryDetails.localGovernment} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, localGovernment: event.target.value })); setDeliveryQuote(null); }} options={[{ value: "", label: deliveryDetails.state ? "Select local government" : "Choose a state first" }, ...selectedLocalGovernments.map((localGovernment) => ({ value: localGovernment, label: localGovernment }))]} />
                 </div>
                 {deliveryDetails.state && deliveryDetails.state !== "Enugu" && <div className="space-y-1.5"><Label htmlFor="delivery-postal-code">Postal code <span className="font-normal text-muted-foreground">(optional)</span></Label><Input id="delivery-postal-code" inputMode="numeric" value={deliveryDetails.postalCode} onChange={(event) => { setDeliveryDetails((current) => ({ ...current, postalCode: event.target.value })); setDeliveryQuote(null); }} /></div>}
-                <Button type="button" variant="outline" className="w-full" disabled={isCalculatingDelivery} onClick={() => void calculateDelivery()}><Truck className="h-4 w-4" />{isCalculatingDelivery ? "Calculating delivery..." : "Calculate delivery"}</Button>
+                <Button type="button" variant="outline" className="w-full" disabled={isCalculatingDelivery} onClick={() => void calculateDelivery()}><Truck className="h-4 w-4" />{isCalculatingDelivery ? "Checking delivery..." : "Check delivery availability"}</Button>
                 {deliveryError && <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{deliveryError}</p>}
-                {deliveryQuote && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-bold text-foreground">{deliveryQuote.serviceName}</span><span className="font-black text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.estimatedDelivery}</p><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.note}</p>{deliveryQuote.requiresWhatsAppConfirmation && <p className="mt-2 rounded-lg bg-amber-100 px-2 py-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">After payment, confirm your order through the WhatsApp button in your dashboard so the team can confirm any delivery adjustment.</p>}</div>}
+                {deliveryQuote && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm"><div className="flex items-center justify-between gap-3"><span className="font-bold text-foreground">{deliveryQuote.serviceName}</span><span className="font-black text-foreground">{deliveryQuote.requiresWhatsAppConfirmation ? "To be arranged" : "Free"}</span></div><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.estimatedDelivery}</p><p className="mt-1 text-xs text-muted-foreground">{deliveryQuote.note}</p>{deliveryQuote.requiresWhatsAppConfirmation && <p className="mt-2 rounded-lg bg-amber-100 px-2 py-1.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">After payment, use the WhatsApp button in your dashboard to arrange delivery directly with the Farms team.</p>}</div>}
               </div>
             )}
           </div>
@@ -803,7 +806,7 @@ export default function PoultryPage() {
               <span>Amount Due</span>
               <span>{formatCurrency(checkoutTotal)}</span>
             </div>
-            {deliveryQuote && <div className="mt-2 flex items-center justify-between text-sm"><span className="text-muted-foreground">Delivery</span><span className="font-semibold text-foreground">{formatCurrency(deliveryQuote.amount)}</span></div>}
+            {deliveryQuote && <div className="mt-2 flex items-center justify-between text-sm"><span className="text-muted-foreground">Delivery</span><span className="font-semibold text-foreground">{deliveryQuote.requiresWhatsAppConfirmation ? "Arrange after payment" : "Free within Enugu metropolis"}</span></div>}
           </div>
 
           {checkoutError && (

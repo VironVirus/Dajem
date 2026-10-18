@@ -82,7 +82,7 @@ Live shipment creation, label purchase, and courier pickup remain separate fulfi
 
 ## DAJEM Farms Delivery
 
-DHL is used only for survey-plan delivery. Farm checkout uses the Farms admin delivery table: **Farms admin** → **Delivery fees**. Add or adjust a fee for each state, set the rest-of-country fee, and enter the support WhatsApp number. Customers in listed states receive that state fee at checkout. Customers in other states receive the rest-of-country fee and see a WhatsApp confirmation button in their paid-order dashboard; its message includes the order ID and payment status.
+DHL is used only for survey-plan delivery. DAJEM Farms delivery is free only within Enugu metropolis: Enugu East, Enugu North, and Enugu South. Checkout never adds a Farms delivery charge. Customers outside those areas pay for their items first, then receive a WhatsApp delivery-arrangement button in their dashboard with their order ID and payment status. Set that number in **Farms admin** → **Delivery contact**; the administrator can review the delivery address under **Farms admin** → **Farm orders**.
 
 ## Cloudflare Setup
 

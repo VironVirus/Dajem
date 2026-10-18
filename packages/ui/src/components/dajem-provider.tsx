@@ -303,6 +303,12 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ action, payload }),
       });
 
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(response.status === 403
+          ? "Access was blocked by the website's security service. Please try another network or contact support."
+          : "The website could not process your request. Please try again or contact support.");
+      }
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error ?? "Action failed.");

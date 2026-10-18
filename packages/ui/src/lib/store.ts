@@ -96,7 +96,7 @@ export interface CheckoutDelivery {
   serviceName: string;
   fee: number;
   currency: "NGN";
-  rateSource: "dajem-estimate" | "dhl-live" | "farm-state-rate" | "farm-rest-of-country";
+  rateSource: "dajem-estimate" | "dhl-live" | "farm-state-rate" | "farm-rest-of-country" | "farm-free-enugu" | "farm-admin-arrangement";
   estimatedDelivery: string;
   requiresWhatsAppConfirmation?: boolean;
   recipientName: string;
@@ -300,7 +300,7 @@ export interface PaymentIntent {
 }
 
 export interface IntegrationStatus {
-  backend: "filesystem" | "supabase" | "unconfigured";
+  backend: "filesystem" | "supabase" | "mysql" | "unconfigured";
   supabaseConfigured: boolean;
   flutterwaveConfigured: boolean;
   hostingConfigured: boolean;
@@ -756,14 +756,8 @@ export const emptySnapshot: DashboardSnapshot = {
   surveyServices: seedSurveyServices,
   communicationLogs: [],
   farmDeliverySettings: {
-    stateRates: [
-      { state: "Enugu", fee: 5000 },
-      { state: "Abia", fee: 15000 },
-      { state: "Anambra", fee: 15000 },
-      { state: "Ebonyi", fee: 15000 },
-      { state: "Imo", fee: 15000 },
-    ],
-    restOfCountryFee: 20000,
+    stateRates: [],
+    restOfCountryFee: 0,
     whatsappNumber: "",
   },
   supportTickets: [],

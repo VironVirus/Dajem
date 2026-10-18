@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { randomBytes, scryptSync } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { createPool, type Pool, type ResultSetHeader, type RowDataPacket } from "mysql2/promise";
 import type {
   IntegrationStatus,
   InventoryItem,
@@ -88,14 +89,8 @@ function createAdminUser(): ServerUser | null {
 function defaultFarmDeliverySettings(): FarmDeliverySettings {
   const supportNumber = (process.env.DAJEM_SUPPORT_WHATSAPP ?? getConfiguredAdminSeed()?.phone ?? "").replace(/\D/g, "");
   return {
-    stateRates: [
-      { state: "Enugu", fee: 5000 },
-      { state: "Abia", fee: 15000 },
-      { state: "Anambra", fee: 15000 },
-      { state: "Ebonyi", fee: 15000 },
-      { state: "Imo", fee: 15000 },
-    ],
-    restOfCountryFee: 20000,
+    stateRates: [],
+    restOfCountryFee: 0,
     whatsappNumber: supportNumber,
   };
 }
@@ -297,9 +292,50 @@ type SupabaseState = {
 
 type StateForUpdate = {
   state: PlatformState;
-  source: "supabase" | "file" | "memory";
+  source: "supabase" | "mysql" | "file" | "memory";
   updatedAt?: string;
+  revision?: number;
 };
+
+let mysqlPool: Pool | undefined;
+
+function useMySql() {
+  return process.env.DAJEM_DATA_BACKEND === "mysql";
+}
+
+function getMySqlPool(): Pool {
+  if (mysqlPool) return mysqlPool;
+  const { DAJEM_MYSQL_DATABASE: database, DAJEM_MYSQL_USER: user, DAJEM_MYSQL_PASSWORD: password } = process.env;
+  if (!database || !user || !password) throw new Error("MySQL database settings are incomplete.");
+  mysqlPool = createPool({
+    host: process.env.DAJEM_MYSQL_HOST || "127.0.0.1",
+    port: Number(process.env.DAJEM_MYSQL_PORT || 3306),
+    database, user, password,
+    connectionLimit: 3,
+    supportBigNumbers: true,
+  });
+  return mysqlPool;
+}
+
+async function readFromMySql(): Promise<StateForUpdate> {
+  const [rows] = await getMySqlPool().execute<RowDataPacket[]>(
+    "SELECT value, revision FROM dajem_platform_state WHERE state_key = ?", [SUPABASE_ROW_KEY],
+  );
+  if (rows.length !== 1) throw new Error("MySQL data has not been migrated; the application cannot start with an empty database.");
+  const value = typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value;
+  if (!value || typeof value !== "object" || !Array.isArray(value.users)) throw new Error("MySQL platform data is invalid.");
+  const revision = Number(rows[0].revision);
+  if (!Number.isSafeInteger(revision) || revision < 0) throw new Error("MySQL platform revision is invalid.");
+  return { state: sanitizeState(value), source: "mysql", revision };
+}
+
+async function writeToMySql(state: PlatformState, revision: number) {
+  const [result] = await getMySqlPool().execute<ResultSetHeader>(
+    "UPDATE dajem_platform_state SET value = ?, revision = revision + 1, updated_at = CURRENT_TIMESTAMP(6) WHERE state_key = ? AND revision = ?",
+    [JSON.stringify(state), SUPABASE_ROW_KEY, revision],
+  );
+  return result.affectedRows === 1;
+}
 
 async function readFromSupabase(): Promise<SupabaseState | null> {
   const client = getSupabaseAdminClient();
@@ -371,6 +407,7 @@ async function writeToSupabase(state: PlatformState, expectedUpdatedAt?: string)
 }
 
 async function readPlatformStateForUpdate(): Promise<StateForUpdate> {
+  if (useMySql()) return readFromMySql();
   const supabaseIsConfigured = Boolean(getSupabaseConfig());
   const supabaseState = await readFromSupabase();
   if (supabaseState) {
@@ -404,6 +441,11 @@ export async function updatePlatformState<T>(
     const current = await readPlatformStateForUpdate();
     const next = cloneState(current.state);
     const result = await updater(next);
+
+    if (current.source === "mysql") {
+      if (await writeToMySql(next, current.revision!)) return { result, state: next };
+      continue;
+    }
 
     if (current.source === "supabase") {
       const outcome = await writeToSupabase(next, current.updatedAt);
@@ -440,7 +482,9 @@ export function publicUser(user: ServerUser): User {
 
 export function getIntegrationStatus(): IntegrationStatus {
   const supabaseConfigured = Boolean(getSupabaseConfig());
-  const backend = supabaseConfigured && supabaseRuntimeState !== "degraded"
+  const backend = useMySql()
+    ? "mysql"
+    : supabaseConfigured && supabaseRuntimeState !== "degraded"
     ? "supabase"
     : allowFileBackend()
       ? "filesystem"

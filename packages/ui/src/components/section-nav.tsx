@@ -47,15 +47,16 @@ export function SectionNav({ items, label = "this page", className }: SectionNav
     <nav
       aria-label={label}
       className={cn(
-        "sticky top-[4.5rem] z-30 border-b border-border/50 bg-background/80 py-2.5 backdrop-blur-xl transition-all dark:border-white/10 dark:bg-slate-950/80",
+        "sticky top-[4.5rem] z-30 border-b border-border/50 bg-background/85 py-2 backdrop-blur-2xl transition-all dark:border-white/10 dark:bg-slate-950/85",
         className,
       )}
     >
-      <div className="container mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <Compass className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
-          <span className="hidden uppercase tracking-wider sm:inline">Explore</span>
-          <span className="font-bold text-foreground">{label}</span>
+      <div className="container mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground shrink-0">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Compass className="h-3.5 w-3.5" />
+          </span>
+          <span className="font-extrabold text-foreground tracking-tight">{label}</span>
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -67,10 +68,10 @@ export function SectionNav({ items, label = "this page", className }: SectionNav
                 href={item.href}
                 onClick={(e) => handleLinkClick(e, item.href)}
                 className={cn(
-                  "inline-flex items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-all duration-200",
+                  "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-tight transition-all duration-200 mobile-tap-target",
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20 scale-[1.02]"
-                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground dark:hover:bg-white/10",
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-white/10",
                 )}
               >
                 {item.label}
@@ -82,3 +83,4 @@ export function SectionNav({ items, label = "this page", className }: SectionNav
     </nav>
   );
 }
+

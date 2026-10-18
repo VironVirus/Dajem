@@ -40,7 +40,7 @@ function deliveryConfirmationUrl(order: Order, whatsappNumber: string) {
   const number = whatsappNumber.replace(/\D/g, "");
   if (!number) return null;
   const message = [
-    "Hello DAJEM Farms, I need to confirm my delivery charge.",
+    "Hello DAJEM Farms, I have paid and need to arrange delivery for my order.",
     `Order ID: ${order.id}`,
     `Invoice: ${order.invoiceNumber}`,
     `Payment status: ${order.paymentStatus}`,
@@ -51,7 +51,7 @@ function deliveryConfirmationUrl(order: Order, whatsappNumber: string) {
 function receiptDocument(order: Order) {
   const items = order.items.map((item) => `<tr><td>${escapeHtml(item.name)}${item.variantLabel ? `<br><small>${escapeHtml(item.variantLabel)}</small>` : ""}</td><td>${item.quantity}</td><td>${formatCurrency(item.price * item.quantity)}</td></tr>`).join("");
   const delivery = order.delivery
-    ? `<tr><td>${escapeHtml(order.delivery.serviceName)}<br><small>${escapeHtml(order.delivery.localGovernment)}, ${escapeHtml(order.delivery.state)}</small></td><td>1</td><td>${formatCurrency(order.delivery.fee)}</td></tr>`
+    ? `<tr><td>${escapeHtml(order.delivery.serviceName)}<br><small>${escapeHtml(order.delivery.localGovernment)}, ${escapeHtml(order.delivery.state)}</small></td><td>1</td><td>${order.delivery.requiresWhatsAppConfirmation ? "To be arranged" : order.delivery.fee === 0 ? "Free" : formatCurrency(order.delivery.fee)}</td></tr>`
     : "";
   const deliveryAddress = order.delivery
     ? `<p>Delivery: ${escapeHtml(order.delivery.recipientName)}<br>${escapeHtml(order.delivery.address)}, ${escapeHtml(order.delivery.localGovernment)}, ${escapeHtml(order.delivery.state)}<br>${escapeHtml(order.delivery.phone)} · ${escapeHtml(order.delivery.estimatedDelivery)}</p>`
@@ -92,7 +92,7 @@ function isDashboardSection(value: string): value is DashboardSection {
 }
 
 export function DashboardView() {
-  const { snapshot, currentUser, isBootstrapping, navigateToUrl, openAuthModal } = useDajem();
+  const { snapshot: fullSnapshot, currentUser, isBootstrapping, navigateToUrl, openAuthModal } = useDajem();
   const [activeSection, setActiveSection] = React.useState<DashboardSection>("overview");
 
   React.useEffect(() => {
@@ -114,7 +114,15 @@ export function DashboardView() {
   if (isBootstrapping) return <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">Loading your account...</div>;
   if (!currentUser) return <Card className="mx-auto max-w-xl border-dashed shadow-none"><CardHeader><Badge variant="secondary" className="w-max">My DAJEM</Badge><CardTitle>Sign in to view your account</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-sm text-muted-foreground">Keep your purchases, property activity, survey requests, bills, and receipts in one place.</p><div className="flex flex-wrap gap-3"><Button className="bg-primary text-white" onClick={() => openAuthModal("login")}>Log in</Button><Button variant="outline" onClick={() => openAuthModal("signup")}>Create account</Button></div></CardContent></Card>;
 
-  const submittedProperties = snapshot.propertyListings.filter((listing) => listing.submittedByEmail === currentUser.email);
+  const belongsToCurrentUser = (email: string | undefined) => email?.trim().toLowerCase() === currentUser.email.trim().toLowerCase();
+  const snapshot = {
+    ...fullSnapshot,
+    orders: fullSnapshot.orders.filter((order) => belongsToCurrentUser(order.userEmail)),
+    bids: fullSnapshot.bids.filter((bid) => belongsToCurrentUser(bid.userEmail)),
+    surveys: fullSnapshot.surveys.filter((survey) => belongsToCurrentUser(survey.userEmail)),
+    communicationLogs: fullSnapshot.communicationLogs.filter((log) => belongsToCurrentUser(log.userEmail)),
+  };
+  const submittedProperties = snapshot.propertyListings.filter((listing) => belongsToCurrentUser(listing.submittedByEmail));
   const paidOrders = snapshot.orders.filter((order) => order.paymentStatus === "Paid");
   const paidTotal = paidOrders.reduce((total, order) => total + order.total, 0);
   const listingBills = submittedProperties.filter((listing) => ["Awaiting Payment", "Payment Submitted"].includes(listing.agentListingPaymentStatus ?? "")).map((listing) => ({ id: listing.id, title: `Listing fee: ${listing.title}`, amount: 20000, state: listing.agentListingPaymentStatus === "Payment Submitted" ? "Payment under review" : "Payment required", href: "/properties/submit" }));
@@ -138,7 +146,7 @@ export function DashboardView() {
 
   const BillingCard = ({ order }: { order: Order }) => {
     const whatsappUrl = order.delivery?.requiresWhatsAppConfirmation ? deliveryConfirmationUrl(order, snapshot.farmDeliverySettings.whatsappNumber) : null;
-    return <article className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{order.invoiceNumber}</p><p className="text-xs text-muted-foreground">{order.date} · {serviceName(order)}</p></div><Badge className="bg-emerald-600 text-white">Paid</Badge></div><p className="mt-4 text-xl font-black text-foreground">{formatCurrency(order.total)}</p><p className="mt-1 text-xs text-muted-foreground">{paymentMethod()}</p>{order.delivery && <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs"><p className="font-bold text-foreground">{order.delivery.serviceName} · {formatCurrency(order.delivery.fee)}</p><p className="mt-1 text-muted-foreground">{order.delivery.localGovernment}, {order.delivery.state} · {order.delivery.estimatedDelivery}</p>{order.delivery.requiresWhatsAppConfirmation && <div className="mt-3 rounded-lg bg-amber-100 p-2.5 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100"><p className="font-bold">Delivery confirmation required</p><p className="mt-1">Order ID: {order.id} · Payment status: {order.paymentStatus}</p>{whatsappUrl ? <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex font-bold text-primary hover:underline">Confirm on WhatsApp</a> : <p className="mt-2 font-semibold">The support WhatsApp number is being configured. Please open a support ticket.</p>}</div>}</div>}<div className="mt-4 grid grid-cols-2 gap-2"><a href={receiptDownloadHref(order)} download={`${order.invoiceNumber}-receipt.html`} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-bold text-foreground hover:bg-accent"><Download className="h-3.5 w-3.5" />Download</a><Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="h-3.5 w-3.5" />Print</Button></div></article>;
+    return <article className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{order.invoiceNumber}</p><p className="text-xs text-muted-foreground">{order.date} · {serviceName(order)}</p></div><Badge className="bg-emerald-600 text-white">Paid</Badge></div><p className="mt-4 text-xl font-black text-foreground">{formatCurrency(order.total)}</p><p className="mt-1 text-xs text-muted-foreground">{paymentMethod()}</p>{order.delivery && <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs"><p className="font-bold text-foreground">{order.delivery.serviceName} · {order.delivery.requiresWhatsAppConfirmation ? "To be arranged" : order.delivery.fee === 0 ? "Free" : formatCurrency(order.delivery.fee)}</p><p className="mt-1 text-muted-foreground">{order.delivery.localGovernment}, {order.delivery.state} · {order.delivery.estimatedDelivery}</p>{order.delivery.requiresWhatsAppConfirmation && <div className="mt-3 rounded-lg bg-amber-100 p-2.5 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100"><p className="font-bold">Delivery arrangement required</p><p className="mt-1">Order ID: {order.id} · Payment status: {order.paymentStatus}</p>{whatsappUrl ? <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex font-bold text-primary hover:underline">Arrange delivery on WhatsApp</a> : <p className="mt-2 font-semibold">The delivery WhatsApp number is being configured. Please open a support ticket.</p>}</div>}</div>}<div className="mt-4 grid grid-cols-2 gap-2"><a href={receiptDownloadHref(order)} download={`${order.invoiceNumber}-receipt.html`} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-bold text-foreground hover:bg-accent"><Download className="h-3.5 w-3.5" />Download</a><Button size="sm" variant="outline" onClick={() => printReceipt(order)}><Printer className="h-3.5 w-3.5" />Print</Button></div></article>;
   };
 
   return <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">

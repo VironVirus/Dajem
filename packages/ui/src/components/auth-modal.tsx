@@ -181,7 +181,11 @@ export function AuthModal({
               className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
-                await onLogin(loginForm);
+                try {
+                  await onLogin(loginForm);
+                } catch {
+                  // The provider displays the request error in the form.
+                }
               }}
             >
               <div className="space-y-1.5">
@@ -189,6 +193,7 @@ export function AuthModal({
                 <Input
                   id="login-email"
                   type="email"
+                  autoComplete="username"
                   required
                   value={loginForm.email}
                   onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
@@ -200,6 +205,7 @@ export function AuthModal({
                   <Input
                     id="login-password"
                     type={showLoginPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     required
                     className="pr-20"
                     value={loginForm.password}
@@ -232,16 +238,20 @@ export function AuthModal({
                 }
 
                 const selectedCountry = phoneCountries.find((country) => country.value === signupForm.countryCode) ?? phoneCountries[0];
-                await onRegister({
-                  name: signupForm.name,
-                  email: signupForm.email,
-                  phone: formatInternationalPhone(selectedCountry.dialCode, signupForm.phone),
-                  country: selectedCountry.country,
-                  address: signupForm.address,
-                  state: signupForm.state,
-                  localGovernment: signupForm.localGovernment,
-                  password: signupForm.password,
-                });
+                try {
+                  await onRegister({
+                    name: signupForm.name,
+                    email: signupForm.email,
+                    phone: formatInternationalPhone(selectedCountry.dialCode, signupForm.phone),
+                    country: selectedCountry.country,
+                    address: signupForm.address,
+                    state: signupForm.state,
+                    localGovernment: signupForm.localGovernment,
+                    password: signupForm.password,
+                  });
+                } catch {
+                  // The provider displays the request error in the form.
+                }
               }}
             >
               <div className="space-y-1.5">

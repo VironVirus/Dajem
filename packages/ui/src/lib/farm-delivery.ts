@@ -1,5 +1,3 @@
-import type { FarmDeliverySettings } from "./store";
-
 export type FarmDeliveryInput = {
   recipientName: string;
   phone: string;
@@ -17,7 +15,7 @@ export type FarmDeliveryQuote = {
   serviceName: string;
   amount: number;
   currency: "NGN";
-  source: "farm-state-rate" | "farm-rest-of-country";
+  source: "farm-free-enugu" | "farm-admin-arrangement";
   estimatedDelivery: string;
   note: string;
   requiresWhatsAppConfirmation: boolean;
@@ -29,6 +27,17 @@ function cleanText(value: unknown, maxLength = 160) {
 
 function normalizedState(value: string) {
   return value.trim().toLocaleLowerCase("en-NG");
+}
+
+const enuguMetropolisLocalGovernments = new Set([
+  "enugu east",
+  "enugu north",
+  "enugu south",
+]);
+
+export function isFreeEnuguMetropolisDelivery(state: string, localGovernment: string) {
+  return normalizedState(state) === "enugu"
+    && enuguMetropolisLocalGovernments.has(normalizedState(localGovernment));
 }
 
 export function normalizeFarmDeliveryInput(input: FarmDeliveryInput): FarmDeliveryInput {
@@ -54,31 +63,30 @@ export function normalizeFarmDeliveryInput(input: FarmDeliveryInput): FarmDelive
   return delivery;
 }
 
-export function quoteFarmDelivery(input: FarmDeliveryInput, settings: FarmDeliverySettings): FarmDeliveryQuote {
+export function quoteFarmDelivery(input: FarmDeliveryInput): FarmDeliveryQuote {
   const destination = normalizeFarmDeliveryInput(input);
-  const stateRate = settings.stateRates.find((rate) => normalizedState(rate.state) === normalizedState(destination.state));
 
-  if (stateRate) {
+  if (isFreeEnuguMetropolisDelivery(destination.state, destination.localGovernment)) {
     return {
       provider: "DAJEM Farms Delivery",
-      serviceName: `${stateRate.state} farm delivery`,
-      amount: stateRate.fee,
+      serviceName: "Free delivery within Enugu metropolis",
+      amount: 0,
       currency: "NGN",
-      source: "farm-state-rate",
-      estimatedDelivery: stateRate.state.toLowerCase() === "enugu" ? "Same day or next business day" : "2-4 business days after confirmation",
-      note: `Delivery fee set by DAJEM Farms for ${stateRate.state}.`,
+      source: "farm-free-enugu",
+      estimatedDelivery: "Same day or next business day",
+      note: "Free delivery is available within Enugu East, Enugu North, and Enugu South only.",
       requiresWhatsAppConfirmation: false,
     };
   }
 
   return {
     provider: "DAJEM Farms Delivery",
-    serviceName: "Rest of Nigeria farm delivery",
-    amount: settings.restOfCountryFee,
+    serviceName: "Delivery arrangement after payment",
+    amount: 0,
     currency: "NGN",
-    source: "farm-rest-of-country",
-    estimatedDelivery: "Delivery timing confirmed after order review",
-    note: "This is the rest-of-country delivery charge. Delivery costs may change for your location; confirm your paid order with DAJEM Farms on WhatsApp.",
+    source: "farm-admin-arrangement",
+    estimatedDelivery: "Delivery timing and charge confirmed after order review",
+    note: "Delivery outside Enugu metropolis is arranged directly with DAJEM Farms after payment. Any delivery charge is confirmed separately and is not included at checkout.",
     requiresWhatsAppConfirmation: true,
   };
 }

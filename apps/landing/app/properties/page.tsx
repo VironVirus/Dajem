@@ -331,16 +331,16 @@ export default function RealEstatePage() {
           <div className="container mx-auto max-w-6xl px-5 text-center sm:px-6">
             <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
               <Badge variant="secondary" className="border border-blue-500/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/15">
-                Started {profile.startDate}
+                Find your place
               </Badge>
               <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
                 <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
-                  Homes, hospitality, development, and property management
+                  Spaces for your next chapter.
                 </span>
               </h1>
               <p className="dajem-hero-lede mx-auto max-w-3xl text-base leading-relaxed">
-                Verified homes, short-lets, hospitality, sales, and property management.
+                Explore homes, land and short stays, or list a property with us.
               </p>
               <div className="flex flex-col justify-center gap-3 pt-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
                 <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => router.push("/properties/listings")}>

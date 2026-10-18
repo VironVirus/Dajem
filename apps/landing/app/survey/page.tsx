@@ -1617,23 +1617,23 @@ export default function SurveyPage() {
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 lg:grid-cols-12 lg:gap-12">
             <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
               <Badge variant="secondary" className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/15">
-                est. April, 2003
+                Surveying & geomatics
               </Badge>
               <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
                 <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
-                  Surveying, mapping, design, construction, and logistics
+                  Know your land. Plan with confidence.
                 </span>
               </h1>
               <p className="dajem-hero-lede text-base leading-relaxed">
-                Surveying, mapping, engineering, construction, and project support.
+                Explore land surveys, mapping and project support tailored to your needs.
               </p>
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4">
                 <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => router.push("/survey/inquiry")}>
-                  Start Verification Portal
+                  Request a survey
                 </Button>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/survey/estimate")}>
-                  Cost Estimator
+                  Get an estimate
                 </Button>
               </div>
             </div>
