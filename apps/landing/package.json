@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build --webpack",
-    "postbuild": "mkdir -p .next/standalone/apps/landing/public .next/standalone/apps/landing/.next .next/standalone/public .next/standalone/.next ../../.next/standalone && cp -R public/. .next/standalone/apps/landing/public/ && cp -R public/. .next/standalone/public/ && cp -R .next/static .next/standalone/apps/landing/.next/static && cp -R .next/static .next/standalone/.next/static && cp -R .next/standalone/. ../../.next/standalone/ && cp scripts/hostinger-standalone-server.cjs ../../.next/standalone/server.js",
+    "postbuild": "mkdir -p .next/standalone/apps/landing/public .next/standalone/apps/landing/.next .next/standalone/public .next/standalone/.next ../../.next/standalone/scripts && cp -R public/. .next/standalone/apps/landing/public/ && cp -R public/. .next/standalone/public/ && cp -R .next/static .next/standalone/apps/landing/.next/static && cp -R .next/static .next/standalone/.next/static && cp -R .next/standalone/. ../../.next/standalone/ && cp scripts/hostinger-standalone-server.cjs ../../.next/standalone/server.js && cp ../../scripts/automated-backup.cjs ../../.next/standalone/scripts/automated-backup.cjs",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/apps/landing/server.js"
   },
   "dependencies": {
