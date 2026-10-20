@@ -40,8 +40,7 @@ Set these environment variables in Hostinger:
 - `DAJEM_ADMIN_PHONE`
 - `NEXT_PUBLIC_DAJEM_SITE_URL=https://dajemgroup.com`
 - `DAJEM_PUBLIC_APP_URL=https://dajemgroup.com`
-- `DAJEM_RESEND_API_KEY`
-- `DAJEM_EMAIL_FROM=DAJEM Group <accounts@dajemgroup.com>`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_DAJEM_REFRESH_INTERVAL_MS=0`
 - Supabase variables from the Supabase setup section
 
@@ -64,7 +63,7 @@ The app validates the signed webhook and independently verifies the transaction 
 
 ## Customer Account Email
 
-New customer accounts must verify their email before they can log in. The same verified address receives password-reset links. Add a verified sender domain and API key from Resend to the three `DAJEM_*` email settings above. The application deliberately refuses new registrations until those settings are configured, preventing unverified account records and registration abuse.
+New customer accounts are managed by Supabase Auth. Supabase sends the confirmation and password-recovery email, while DAJEM stores the customer profile, orders, and audit history against the stable Supabase Auth ID. In Supabase Auth URL Configuration, set `https://dajemgroup.com` as Site URL and add `https://dajemgroup.com/auth/supabase` as a Redirect URL. Add the project Publishable key to `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in Hostinger; keep the service-role key server-only.
 
 ## Managed Images
 

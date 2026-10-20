@@ -251,6 +251,15 @@ function getSupabaseConfig() {
   }
 }
 
+function getSupabaseAuthConfig() {
+  const config = getSupabaseConfig();
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ?? process.env.SUPABASE_AUTH_PUBLISHABLE_KEY;
+  if (!config || !publishableKey?.trim()) return null;
+  return { url: config.url, publishableKey: publishableKey.trim() };
+}
+
 export function getSupabaseAdminClient() {
   const config = getSupabaseConfig();
   if (!config) return null;
@@ -261,6 +270,23 @@ export function getSupabaseAdminClient() {
       autoRefreshToken: false,
     },
   });
+}
+
+export function getSupabaseAuthClient() {
+  const config = getSupabaseAuthConfig();
+  if (!config) return null;
+  return createClient(config.url, config.publishableKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: "implicit",
+    },
+  });
+}
+
+export function isSupabaseAuthConfigured() {
+  return Boolean(getSupabaseAuthConfig());
 }
 
 export function getSupabaseStorageBucket() {

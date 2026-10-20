@@ -33,7 +33,7 @@ import type {
 } from "../store";
 import { shippingWeightKg } from "../store";
 import { normalizeFarmDeliveryInput, quoteFarmDelivery, type FarmDeliveryInput } from "../farm-delivery";
-import { getIntegrationStatus, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
+import { getIntegrationStatus, getSupabaseAdminClient, getSupabaseAuthClient, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
 
 function nowIso() {
   return new Date().toISOString();
@@ -69,6 +69,12 @@ function verificationToken() {
 
 function publicAppUrl() {
   return (process.env.DAJEM_PUBLIC_APP_URL?.trim() || "https://dajemgroup.com").replace(/\/$/, "");
+}
+
+function supabaseAuthRedirect(path: string) {
+  const url = new URL("/auth/supabase", publicAppUrl());
+  url.searchParams.set("next", path);
+  return url.toString();
 }
 
 async function sendAccountEmail(input: { to: string; subject: string; html: string }) {
@@ -387,6 +393,36 @@ export async function registerUser(
     throw new Error("Please use a password with at least 8 characters.");
   }
 
+  const existingState = await readPlatformState();
+  if (existingState.users.some((user) => normalizeEmail(user.email) === email)) {
+    throw new Error("An account already exists for that email.");
+  }
+
+  const supabaseAuth = getSupabaseAuthClient();
+  if (supabaseAuth) {
+    const { data, error } = await supabaseAuth.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, phone, country, address, state: stateName, local_government: localGovernment },
+        emailRedirectTo: supabaseAuthRedirect("/dashboard"),
+      },
+    });
+    if (error || !data.user) throw new Error(error?.message ?? "Unable to create your secure account.");
+    const authUser = data.user;
+    const { state } = await updatePlatformState((draft) => {
+      if (draft.users.some((user) => normalizeEmail(user.email) === email)) throw new Error("An account already exists for that email.");
+      const user: ServerUser = {
+        id: makeCustomerId(), authUserId: authUser.id, name, email, phone, country, address, state: stateName, localGovernment,
+        role: "user", createdAt: nowIso(), emailVerified: Boolean(authUser.email_confirmed_at), passwordSalt: "supabase-auth", passwordHash: "supabase-auth",
+      };
+      draft.users.unshift(user);
+      draft.carts[user.email] = draft.carts[user.email] ?? [];
+      appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Account registered", detail: "Supabase email confirmation requested." });
+    });
+    return { sessionEmail: null, snapshot: snapshotFor(state, null), message: "Check your email and verify your account before signing in." };
+  }
+
   // Do not persist a pending account unless we can actually send its confirmation link.
   if (!process.env.DAJEM_RESEND_API_KEY?.trim() || !process.env.DAJEM_EMAIL_FROM?.trim()) {
     throw new Error("Email verification is not configured yet. Please contact DAJEM support.");
@@ -446,6 +482,14 @@ export async function registerUser(
 export async function resendVerificationEmail(payload: { email: string }) {
   const email = normalizeEmail(payload.email);
   if (!email) throw new Error("Enter your email address first.");
+  const supabaseAuth = getSupabaseAuthClient();
+  const state = await readPlatformState();
+  const existingUser = state.users.find((user) => normalizeEmail(user.email) === email);
+  if (supabaseAuth && existingUser?.authUserId && !existingUser.emailVerified) {
+    const { error } = await supabaseAuth.auth.resend({ type: "signup", email, options: { emailRedirectTo: supabaseAuthRedirect("/dashboard") } });
+    if (error) throw new Error("We could not send the verification email right now. Please try again shortly.");
+    return { message: "If that address has an unverified DAJEM account, a verification email has been sent." };
+  }
   if (!process.env.DAJEM_RESEND_API_KEY?.trim() || !process.env.DAJEM_EMAIL_FROM?.trim()) {
     throw new Error("Email verification is not configured yet. Please contact DAJEM support.");
   }
@@ -480,7 +524,16 @@ export async function loginUser(
   }
 
   const state = await readPlatformState();
-  const user = state.users.find((entry) => normalizeEmail(entry.email) === email);
+  const existingUser = state.users.find((entry) => normalizeEmail(entry.email) === email);
+  const supabaseAuth = getSupabaseAuthClient();
+  if (supabaseAuth && existingUser?.authUserId) {
+    const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
+    if (error || !data.user) throw new Error(error?.message ?? "Invalid email or password.");
+    if (!data.user.email_confirmed_at) throw new Error("Please verify your email before signing in.");
+    return completeSupabaseAuthentication(data.session?.access_token ?? "");
+  }
+
+  const user = existingUser;
   if (!user) {
     throw new Error("Invalid email or password.");
   }
@@ -498,6 +551,23 @@ export async function loginUser(
     snapshot: snapshotFor(state, user.email),
     message: `Welcome back, ${user.name}.`,
   };
+}
+
+export async function completeSupabaseAuthentication(accessToken: string) {
+  const admin = getSupabaseAdminClient();
+  if (!admin || !accessToken) throw new Error("Supabase authentication is not configured yet.");
+  const { data, error } = await admin.auth.getUser(accessToken);
+  const authUser = data.user;
+  if (error || !authUser?.email || !authUser.email_confirmed_at) throw new Error("Your email must be verified before you can sign in.");
+  const email = normalizeEmail(authUser.email);
+  const { state } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => entry.authUserId === authUser.id || normalizeEmail(entry.email) === email);
+    if (!user) throw new Error("Your customer profile is not ready yet. Please contact DAJEM support.");
+    user.authUserId = authUser.id;
+    user.emailVerified = true;
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Supabase account verified", detail: "Supabase Auth confirmed the customer email." });
+  });
+  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Your email has been verified." };
 }
 
 export async function verifyUserEmail(payload: { email: string; token: string }) {
@@ -526,6 +596,14 @@ export async function verifyUserEmail(payload: { email: string; token: string })
 export async function requestPasswordReset(payload: { email: string }) {
   const email = normalizeEmail(payload.email);
   if (!email) throw new Error("Enter your email address.");
+  const supabaseAuth = getSupabaseAuthClient();
+  const currentState = await readPlatformState();
+  const existingUser = currentState.users.find((user) => normalizeEmail(user.email) === email);
+  if (supabaseAuth && existingUser?.authUserId) {
+    const { error } = await supabaseAuth.auth.resetPasswordForEmail(email, { redirectTo: supabaseAuthRedirect("/auth/reset") });
+    if (error) throw new Error("We could not send the recovery email right now. Please try again shortly.");
+    return { message: "If that address has a DAJEM account, a password reset link has been sent." };
+  }
   const rawToken = verificationToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
   const { result } = await updatePlatformState((draft) => {

@@ -30,6 +30,7 @@ export interface User {
 }
 
 export interface ServerUser extends User {
+  authUserId?: string;
   passwordHash: string;
   passwordSalt: string;
   emailVerificationTokenHash?: string;

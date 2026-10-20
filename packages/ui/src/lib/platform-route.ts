@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   addToCart,
   clearCart,
+  completeSupabaseAuthentication,
   createSupportTicket,
   getSnapshot,
   loginUser,
@@ -147,6 +148,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await resendVerificationEmail(payload));
       case "reset-password":
         return NextResponse.json(await resetPasswordWithToken(payload));
+      case "complete-supabase-auth": {
+        const result = await completeSupabaseAuthentication(String(payload.accessToken ?? ""));
+        const response = NextResponse.json({ snapshot: result.snapshot, message: result.message });
+        writeSessionCookie(response, result.sessionEmail);
+        return response;
+      }
       default:
         return jsonError(new Error("Unsupported platform action."), 404);
     }

@@ -59,6 +59,7 @@ NEXT_PUBLIC_DAJEM_SITE_URL=https://dajemgroup.com
 DAJEM_PUBLIC_APP_URL=https://dajemgroup.com
 NEXT_PUBLIC_DAJEM_REFRESH_INTERVAL_MS=0
 NEXT_PUBLIC_SUPABASE_URL=https://inkttilgzxkqhviejglb.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=replace-with-supabase-publishable-key
 SUPABASE_SERVICE_ROLE_KEY=replace-with-supabase-service-role-key
 SUPABASE_STORAGE_BUCKET=dajem-documents
 SUPABASE_MEDIA_BUCKET=dajem-media
@@ -86,14 +87,15 @@ The DHL values are not required for deployment. Until they are added, the survey
 
 ### Account verification and password recovery
 
-DAJEM uses a verification link before a new account can sign in, and uses the same email address for password recovery. Configure a verified transactional sender through [Resend](https://resend.com):
+DAJEM uses Supabase Auth for customer email confirmation, password recovery, and secure user identities. In Supabase, open **Authentication**:
 
-1. Add and verify `dajemgroup.com` in Resend by publishing its DNS records at the domain provider.
-2. Create a Resend API key with permission to send email.
-3. Add `DAJEM_RESEND_API_KEY`, `DAJEM_EMAIL_FROM`, and `DAJEM_PUBLIC_APP_URL=https://dajemgroup.com` in Hostinger.
-4. Redeploy the application, then create one customer test account and open the verification email.
+1. In **URL Configuration**, set Site URL to `https://dajemgroup.com`.
+2. Add `https://dajemgroup.com/auth/supabase` to Redirect URLs.
+3. In **Email**, keep **Confirm email** enabled and configure a custom SMTP provider when ready for production volume.
+4. Copy the project **Publishable key** from **Project Settings → API** into `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in Hostinger.
+5. Redeploy, then create one customer test account and open the confirmation email.
 
-Until those settings are present, registration is intentionally declined rather than creating an account that cannot be verified. Do not expose the Resend API key in browser code or commit it to Git.
+The existing `SUPABASE_SERVICE_ROLE_KEY` stays server-only. Never expose it in browser code or commit it to Git. Resend variables remain only as a temporary legacy fallback and are not needed after Supabase Auth is configured.
 
 Run `supabase/dajem_media.sql` in Supabase SQL Editor once before using image uploads. It creates the public `dajem-media` bucket used by the server to store 5 MB-or-smaller, WebP-converted, DAJEM-watermarked images. Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser code.
 
