@@ -29,6 +29,8 @@ interface AuthModalProps {
     password: string;
   }) => Promise<void>;
   onResendVerification: (email: string) => Promise<void>;
+  mfaRequired?: boolean;
+  onVerifyMfa?: (code: string) => Promise<void>;
 }
 
 const phoneCountries = [
@@ -61,6 +63,8 @@ export function AuthModal({
   onLogin,
   onRegister,
   onResendVerification,
+  mfaRequired = false,
+  onVerifyMfa,
 }: AuthModalProps) {
   const [loginForm, setLoginForm] = React.useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = React.useState({
@@ -78,6 +82,7 @@ export function AuthModal({
   const [showSignupPassword, setShowSignupPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [mfaCode, setMfaCode] = React.useState("");
   const selectedLocalGovernments = localGovernmentsForState(signupForm.state);
 
   React.useEffect(() => {
@@ -98,6 +103,7 @@ export function AuthModal({
       setShowSignupPassword(false);
       setShowConfirmPassword(false);
       setFormError(null);
+      setMfaCode("");
     }
   }, [isOpen]);
 
@@ -134,7 +140,41 @@ export function AuthModal({
           )}
           {notice && <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">{notice}</div>}
 
-          {mode === "login" ? (
+          {mfaRequired ? (
+            <form
+              className="space-y-4"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!onVerifyMfa) return;
+                try {
+                  await onVerifyMfa(mfaCode.replace(/\s/g, ""));
+                } catch {
+                  // The provider displays the verification error in the form.
+                }
+              }}
+            >
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+                Open Google Authenticator and enter the current six-digit code for DAJEM.
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="authenticator-code">Authenticator code</Label>
+                <Input
+                  id="authenticator-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={mfaCode}
+                  onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="123456"
+                />
+              </div>
+              <Button type="submit" className="w-full bg-primary text-white" disabled={isBusy || mfaCode.length !== 6}>
+                {isBusy ? "Verifying..." : "Verify and continue"}
+              </Button>
+            </form>
+          ) : mode === "login" ? (
             <form
               className="space-y-4"
               onSubmit={async (event) => {

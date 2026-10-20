@@ -23,6 +23,7 @@ import type {
 } from "../lib/store";
 import type { FarmDeliveryInput, FarmDeliveryQuote } from "../lib/farm-delivery";
 import { emptySnapshot } from "../lib/store";
+import { getSupabaseBrowserClient } from "../lib/supabase-browser";
 
 type AuthMode = "login" | "signup";
 
@@ -35,6 +36,7 @@ interface DajemContextValue {
   authMode: AuthMode;
   authError: string | null;
   authNotice: string | null;
+  mfaRequired: boolean;
   openAuthModal: (mode?: AuthMode) => void;
   closeAuthModal: () => void;
   refresh: () => Promise<void>;
@@ -51,6 +53,7 @@ interface DajemContextValue {
   }) => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
+  verifyMfa: (code: string) => Promise<void>;
   logout: () => Promise<void>;
   navigateToUrl: (targetUrl: string) => Promise<void>;
   addToCart: (productId: string, quantity?: number, variant?: { variantKey?: string; variantLabel?: string }) => Promise<void>;
@@ -225,6 +228,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
   const [authMode, setAuthMode] = React.useState<AuthMode>("login");
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
+  const [mfaRequired, setMfaRequired] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     const nextSnapshot = await fetchSnapshot();
@@ -277,6 +281,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     setAuthMode(mode);
     setAuthError(null);
     setAuthNotice(null);
+    setMfaRequired(false);
     setAuthModalOpen(true);
   }, []);
 
@@ -284,6 +289,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     setAuthModalOpen(false);
     setAuthError(null);
     setAuthNotice(null);
+    setMfaRequired(false);
   }, []);
 
   const navigateToDashboard = React.useCallback(() => {
@@ -356,12 +362,57 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     setAuthNotice(result.message ?? "Check your email for a new verification link.");
   }, [postAction]);
 
+  const finishSupabaseLogin = React.useCallback(async (accessToken: string) => {
+    await postAction("complete-supabase-auth", { accessToken });
+    setAuthModalOpen(false);
+    setAuthError(null);
+    setMfaRequired(false);
+    navigateToDashboard();
+  }, [navigateToDashboard, postAction]);
+
   const login = React.useCallback(async (payload: { email: string; password: string }) => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword(payload);
+      if (!error && data.session && data.user) {
+        if (!data.user.email_confirmed_at) {
+          await supabase.auth.signOut();
+          throw new Error("Please verify your email before signing in.");
+        }
+        const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assurance.error) throw new Error(assurance.error.message);
+        if (assurance.data.nextLevel === "aal2" && assurance.data.currentLevel !== "aal2") {
+          setMfaRequired(true);
+          setAuthNotice("Google Authenticator confirmation is required for this account.");
+          return;
+        }
+        await finishSupabaseLogin(data.session.access_token);
+        return;
+      }
+    }
+
+    // Existing accounts remain available while they are safely moved to Supabase Auth.
     await postAction("login", payload);
     setAuthModalOpen(false);
     setAuthError(null);
     navigateToDashboard();
-  }, [navigateToDashboard, postAction]);
+  }, [finishSupabaseLogin, navigateToDashboard, postAction]);
+
+  const verifyMfa = React.useCallback(async (code: string) => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) throw new Error("Google Authenticator is not configured yet.");
+    const { data: factors, error: factorError } = await supabase.auth.mfa.listFactors();
+    if (factorError) throw new Error(factorError.message);
+    const factor = factors.totp.find((entry) => entry.status === "verified");
+    if (!factor) throw new Error("No Google Authenticator setup was found for this account.");
+    const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+    if (challengeError) throw new Error(challengeError.message);
+    const { error: verifyError } = await supabase.auth.mfa.verify({ factorId: factor.id, challengeId: challenge.id, code });
+    if (verifyError) throw new Error(verifyError.message);
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session?.access_token) throw new Error("Your secure session has expired. Please sign in again.");
+    await finishSupabaseLogin(sessionData.session.access_token);
+  }, [finishSupabaseLogin]);
 
   const logout = React.useCallback(async () => {
     await postAction("logout");
@@ -443,6 +494,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     authMode,
     authError,
     authNotice,
+    mfaRequired,
     openAuthModal,
     closeAuthModal,
     refresh,
@@ -450,6 +502,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     register,
     resendVerification,
     login,
+    verifyMfa,
     logout,
     navigateToUrl,
     addToCart: async (productId, quantity, variant) => {
@@ -559,6 +612,8 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
         onLogin={login}
         onRegister={register}
         onResendVerification={resendVerification}
+        mfaRequired={mfaRequired}
+        onVerifyMfa={verifyMfa}
       />
     </DajemContext.Provider>
   );

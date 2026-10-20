@@ -533,8 +533,15 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                       <div className="border-b border-border/50 px-3 py-2.5 mb-1">
                         <p className="text-xs font-bold text-foreground truncate">{currentUser.name}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{currentUser.email}</p>
-                        <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-black uppercase text-primary">
-                          {currentUser.role === "admin" ? "Enterprise Admin" : "Verified Client"}
+                        <span className={cn(
+                          "mt-1.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase",
+                          currentUser.role === "admin"
+                            ? "bg-primary/10 text-primary"
+                            : currentUser.emailVerified
+                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              : "bg-amber-500/10 text-amber-800 dark:text-amber-300",
+                        )}>
+                          {currentUser.role === "admin" ? "Enterprise Admin" : currentUser.emailVerified ? "Verified email" : "Email not verified"}
                         </span>
                       </div>
                       <a
