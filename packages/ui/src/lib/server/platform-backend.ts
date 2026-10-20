@@ -202,7 +202,11 @@ function sanitizeState(raw: unknown): PlatformState {
     ? candidate.users.filter((user): user is ServerUser => Boolean(user && typeof user === "object"))
       .map(removeLegacyIdentityFields)
       // Existing accounts predate verification, so retain their established access.
-      .map((user) => ({ ...user, emailVerified: typeof user.emailVerified === "boolean" ? user.emailVerified : true }))
+      .map((user) => ({
+        ...user,
+        emailVerified: typeof user.emailVerified === "boolean" ? user.emailVerified : true,
+        mfaEnabled: typeof user.mfaEnabled === "boolean" ? user.mfaEnabled : false,
+      }))
     : [];
   const configuredAdmin = createAdminUser();
   const adminEmail = configuredAdmin?.email.toLowerCase();
@@ -506,6 +510,7 @@ export function publicUser(user: ServerUser): User {
     role: user.role,
     createdAt: user.createdAt,
     emailVerified: user.emailVerified,
+    mfaEnabled: user.mfaEnabled,
     country: user.country,
     address: user.address,
     state: user.state,

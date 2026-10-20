@@ -54,6 +54,7 @@ interface DajemContextValue {
   resendVerification: (email: string) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
   verifyMfa: (code: string) => Promise<void>;
+  completeMfaEnrollment: (accessToken: string) => Promise<void>;
   logout: () => Promise<void>;
   navigateToUrl: (targetUrl: string) => Promise<void>;
   addToCart: (productId: string, quantity?: number, variant?: { variantKey?: string; variantLabel?: string }) => Promise<void>;
@@ -414,6 +415,11 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     await finishSupabaseLogin(sessionData.session.access_token);
   }, [finishSupabaseLogin]);
 
+  const completeMfaEnrollment = React.useCallback(async (accessToken: string) => {
+    const result = await postAction("complete-supabase-mfa-enrollment", { accessToken });
+    setAuthNotice(result.message ?? "Google Authenticator is active and your account is verified.");
+  }, [postAction]);
+
   const logout = React.useCallback(async () => {
     await postAction("logout");
     setAuthModalOpen(false);
@@ -503,6 +509,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     resendVerification,
     login,
     verifyMfa,
+    completeMfaEnrollment,
     logout,
     navigateToUrl,
     addToCart: async (productId, quantity, variant) => {
@@ -582,9 +589,11 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     authMode,
     busyAction,
     closeAuthModal,
+    completeMfaEnrollment,
     isBootstrapping,
     login,
     logout,
+    mfaRequired,
     navigateToUrl,
     openAuthModal,
     postAction,
@@ -596,6 +605,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     startPaymentCheckout,
     startFlutterwaveCheckout,
     verifyFlutterwaveCheckout,
+    verifyMfa,
   ]);
 
   return (

@@ -537,11 +537,11 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                           "mt-1.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-black uppercase",
                           currentUser.role === "admin"
                             ? "bg-primary/10 text-primary"
-                            : currentUser.emailVerified
+                            : currentUser.emailVerified && currentUser.mfaEnabled
                               ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                               : "bg-amber-500/10 text-amber-800 dark:text-amber-300",
                         )}>
-                          {currentUser.role === "admin" ? "Enterprise Admin" : currentUser.emailVerified ? "Verified email" : "Email not verified"}
+                          {currentUser.role === "admin" ? "Enterprise Admin" : currentUser.emailVerified && currentUser.mfaEnabled ? "Verified client" : currentUser.emailVerified ? "Set up two-factor authentication" : "Email not verified"}
                         </span>
                       </div>
                       <a

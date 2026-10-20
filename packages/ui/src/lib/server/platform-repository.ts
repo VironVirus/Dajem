@@ -184,6 +184,29 @@ function buildEmailLog(userEmail: string, subject: string, message: string): Com
   };
 }
 
+function addTwoFactorSetupPrompt(state: PlatformState, user: ServerUser) {
+  const subject = "Finish account verification";
+  const alreadyPrompted = state.communicationLogs.some((log) => log.userEmail === user.email && log.subject === subject);
+  if (user.mfaEnabled || alreadyPrompted) return;
+  state.communicationLogs.unshift(buildEmailLog(
+    user.email,
+    subject,
+    "Your email is confirmed. Open Profile in your dashboard, add Google Authenticator, and enter its six-digit code to receive your Verified client badge.",
+  ));
+  state.communicationLogs.splice(1000);
+}
+
+function accessTokenAssuranceLevel(accessToken: string) {
+  try {
+    const payload = accessToken.split(".")[1];
+    if (!payload) return "aal1";
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { aal?: unknown };
+    return claims.aal === "aal2" ? "aal2" : "aal1";
+  } catch {
+    return "aal1";
+  }
+}
+
 function deriveStockStatus(availableUnits: number): InventoryStockStatus {
   if (availableUnits <= 0) return "Out of Stock";
   if (availableUnits <= 12) return "Low Stock";
@@ -414,7 +437,7 @@ export async function registerUser(
       if (draft.users.some((user) => normalizeEmail(user.email) === email)) throw new Error("An account already exists for that email.");
       const user: ServerUser = {
         id: makeCustomerId(), authUserId: authUser.id, name, email, phone, country, address, state: stateName, localGovernment,
-        role: "user", createdAt: nowIso(), emailVerified: Boolean(authUser.email_confirmed_at), passwordSalt: "supabase-auth", passwordHash: "supabase-auth",
+        role: "user", createdAt: nowIso(), emailVerified: Boolean(authUser.email_confirmed_at), mfaEnabled: false, passwordSalt: "supabase-auth", passwordHash: "supabase-auth",
       };
       draft.users.unshift(user);
       draft.carts[user.email] = draft.carts[user.email] ?? [];
@@ -560,14 +583,39 @@ export async function completeSupabaseAuthentication(accessToken: string) {
   const authUser = data.user;
   if (error || !authUser?.email || !authUser.email_confirmed_at) throw new Error("Your email must be verified before you can sign in.");
   const email = normalizeEmail(authUser.email);
+  const assuranceLevel = accessTokenAssuranceLevel(accessToken);
+  const { state } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => entry.authUserId === authUser.id || normalizeEmail(entry.email) === email);
+    if (!user) throw new Error("Your customer profile is not ready yet. Please contact DAJEM support.");
+    if (user.mfaEnabled && assuranceLevel !== "aal2") throw new Error("Google Authenticator confirmation is required for this account.");
+    user.authUserId = authUser.id;
+    user.emailVerified = true;
+    addTwoFactorSetupPrompt(draft, user);
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Supabase account verified", detail: "Supabase Auth confirmed the customer email." });
+  });
+  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Your email is confirmed. Set up Google Authenticator in Profile to receive your verified badge." };
+}
+
+export async function completeSupabaseMfaEnrollment(accessToken: string) {
+  const admin = getSupabaseAdminClient();
+  if (!admin || !accessToken) throw new Error("Supabase authentication is not configured yet.");
+  const { data, error } = await admin.auth.getUser(accessToken);
+  const authUser = data.user;
+  if (error || !authUser?.email || !authUser.email_confirmed_at) throw new Error("Your email must be verified before enabling two-factor authentication.");
+  if (accessTokenAssuranceLevel(accessToken) !== "aal2") throw new Error("Enter a current Google Authenticator code to finish setup.");
+
+  const email = normalizeEmail(authUser.email);
   const { state } = await updatePlatformState((draft) => {
     const user = draft.users.find((entry) => entry.authUserId === authUser.id || normalizeEmail(entry.email) === email);
     if (!user) throw new Error("Your customer profile is not ready yet. Please contact DAJEM support.");
     user.authUserId = authUser.id;
     user.emailVerified = true;
-    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Supabase account verified", detail: "Supabase Auth confirmed the customer email." });
+    user.mfaEnabled = true;
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Google Authenticator enabled", detail: "Two-factor authentication was confirmed through Supabase Auth." });
+    draft.communicationLogs.unshift(buildEmailLog(user.email, "Account verified", "Google Authenticator is active. Your DAJEM account now carries the Verified client badge."));
+    draft.communicationLogs.splice(1000);
   });
-  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Your email has been verified." };
+  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Google Authenticator is active and your account is verified." };
 }
 
 export async function verifyUserEmail(payload: { email: string; token: string }) {
@@ -582,6 +630,7 @@ export async function verifyUserEmail(payload: { email: string; token: string })
       throw new Error("This verification link has expired. Please request a new link.");
     }
     user.emailVerified = true;
+    addTwoFactorSetupPrompt(draft, user);
     user.emailVerificationTokenHash = undefined;
     user.emailVerificationExpiresAt = undefined;
     user.emailVerificationSentAt = undefined;

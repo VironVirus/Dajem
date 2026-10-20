@@ -3,6 +3,7 @@ import {
   addToCart,
   clearCart,
   completeSupabaseAuthentication,
+  completeSupabaseMfaEnrollment,
   createSupportTicket,
   getSnapshot,
   loginUser,
@@ -150,6 +151,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await resetPasswordWithToken(payload));
       case "complete-supabase-auth": {
         const result = await completeSupabaseAuthentication(String(payload.accessToken ?? ""));
+        const response = NextResponse.json({ snapshot: result.snapshot, message: result.message });
+        writeSessionCookie(response, result.sessionEmail);
+        return response;
+      }
+      case "complete-supabase-mfa-enrollment": {
+        const result = await completeSupabaseMfaEnrollment(String(payload.accessToken ?? ""));
         const response = NextResponse.json({ snapshot: result.snapshot, message: result.message });
         writeSessionCookie(response, result.sessionEmail);
         return response;

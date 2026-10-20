@@ -551,8 +551,8 @@ function calculateSurveyEstimate(inputs: {
     notes: inputs.delivery.added ? [...notes, deliveryFulfillmentNote] : notes,
   });
 
-  const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[], fieldOperationsIncluded = false) => {
-    const selectedExtras = fieldOperationsIncluded
+  const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[], extrasAlreadyAdded = false) => {
+    const selectedExtras = extrasAlreadyAdded
       ? []
       : perimeterExtraItems.filter((item) => inputs.selectedExtras.includes(item.label));
     items.push(...selectedExtras);
@@ -703,15 +703,13 @@ function calculateSurveyEstimate(inputs: {
         return buildScopedEmptyEstimate("Enter a parcel size within the supported perimeter survey table.");
       }
 
-      const perimeterExtrasTotal = sumLineItems(perimeterExtraItems);
       items.push({
         label: `Perimeter-based lifting base (${perimeterBase.detail}) x ${count} plot(s)`,
         amount: perimeterBase.amount * count,
       });
-      items.push({
-        label: `Perimeter survey field operations x ${count} plot(s)`,
-        amount: perimeterExtrasTotal * count,
-      });
+      items.push(...perimeterExtraItems
+        .filter((item) => inputs.selectedExtras.includes(item.label))
+        .map((item) => ({ label: `${item.label} x ${count} plot(s)`, amount: item.amount * count })));
       detail = `${perimeterBase.detail} perimeter pricing applied to lifting.`;
     }
 
@@ -741,10 +739,7 @@ function calculateSurveyEstimate(inputs: {
       return buildScopedEmptyEstimate("Enter a parcel size within the supported perimeter survey table.");
     }
 
-    const items: EstimateLineItem[] = [
-      { label: `Perimeter survey base (${base.detail})`, amount: base.amount },
-      ...perimeterExtraItems,
-    ];
+    const items: EstimateLineItem[] = [{ label: `Perimeter survey base (${base.detail})`, amount: base.amount }];
     addDeliveryLineItem(items, inputs.delivery);
 
     return addAmountAndSelections(
@@ -753,12 +748,10 @@ function calculateSurveyEstimate(inputs: {
         `Client type: ${getClientTypeLabel(inputs.clientType)}`,
         `Parcel size: ${areaSelection}`,
       ],
-      `${base.detail} plus perimeter field operations.`,
+      `${base.detail} with any selected field operations added below.`,
       [
-        "Perimeter summary includes transportation, security, casual labourers, skilled labourer, and beacons.",
-        "These posted perimeter extras have been added to the total automatically.",
+        "Choose only the transportation, security, labour, and beacon costs that apply to this perimeter survey.",
       ],
-      true,
     );
   }
 
@@ -1484,12 +1477,11 @@ export default function SurveyPage() {
 
       <fieldset className="rounded-xl border border-amber-400/30 bg-amber-50/50 p-4 dark:bg-amber-950/15">
         <legend className="px-1 text-sm font-bold text-foreground">Other field costs</legend>
-        <p className="mb-3 text-xs text-muted-foreground">Select the posted operational costs that apply. Perimeter pricing already includes all five items.</p>
+        <p className="mb-3 text-xs text-muted-foreground">Select only the posted operational costs that apply. Checked items are added to the estimate.</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {optionalExtraCostOptions.map((item) => {
-            const included = serviceType === "perimeter" || (serviceType === "lifting" && toSquareMetres(calculatorInputs.parcelSize, calculatorInputs.parcelUnit) >= 1000);
-            const checked = included || calculatorInputs.selectedExtras.includes(item.label);
-            return <label key={item.id} className="flex items-center justify-between gap-3 rounded-lg border bg-background/80 p-2.5 text-xs text-foreground"><span className="flex items-center gap-2"><input type="checkbox" checked={checked} disabled={included} onChange={(event) => setCalculatorInputs((current) => ({ ...current, selectedExtras: event.target.checked ? [...current.selectedExtras, item.label] : current.selectedExtras.filter((label) => label !== item.label) }))} /><span>{item.label}</span></span><span className="font-bold">{formatCurrency(item.amount)}</span></label>;
+            const checked = calculatorInputs.selectedExtras.includes(item.label);
+            return <label key={item.id} className="flex items-center justify-between gap-3 rounded-lg border bg-background/80 p-2.5 text-xs text-foreground"><span className="flex items-center gap-2"><input type="checkbox" checked={checked} onChange={(event) => setCalculatorInputs((current) => ({ ...current, selectedExtras: event.target.checked ? [...current.selectedExtras, item.label] : current.selectedExtras.filter((label) => label !== item.label) }))} /><span>{item.label}</span></span><span className="font-bold">{formatCurrency(item.amount)}</span></label>;
           })}
         </div>
       </fieldset>

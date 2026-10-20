@@ -23,6 +23,7 @@ export interface User {
   role: UserRole;
   createdAt: string;
   emailVerified?: boolean;
+  mfaEnabled?: boolean;
   country?: string;
   address?: string;
   state?: string;

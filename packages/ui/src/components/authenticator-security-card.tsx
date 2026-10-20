@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CheckCircle2, KeyRound, ShieldCheck } from "lucide-react";
 import { getSupabaseBrowserClient } from "../lib/supabase-browser";
+import { useDajem } from "./dajem-provider";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Input } from "./input";
@@ -11,6 +12,7 @@ import { Label } from "./label";
 type FactorStatus = "checking" | "unavailable" | "ready" | "enrolled";
 
 export function AuthenticatorSecurityCard() {
+  const { completeMfaEnrollment } = useDajem();
   const [status, setStatus] = React.useState<FactorStatus>("checking");
   const [factorId, setFactorId] = React.useState("");
   const [qrCode, setQrCode] = React.useState("");
@@ -57,8 +59,11 @@ export function AuthenticatorSecurityCard() {
       if (challengeError) throw challengeError;
       const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code: code.replace(/\s/g, "") });
       if (error) throw error;
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token) throw new Error("Your secure session expired. Please sign in again.");
+      await completeMfaEnrollment(sessionData.session.access_token);
       setFactorId(""); setQrCode(""); setSecret(""); setCode(""); setStatus("enrolled");
-      setMessage("Google Authenticator is now protecting your DAJEM account.");
+      setMessage("Google Authenticator is active. Your DAJEM account is now verified.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "That code could not be verified. Please try the latest code.");
     } finally { setBusy(false); }
