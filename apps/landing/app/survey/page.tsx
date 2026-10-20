@@ -1629,7 +1629,6 @@ export default function SurveyPage() {
           slides={[
             { src: "/images/orbital-field-survey-1.jpg", position: "center", label: "Professional field survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
             { src: "/images/orbital-field-survey-2.jpg", position: "center", label: "Site measurement and beacon work", actionLabel: "Submit a survey inquiry", href: "/survey/inquiry" },
-            { src: "/images/orbital-hero-field-v2.png", position: "center", label: "Mapping, plans, and design", actionLabel: "Explore survey services", href: "/survey/services" },
             { src: "/images/orbital-hero-generated.png", position: "center", label: "Survey plan completion and delivery", actionLabel: "Track my survey job", href: "/survey/tracker" },
           ]}
         >
