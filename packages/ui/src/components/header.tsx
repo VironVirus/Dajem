@@ -90,6 +90,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   const [notificationsReadAt, setNotificationsReadAt] = React.useState("");
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const { currentUser, cartCount, navigateToUrl, openAuthModal, logout, snapshot } = useDajem();
+  const logoUrl = snapshot.brandLogoUrl || "/images/dajem-logo.jpg";
 
   React.useEffect(() => setCurrentOrigin(window.location.origin), []);
 
@@ -201,13 +202,8 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             className="group flex items-center gap-3"
             aria-label={`${currentApp.name} home`}
           >
-            <span
-              className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-md shadow-slate-950/15 ring-1 ring-white/25 transition-transform duration-300 group-hover:scale-105",
-                currentApp.surface,
-              )}
-            >
-              <currentApp.icon className="h-5 w-5 drop-shadow-sm" />
+            <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-2xl bg-slate-950 shadow-md shadow-slate-950/15 ring-1 ring-white/25 transition-transform duration-300 group-hover:scale-105">
+              <img src={logoUrl} alt="DAJEM Group" className="h-full w-full object-cover" />
             </span>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
@@ -262,6 +258,19 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   <span>Group</span>
                 </a>
                 <a
+                  href={surveyHref}
+                  onClick={(event) => handleNavigate(event, surveyHref)}
+                  className={cn(
+                    "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold transition-all",
+                    activeApp === "survey"
+                      ? "bg-background text-cyan-700 shadow-sm dark:bg-card dark:text-cyan-400"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Map className="h-3 w-3 text-cyan-500" />
+                  <span>Orbital</span>
+                </a>
+                <a
                   href={farmsHref}
                   onClick={(event) => handleNavigate(event, farmsHref)}
                   className={cn(
@@ -286,19 +295,6 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                 >
                   <House className="h-3 w-3 text-blue-500" />
                   <span>Homes</span>
-                </a>
-                <a
-                  href={surveyHref}
-                  onClick={(event) => handleNavigate(event, surveyHref)}
-                  className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold transition-all",
-                    activeApp === "survey"
-                      ? "bg-background text-cyan-700 shadow-sm dark:bg-card dark:text-cyan-400"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Map className="h-3 w-3 text-cyan-500" />
-                  <span>Orbital</span>
                 </a>
               </nav>
 

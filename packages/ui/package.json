@@ -16,6 +16,8 @@
     "./lib/nigeria-locations": "./src/lib/nigeria-locations.ts",
     "./lib/image-upload-route": "./src/lib/image-upload-route.ts",
     "./lib/survey-document-upload-route": "./src/lib/survey-document-upload-route.ts",
+    "./lib/server/platform-repository": "./src/lib/server/platform-repository.ts",
+    "./lib/server/session": "./src/lib/server/session.ts",
     "./lib/*": "./src/lib/*",
     "./styles/*": "./src/styles/*"
   },

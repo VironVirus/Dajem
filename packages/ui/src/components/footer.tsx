@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Landmark, Mail, MapPin, ExternalLink, Globe } from "lucide-react";
+import { Mail, MapPin, ExternalLink, Globe } from "lucide-react";
 import { dajemCompanyProfiles, getAppBaseUrl, getCompanyLinks } from "../lib/store";
 import { useDajem } from "./dajem-provider";
 
@@ -12,7 +12,8 @@ export function Footer({ compact = false }: FooterProps) {
   const companies = getCompanyLinks().filter((company) => company.id !== "landing");
   const landingUrl = getAppBaseUrl("landing");
   const group = dajemCompanyProfiles.landing;
-  const { navigateToUrl } = useDajem();
+  const { navigateToUrl, snapshot } = useDajem();
+  const logoUrl = snapshot.brandLogoUrl || "/images/dajem-logo.jpg";
 
   const handleNavigate = React.useCallback((event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (
@@ -63,8 +64,8 @@ export function Footer({ compact = false }: FooterProps) {
           {/* Logo & Corporate Summary */}
           <div className="space-y-4 md:col-span-1">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white shadow-md ring-1 ring-white/20">
-                <Landmark className="h-4.5 w-4.5" />
+              <span className="flex h-9 w-9 overflow-hidden rounded-xl bg-slate-950 shadow-md ring-1 ring-white/20">
+                <img src={logoUrl} alt="DAJEM Group" className="h-full w-full object-cover" />
               </span>
               <span className="text-base font-extrabold tracking-tight text-foreground">
                 {group.displayName}

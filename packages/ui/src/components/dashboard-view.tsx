@@ -1,22 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Bell, Building2, CheckCircle2, Clock3, Download, Home, Map, Printer, ReceiptText, ShoppingCart, WalletCards } from "lucide-react";
+import { ArrowRight, Bell, Building2, CheckCircle2, Clock3, Download, Home, Map, Pencil, Printer, ReceiptText, ShoppingCart, UserCircle2, WalletCards } from "lucide-react";
 import type { Order } from "../lib/store";
 import { getAppBaseUrl } from "../lib/store";
 import { cn } from "../lib/utils";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card, CardContent, CardHeader, CardTitle } from "./card";
+import { Input } from "./input";
+import { Label } from "./label";
+import { Select } from "./select";
 import { useDajem } from "./dajem-provider";
+import { localGovernmentsForState, nigeriaStates } from "../lib/nigeria-locations";
 
-type DashboardSection = "overview" | "billing" | "properties" | "surveys" | "notifications";
+type DashboardSection = "overview" | "billing" | "properties" | "surveys" | "profile" | "notifications";
 
 const dashboardSections = [
   { id: "overview", label: "Home", icon: Home },
   { id: "billing", label: "Bills", icon: ReceiptText },
   { id: "properties", label: "Homes", icon: Building2 },
   { id: "surveys", label: "Surveys", icon: Map },
+  { id: "profile", label: "Profile", icon: UserCircle2 },
   { id: "notifications", label: "Updates", icon: Bell },
 ] satisfies Array<{ id: DashboardSection; label: string; icon: typeof Home }>;
 
@@ -92,8 +97,9 @@ function isDashboardSection(value: string): value is DashboardSection {
 }
 
 export function DashboardView() {
-  const { snapshot: fullSnapshot, currentUser, isBootstrapping, navigateToUrl, openAuthModal } = useDajem();
+  const { snapshot: fullSnapshot, currentUser, isBootstrapping, isBusy, navigateToUrl, openAuthModal, updateProfile } = useDajem();
   const [activeSection, setActiveSection] = React.useState<DashboardSection>("overview");
+  const [profileDraft, setProfileDraft] = React.useState({ name: "", phone: "", country: "Nigeria", address: "", state: "", localGovernment: "" });
 
   React.useEffect(() => {
     const syncSection = () => {
@@ -104,6 +110,11 @@ export function DashboardView() {
     window.addEventListener("hashchange", syncSection);
     return () => window.removeEventListener("hashchange", syncSection);
   }, []);
+
+  React.useEffect(() => {
+    if (!currentUser) return;
+    setProfileDraft({ name: currentUser.name, phone: currentUser.phone, country: currentUser.country || "Nigeria", address: currentUser.address || "", state: currentUser.state || "", localGovernment: currentUser.localGovernment || "" });
+  }, [currentUser]);
 
   const selectSection = (section: DashboardSection) => {
     setActiveSection(section);
@@ -142,7 +153,7 @@ export function DashboardView() {
     { title: "Find a property", href: `${getAppBaseUrl("real-estate")}/listings`, icon: Building2, tone: "from-blue-600 to-slate-900" },
   ];
 
-  const DashboardNav = ({ mobile = false }: { mobile?: boolean }) => <nav aria-label="Account sections" className={cn(mobile ? "grid grid-cols-5 gap-1 rounded-2xl border bg-card/90 p-1.5 shadow-sm lg:hidden" : "space-y-1")}>{dashboardSections.map((section) => <button key={section.id} type="button" onClick={() => selectSection(section.id)} className={cn("flex items-center rounded-xl font-semibold transition", mobile ? "min-h-14 flex-col justify-center gap-1 px-1 text-[10px]" : "w-full gap-3 px-3 py-2.5 text-sm", activeSection === section.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground")} aria-current={activeSection === section.id ? "page" : undefined}><section.icon className="h-4 w-4" /><span>{section.label}</span></button>)}</nav>;
+  const DashboardNav = ({ mobile = false }: { mobile?: boolean }) => <nav aria-label="Account sections" className={cn(mobile ? "grid grid-cols-6 gap-1 overflow-x-auto rounded-2xl border bg-card/90 p-1.5 shadow-sm lg:hidden" : "space-y-1")}>{dashboardSections.map((section) => <button key={section.id} type="button" onClick={() => selectSection(section.id)} className={cn("flex items-center rounded-xl font-semibold transition", mobile ? "min-h-14 min-w-12 flex-col justify-center gap-1 px-1 text-[10px]" : "w-full gap-3 px-3 py-2.5 text-sm", activeSection === section.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent hover:text-foreground")} aria-current={activeSection === section.id ? "page" : undefined}><section.icon className="h-4 w-4" /><span>{section.label}</span></button>)}</nav>;
 
   const BillingCard = ({ order }: { order: Order }) => {
     const whatsappUrl = order.delivery?.requiresWhatsAppConfirmation ? deliveryConfirmationUrl(order, snapshot.farmDeliverySettings.whatsappNumber) : null;
@@ -161,6 +172,7 @@ export function DashboardView() {
         <Card><CardHeader><Badge variant="secondary" className="w-max">Receipts</Badge><CardTitle>Payments you have made</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{paidOrders.length === 0 ? <p className="text-sm text-muted-foreground">Once a payment is received, its receipt will be available here.</p> : paidOrders.map((order) => <BillingCard key={order.id} order={order} />)}</CardContent></Card></section>}
       {activeSection === "properties" && <Card><CardHeader><Badge variant="secondary" className="w-max">DAJEM Homes</Badge><CardTitle>Property activity</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{snapshot.bids.length === 0 && submittedProperties.length === 0 ? <p className="text-sm text-muted-foreground">No property activity yet.</p> : <>{submittedProperties.map((listing) => <div key={listing.id} className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{listing.title}</p><p className="text-xs text-muted-foreground">{listing.location}</p></div><Badge variant={listing.status === "Approved" ? "default" : listing.status === "Rejected" ? "destructive" : "secondary"}>{listing.status}</Badge></div><p className="mt-4 text-sm font-bold text-foreground">Listing: {formatCurrency(listing.price)}</p></div>)}{snapshot.bids.map((bid) => <div key={bid.id} className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{bid.propertyTitle}</p><p className="text-xs text-muted-foreground">{bid.propertyLocation}</p></div><Badge variant={bid.status === "Connected" ? "default" : bid.status === "Rejected" ? "destructive" : "secondary"}>{bid.status}</Badge></div><p className="mt-4 text-sm font-bold text-foreground">Your bid: {formatCurrency(bid.bidAmount)}</p></div>)}</>}</CardContent></Card>}
       {activeSection === "surveys" && <Card><CardHeader><Badge variant="secondary" className="w-max">DAJEM Orbital</Badge><CardTitle>Survey tracker</CardTitle></CardHeader><CardContent className="grid gap-3 xl:grid-cols-2">{snapshot.surveys.length === 0 ? <p className="text-sm text-muted-foreground">No survey requests yet.</p> : snapshot.surveys.map((survey) => <div key={survey.id} className="rounded-2xl border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-bold text-foreground">{survey.location}</p><p className="text-xs text-muted-foreground">{survey.applicationNumber ?? survey.id} · {survey.serviceType}</p></div><Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "Rejected" ? "destructive" : "secondary"}>{survey.status}</Badge></div>{survey.paymentStatus && <p className="mt-3 text-xs font-bold text-primary">{survey.paymentStatus}</p>}<details className="mt-3 rounded-xl bg-muted/45 p-3 text-sm"><summary className="cursor-pointer font-bold text-foreground">View request details</summary><p className="mt-2 whitespace-pre-line text-muted-foreground">{survey.description}</p></details></div>)}</CardContent></Card>}
+      {activeSection === "profile" && <Card><CardHeader><Badge variant="secondary" className="w-max">My profile</Badge><CardTitle>Keep your contact details current</CardTitle><p className="text-sm text-muted-foreground">Your unique customer ID is <span className="font-bold text-foreground">{currentUser.id}</span>. Address changes are recorded in the DAJEM audit log.</p></CardHeader><CardContent><form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => { event.preventDefault(); void updateProfile(profileDraft); }}><div className="space-y-1.5"><Label htmlFor="profile-name">Full name</Label><Input id="profile-name" value={profileDraft.name} onChange={(event) => setProfileDraft((current) => ({ ...current, name: event.target.value }))} required /></div><div className="space-y-1.5"><Label htmlFor="profile-phone">Phone number</Label><Input id="profile-phone" type="tel" value={profileDraft.phone} onChange={(event) => setProfileDraft((current) => ({ ...current, phone: event.target.value }))} required /></div><div className="space-y-1.5 sm:col-span-2"><Label htmlFor="profile-email">Verified email</Label><Input id="profile-email" value={currentUser.email} disabled /></div><div className="space-y-1.5 sm:col-span-2"><Label htmlFor="profile-address">Address</Label><Input id="profile-address" value={profileDraft.address} onChange={(event) => setProfileDraft((current) => ({ ...current, address: event.target.value }))} required /></div><Select label="State" value={profileDraft.state} onChange={(event) => setProfileDraft((current) => ({ ...current, state: event.target.value, localGovernment: "" }))} options={[{ value: "", label: "Select state" }, ...nigeriaStates.map((state) => ({ value: state, label: state }))]} /><Select label="Local government" value={profileDraft.localGovernment} disabled={!profileDraft.state} onChange={(event) => setProfileDraft((current) => ({ ...current, localGovernment: event.target.value }))} options={[{ value: "", label: "Select local government" }, ...localGovernmentsForState(profileDraft.state).map((localGovernment) => ({ value: localGovernment, label: localGovernment }))]} /><div className="sm:col-span-2"><Button type="submit" disabled={isBusy} className="bg-primary text-white"><Pencil className="h-4 w-4" />Save profile</Button></div></form></CardContent></Card>}
       {activeSection === "notifications" && <Card id="notifications"><CardHeader><Badge variant="secondary" className="w-max">Updates</Badge><CardTitle>Latest activity</CardTitle></CardHeader><CardContent className="space-y-3">{snapshot.communicationLogs.length === 0 ? <p className="text-sm text-muted-foreground">Updates about your activity will appear here.</p> : snapshot.communicationLogs.map((log) => <article key={log.id} className="flex gap-3 rounded-2xl border p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Bell className="h-4 w-4" /></span><div className="min-w-0"><h3 className="font-bold text-foreground">{log.subject}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{log.message}</p><time className="mt-2 block text-xs font-semibold text-muted-foreground">{new Date(log.createdAt).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</time></div></article>)}</CardContent></Card>}
     </div>
   </div>;

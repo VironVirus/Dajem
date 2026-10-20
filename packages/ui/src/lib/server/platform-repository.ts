@@ -1,11 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type {
   ApprovalStatus,
   Bid,
   BidStatus,
   CartItem,
   CommunicationLog,
-  CommunicationPreview,
   DashboardSnapshot,
   InventoryItem,
   InventoryCategory,
@@ -54,6 +53,67 @@ function normalizeEmail(email: string) {
 
 function makeId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function makeCustomerId() {
+  return `DAJ-${nowIso().slice(0, 10).replace(/-/g, "")}-${randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function tokenHash(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function verificationToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+function publicAppUrl() {
+  return (process.env.DAJEM_PUBLIC_APP_URL?.trim() || "https://dajemgroup.com").replace(/\/$/, "");
+}
+
+async function sendAccountEmail(input: { to: string; subject: string; html: string }) {
+  const apiKey = process.env.DAJEM_RESEND_API_KEY?.trim();
+  const from = process.env.DAJEM_EMAIL_FROM?.trim();
+  if (!apiKey || !from) {
+    throw new Error("Email verification is not configured yet. Please contact DAJEM support.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: input.to, subject: input.subject, html: input.html }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("We could not send the email right now. Please try again shortly.");
+}
+
+async function sendVerificationEmail(user: Pick<ServerUser, "name" | "email">, rawToken: string) {
+  const confirmationUrl = new URL("/auth/verify", publicAppUrl());
+  confirmationUrl.searchParams.set("email", user.email);
+  confirmationUrl.searchParams.set("token", rawToken);
+  await sendAccountEmail({
+    to: user.email,
+    subject: "Verify your DAJEM account",
+    html: `<p>Hello ${user.name},</p><p>Please verify your DAJEM account to sign in.</p><p><a href="${confirmationUrl.toString()}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
+  });
+}
+
+function appendAuditLog(state: PlatformState, input: {
+  actor: User;
+  action: string;
+  detail: string;
+  targetUserId?: string;
+}) {
+  state.auditLogs.unshift({
+    id: makeId("AUD"),
+    actorUserId: input.actor.id,
+    actorEmail: input.actor.email,
+    targetUserId: input.targetUserId,
+    action: input.action,
+    detail: input.detail,
+    createdAt: nowIso(),
+  });
+  state.auditLogs.splice(1000);
 }
 
 function invoicePrefix(app: PaymentApp) {
@@ -106,43 +166,6 @@ function requireAdmin(state: PlatformState, sessionEmail: string | null) {
 
 const supportTicketCategories: SupportTicketCategory[] = ["Order & Delivery", "Survey", "Homes", "Account", "General"];
 const supportTicketStatuses: SupportTicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
-
-function buildRegistrationPreview(user: User): CommunicationPreview {
-  return {
-    sms: {
-      to: user.phone,
-      message: `Hi ${user.name}, your Dajem Group Limited account is active. Visit your dashboard to track Dajem Farms orders, Dajem Homes bids, and Dajem Orbital requests.`,
-    },
-    email: {
-      to: user.email,
-      subject: "Welcome to Dajem Group Limited",
-      message: `Hello ${user.name}, your unified Dajem portal is now ready. You can move between Dajem Orbital Resources Limited, Dajem Farms Limited, Dajem Homes Limited, and the shared dashboard with one login.`,
-    },
-  };
-}
-
-function previewToLogs(user: User, preview: CommunicationPreview): CommunicationLog[] {
-  const createdAt = nowIso();
-
-  return [
-    {
-      id: randomUUID(),
-      userEmail: user.email,
-      channel: "sms",
-      subject: "SMS Dispatch",
-      message: preview.sms.message,
-      createdAt,
-    },
-    {
-      id: randomUUID(),
-      userEmail: user.email,
-      channel: "email",
-      subject: preview.email.subject,
-      message: preview.email.message,
-      createdAt,
-    },
-  ];
-}
 
 function buildEmailLog(userEmail: string, subject: string, message: string): CommunicationLog {
   return {
@@ -255,6 +278,8 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
     supportTickets: isAdmin
       ? state.supportTickets
       : state.supportTickets.filter((ticket) => normalizeEmail(ticket.userEmail) === normalizeEmail(email)),
+    auditLogs: isAdmin ? state.auditLogs : [],
+    brandLogoUrl: state.brandLogoUrl,
     integrations: getIntegrationStatus(),
   };
 }
@@ -362,6 +387,14 @@ export async function registerUser(
     throw new Error("Please use a password with at least 8 characters.");
   }
 
+  // Do not persist a pending account unless we can actually send its confirmation link.
+  if (!process.env.DAJEM_RESEND_API_KEY?.trim() || !process.env.DAJEM_EMAIL_FROM?.trim()) {
+    throw new Error("Email verification is not configured yet. Please contact DAJEM support.");
+  }
+
+  const rawToken = verificationToken();
+  const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const { result, state } = await updatePlatformState(async (draft) => {
     const exists = draft.users.some((user) => normalizeEmail(user.email) === email);
     if (exists) {
@@ -370,7 +403,7 @@ export async function registerUser(
 
     const passwordSalt = randomUUID();
     const user: ServerUser = {
-      id: `user-${randomUUID()}`,
+      id: makeCustomerId(),
       name,
       email,
       phone,
@@ -380,6 +413,10 @@ export async function registerUser(
       localGovernment,
       role: "user",
       createdAt: nowIso(),
+      emailVerified: false,
+      emailVerificationTokenHash: tokenHash(rawToken),
+      emailVerificationExpiresAt: tokenExpiresAt,
+      emailVerificationSentAt: nowIso(),
       passwordSalt,
       passwordHash: hashPassword(password, passwordSalt),
     };
@@ -387,18 +424,48 @@ export async function registerUser(
     draft.users.unshift(user);
     draft.carts[user.email] = draft.carts[user.email] ?? [];
 
-    const preview = buildRegistrationPreview(publicUser(user));
-    draft.communicationLogs.unshift(...previewToLogs(publicUser(user), preview));
+    appendAuditLog(draft, {
+      actor: publicUser(user),
+      targetUserId: user.id,
+      action: "Account registered",
+      detail: "Account created and waiting for email verification.",
+    });
 
-    return { user, preview };
+    return { user };
   });
 
+  await sendVerificationEmail(result.user, rawToken);
+
   return {
-    sessionEmail: result.user.email,
-    preview: result.preview,
-    snapshot: snapshotFor(state, result.user.email),
-    message: `Welcome aboard, ${result.user.name}.`,
+    sessionEmail: null,
+    snapshot: snapshotFor(state, null),
+    message: "Check your email and verify your account before signing in.",
   };
+}
+
+export async function resendVerificationEmail(payload: { email: string }) {
+  const email = normalizeEmail(payload.email);
+  if (!email) throw new Error("Enter your email address first.");
+  if (!process.env.DAJEM_RESEND_API_KEY?.trim() || !process.env.DAJEM_EMAIL_FROM?.trim()) {
+    throw new Error("Email verification is not configured yet. Please contact DAJEM support.");
+  }
+
+  const rawToken = verificationToken();
+  const { result } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user || user.emailVerified) return { user: null as ServerUser | null };
+    if (user.emailVerificationSentAt && Date.now() - Date.parse(user.emailVerificationSentAt) < 2 * 60 * 1000) {
+      throw new Error("Please wait two minutes before requesting another verification email.");
+    }
+    user.emailVerificationTokenHash = tokenHash(rawToken);
+    user.emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    user.emailVerificationSentAt = nowIso();
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Verification email resent", detail: "A new email verification link was requested." });
+    return { user };
+  });
+
+  if (result.user) await sendVerificationEmail(result.user, rawToken);
+  return { message: "If that address has an unverified DAJEM account, a verification email has been sent." };
 }
 
 export async function loginUser(
@@ -417,6 +484,9 @@ export async function loginUser(
   if (!user) {
     throw new Error("Invalid email or password.");
   }
+  if (!user.emailVerified) {
+    throw new Error("Please verify your email before signing in.");
+  }
 
   const hash = hashPassword(password, user.passwordSalt);
   if (hash !== user.passwordHash) {
@@ -428,6 +498,108 @@ export async function loginUser(
     snapshot: snapshotFor(state, user.email),
     message: `Welcome back, ${user.name}.`,
   };
+}
+
+export async function verifyUserEmail(payload: { email: string; token: string }) {
+  const email = normalizeEmail(payload.email);
+  const hash = tokenHash(String(payload.token ?? ""));
+  const { result, state } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user || !user.emailVerificationTokenHash || user.emailVerificationTokenHash !== hash) {
+      throw new Error("This verification link is invalid or has already been used.");
+    }
+    if (!user.emailVerificationExpiresAt || Date.parse(user.emailVerificationExpiresAt) < Date.now()) {
+      throw new Error("This verification link has expired. Please request a new link.");
+    }
+    user.emailVerified = true;
+    user.emailVerificationTokenHash = undefined;
+    user.emailVerificationExpiresAt = undefined;
+    user.emailVerificationSentAt = undefined;
+    appendAuditLog(draft, {
+      actor: publicUser(user), targetUserId: user.id, action: "Email verified", detail: "Account email confirmation completed.",
+    });
+    return user;
+  });
+  return { sessionEmail: result.email, snapshot: snapshotFor(state, result.email) };
+}
+
+export async function requestPasswordReset(payload: { email: string }) {
+  const email = normalizeEmail(payload.email);
+  if (!email) throw new Error("Enter your email address.");
+  const rawToken = verificationToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const { result } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user || !user.emailVerified) return { user: null as ServerUser | null };
+    user.passwordResetTokenHash = tokenHash(rawToken);
+    user.passwordResetExpiresAt = expiresAt;
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Password reset requested", detail: "A password recovery link was requested." });
+    return { user };
+  });
+  if (result.user) {
+    const resetUrl = new URL("/auth/reset", publicAppUrl());
+    resetUrl.searchParams.set("email", result.user.email);
+    resetUrl.searchParams.set("token", rawToken);
+    await sendAccountEmail({
+      to: result.user.email,
+      subject: "Reset your DAJEM password",
+      html: `<p>Hello ${result.user.name},</p><p><a href="${resetUrl.toString()}">Reset my password</a></p><p>This link expires in one hour. If you did not request it, you can ignore this email.</p>`,
+    });
+  }
+  return { message: "If that address has a verified DAJEM account, a password reset link has been sent." };
+}
+
+export async function resetPasswordWithToken(payload: { email: string; token: string; password: string }) {
+  const email = normalizeEmail(payload.email);
+  const password = String(payload.password ?? "");
+  if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
+  const { state } = await updatePlatformState((draft) => {
+    const user = draft.users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user || !user.passwordResetTokenHash || user.passwordResetTokenHash !== tokenHash(String(payload.token ?? ""))) {
+      throw new Error("This password reset link is invalid or has already been used.");
+    }
+    if (!user.passwordResetExpiresAt || Date.parse(user.passwordResetExpiresAt) < Date.now()) throw new Error("This password reset link has expired.");
+    const salt = randomUUID();
+    user.passwordSalt = salt;
+    user.passwordHash = hashPassword(password, salt);
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpiresAt = undefined;
+    appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Password reset completed", detail: "The account password was changed using an email recovery link." });
+  });
+  return { snapshot: snapshotFor(state, null), message: "Password reset successful. You can now sign in." };
+}
+
+export async function updateUserProfile(sessionEmail: string | null, payload: {
+  name: string; phone: string; country: string; address: string; state: string; localGovernment: string;
+}) {
+  const { state } = await updatePlatformState((draft) => {
+    const user = requireUser(draft, sessionEmail);
+    const name = String(payload.name ?? "").trim().slice(0, 120);
+    const phone = String(payload.phone ?? "").trim();
+    const country = String(payload.country ?? "").trim().slice(0, 80);
+    const address = String(payload.address ?? "").trim().slice(0, 400);
+    const stateName = String(payload.state ?? "").trim().slice(0, 80);
+    const localGovernment = String(payload.localGovernment ?? "").trim().slice(0, 120);
+    if (!name || !/^\+[1-9]\d{6,14}$/.test(phone) || !country || !address || !stateName || !localGovernment) {
+      throw new Error("Please provide a name, valid phone number, and complete address.");
+    }
+    user.name = name; user.phone = phone; user.country = country; user.address = address; user.state = stateName; user.localGovernment = localGovernment;
+    appendAuditLog(draft, {
+      actor: publicUser(user), targetUserId: user.id, action: "Profile updated", detail: "Contact address or profile details were updated by the account owner.",
+    });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Your profile has been updated." };
+}
+
+export async function updateBrandLogo(sessionEmail: string | null, payload: { imageUrl: string }) {
+  const { state } = await updatePlatformState((draft) => {
+    const admin = requireAdmin(draft, sessionEmail);
+    const imageUrl = String(payload.imageUrl ?? "").trim().slice(0, 2000);
+    if (!imageUrl) throw new Error("Upload a logo image before saving.");
+    draft.brandLogoUrl = imageUrl;
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Brand logo updated", detail: "The shared DAJEM logo was updated." });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "DAJEM logo updated across the platform." };
 }
 
 export async function addToCart(

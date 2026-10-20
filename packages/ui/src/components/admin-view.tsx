@@ -45,7 +45,7 @@ function joinHighlights(value: string[] | undefined) {
   return (value ?? []).join(", ");
 }
 
-async function uploadManagedImage(file: File, scope: "farm" | "property") {
+async function uploadManagedImage(file: File, scope: "farm" | "property" | "brand") {
   if (file.size > 5 * 1024 * 1024) throw new Error("Image must be 5MB or less.");
   const formData = new FormData();
   formData.append("scope", scope);
@@ -337,6 +337,7 @@ export function AdminView() {
     updateSupportTicket,
     upsertPropertyListing,
     upsertSurveyService,
+    updateBrandLogo,
     openAuthModal,
   } = useDajem();
   const [inventoryDrafts, setInventoryDrafts] = React.useState<Record<string, InventoryItem>>({});
@@ -349,6 +350,7 @@ export function AdminView() {
   const [serviceEditorOpen, setServiceEditorOpen] = React.useState(false);
   const [deliveryDrafts, setDeliveryDrafts] = React.useState<Record<string, SurveyDeliveryDraft>>({});
   const [mediaError, setMediaError] = React.useState<string | null>(null);
+  const [brandLogoDraft, setBrandLogoDraft] = React.useState(snapshot.brandLogoUrl || "/images/dajem-logo.jpg");
   const [adminFeedback, setAdminFeedback] = React.useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [activeArea, setActiveArea] = React.useState<AdminArea>("overview");
   const [farmsAction, setFarmsAction] = React.useState<FarmsAction>("manage-products");
@@ -381,6 +383,10 @@ export function AdminView() {
   React.useEffect(() => {
     setFarmDeliveryDraft(snapshot.farmDeliverySettings);
   }, [snapshot.farmDeliverySettings]);
+
+  React.useEffect(() => {
+    setBrandLogoDraft(snapshot.brandLogoUrl || "/images/dajem-logo.jpg");
+  }, [snapshot.brandLogoUrl]);
 
   const saveInventory = async (item: InventoryItem) => {
     await updateInventoryItem({
@@ -561,8 +567,8 @@ export function AdminView() {
           <nav aria-label="Admin areas" className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
             {[
               { id: "overview" as const, label: "Overview", icon: BarChart3, tone: "bg-slate-900 text-white" },
-              { id: "farms" as const, label: "Farms admin", icon: Sprout, tone: "bg-emerald-600 text-white" },
               { id: "orbital" as const, label: "Orbital admin", icon: ClipboardList, tone: "bg-cyan-700 text-white" },
+              { id: "farms" as const, label: "Farms admin", icon: Sprout, tone: "bg-emerald-600 text-white" },
               { id: "homes" as const, label: "Homes admin", icon: Building2, tone: "bg-blue-700 text-white" },
               { id: "reports" as const, label: "Reports", icon: FileText, tone: "bg-amber-500 text-slate-950" },
               { id: "support" as const, label: "Support", icon: Headphones, tone: "bg-violet-700 text-white" },
@@ -604,9 +610,36 @@ export function AdminView() {
 
       {activeArea === "overview" && <BackupCard />}
 
+      {activeArea === "overview" && (
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader><CardTitle>DAJEM brand logo</CardTitle><p className="text-sm text-muted-foreground">Upload the logo from this device. It is converted to WebP, watermarked, and used by the shared header and footer.</p></CardHeader>
+            <CardContent className="space-y-4">
+              <ImagePreview imageUrl={brandLogoDraft} fallbackClass="bg-slate-900 text-white" />
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadManagedImage(file, "brand")
+                    .then(setBrandLogoDraft)
+                    .catch((error) => setMediaError(error instanceof Error ? error.message : "Logo upload failed."));
+                }} />
+                <Button disabled={isBusy || !brandLogoDraft} onClick={() => void updateBrandLogo(brandLogoDraft)}><UploadCloud className="h-4 w-4" />Save logo</Button>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Account audit log</CardTitle><p className="text-sm text-muted-foreground">Recent account and administrator changes are linked to each user ID.</p></CardHeader>
+            <CardContent className="space-y-2">
+              {snapshot.auditLogs.slice(0, 8).map((entry) => <div key={entry.id} className="rounded-xl border border-border/70 p-3 text-sm"><p className="font-bold text-foreground">{entry.action}</p><p className="mt-1 text-xs text-muted-foreground">{entry.actorEmail} · ID {entry.targetUserId || entry.actorUserId}</p><p className="mt-1 text-xs text-muted-foreground">{entry.detail}</p></div>)}
+              {snapshot.auditLogs.length === 0 && <p className="py-4 text-sm text-muted-foreground">Account changes will be recorded here.</p>}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {activeArea === "reports" && (
         <Card>
-          <CardHeader><CardTitle>Activity reports</CardTitle><p className="text-sm text-muted-foreground">Generate a clean activity register across Farms, Orbital, and Homes.</p></CardHeader>
+          <CardHeader><CardTitle>Activity reports</CardTitle><p className="text-sm text-muted-foreground">Generate a clean activity register across Orbital, Farms, and Homes.</p></CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-[12rem_1fr_1fr_auto] sm:items-end">
               <Select label="Report period" value={reportPeriod} onChange={(event) => setReportPeriod(event.target.value as ReportPeriod)} options={[{ value: "today", label: "Today" }, { value: "week", label: "Last 7 days" }, { value: "month", label: "This month" }, { value: "custom", label: "Custom range" }]} />

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file");
     const scope = String(formData.get("scope") ?? "property");
-    if (scope !== "property" && scope !== "farm") throw new Error("Select a valid image destination.");
+    if (scope !== "property" && scope !== "farm" && scope !== "brand") throw new Error("Select a valid image destination.");
     if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") throw new Error("Please choose an image file.");
     if (file.size > MAX_FILE_SIZE_BYTES) throw new Error("Each image must be 5MB or less.");
     if (!ALLOWED_MIME_TYPES.has(file.type)) throw new Error("Only JPG, PNG, and WebP images are allowed.");
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (!hasExpectedFileSignature(bytes, file.type)) throw new Error("The image does not match its declared file type.");
     const state = await readPlatformState();
     const user = state.users.find((entry) => entry.email.toLowerCase() === sessionEmail.toLowerCase());
-    if (!user || (scope === "farm" && user.role !== "admin")) throw new Error("You are not allowed to upload this image.");
+    if (!user || ((scope === "farm" || scope === "brand") && user.role !== "admin")) throw new Error("You are not allowed to upload this image.");
 
     const prepared = sharp(bytes, { failOn: "error", limitInputPixels: 40_000_000 }).rotate();
     const metadata = await prepared.metadata();

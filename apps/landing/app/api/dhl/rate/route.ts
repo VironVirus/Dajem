@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type DeliveryZone = "enugu" | "southeast" | "other";
+type DeliveryZone = "enugu" | "southeast" | "other" | "international";
 
 const fallbackRates: Record<DeliveryZone, { amount: number; estimatedDelivery: string }> = {
   enugu: { amount: 5000, estimatedDelivery: "Same day or next business day" },
   southeast: { amount: 15000, estimatedDelivery: "2-3 business days after dispatch" },
   other: { amount: 20000, estimatedDelivery: "3-5 business days after dispatch" },
+  international: { amount: 0, estimatedDelivery: "Live DHL account rate required" },
 };
 
 function assertSameOrigin(request: NextRequest) {
@@ -142,21 +143,31 @@ export async function POST(request: NextRequest) {
     };
 
     if (!(zone in fallbackRates)) {
-      return NextResponse.json({ error: "Select a valid Nigerian delivery zone." }, { status: 400 });
+      return NextResponse.json({ error: "Select a valid delivery zone." }, { status: 400 });
     }
-    if (!destination.city || !destination.state || destination.countryCode !== "NG") {
-      return NextResponse.json({ error: "Enter a valid Nigerian destination city and state." }, { status: 400 });
+    if (!destination.city || !destination.state || destination.countryCode.length !== 2) {
+      return NextResponse.json({ error: "Enter a valid destination city, state, and two-letter country code." }, { status: 400 });
     }
 
-    if (destination.state.toLowerCase() === "enugu") {
+    if (zone === "international" && destination.countryCode === "NG") {
+      return NextResponse.json({ error: "Enter the destination country code for delivery outside Nigeria." }, { status: 400 });
+    }
+
+    if (destination.countryCode === "NG" && destination.state.toLowerCase() === "enugu") {
       return NextResponse.json(buildFallbackRate("enugu", "Flat Enugu delivery charge."));
     }
 
     try {
       const liveRate = await requestLiveDhlRate(destination);
+      if (!liveRate && zone === "international") {
+        return NextResponse.json({ error: "International delivery needs an active DHL account rate. Please contact DAJEM Orbital for a confirmed quote." }, { status: 503 });
+      }
       return NextResponse.json(liveRate ?? buildFallbackRate(zone));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Live DHL rating is temporarily unavailable.";
+      if (zone === "international") {
+        return NextResponse.json({ error: `${message} Please contact DAJEM Orbital for a confirmed international quote.` }, { status: 503 });
+      }
       return NextResponse.json(buildFallbackRate(zone, `${message} DAJEM's estimated DHL rate is shown instead.`));
     }
   } catch (error) {

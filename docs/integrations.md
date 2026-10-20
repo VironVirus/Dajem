@@ -38,7 +38,10 @@ Set these environment variables in Hostinger:
 - `DAJEM_ADMIN_EMAIL`
 - `DAJEM_ADMIN_PASSWORD`
 - `DAJEM_ADMIN_PHONE`
-- `NEXT_PUBLIC_DAJEM_SITE_URL=https://dajem.consolish.com`
+- `NEXT_PUBLIC_DAJEM_SITE_URL=https://dajemgroup.com`
+- `DAJEM_PUBLIC_APP_URL=https://dajemgroup.com`
+- `DAJEM_RESEND_API_KEY`
+- `DAJEM_EMAIL_FROM=DAJEM Group <accounts@dajemgroup.com>`
 - `NEXT_PUBLIC_DAJEM_REFRESH_INTERVAL_MS=0`
 - Supabase variables from the Supabase setup section
 
@@ -58,6 +61,10 @@ Set these environment variables in Hostinger:
 4. Set the Flutterwave webhook URL to `https://dajem.consolish.com/api/flutterwave/webhook`.
 
 The app validates the signed webhook and independently verifies the transaction with Flutterwave before issuing the order and receipt. The browser return page is a customer confirmation page; the webhook lets DAJEM record a verified payment even if the customer closes that page.
+
+## Customer Account Email
+
+New customer accounts must verify their email before they can log in. The same verified address receives password-reset links. Add a verified sender domain and API key from Resend to the three `DAJEM_*` email settings above. The application deliberately refuses new registrations until those settings are configured, preventing unverified account records and registration abuse.
 
 ## Managed Images
 

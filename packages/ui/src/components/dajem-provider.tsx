@@ -4,7 +4,6 @@ import * as React from "react";
 import { AuthModal } from "./auth-modal";
 import type {
   BidStatus,
-  CommunicationPreview,
   DashboardSnapshot,
   DajemActionResponse,
   ApprovalStatus,
@@ -35,7 +34,7 @@ interface DajemContextValue {
   isBusy: boolean;
   authMode: AuthMode;
   authError: string | null;
-  authPreview: CommunicationPreview | null;
+  authNotice: string | null;
   openAuthModal: (mode?: AuthMode) => void;
   closeAuthModal: () => void;
   refresh: () => Promise<void>;
@@ -50,6 +49,7 @@ interface DajemContextValue {
     localGovernment: string;
     password: string;
   }) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   navigateToUrl: (targetUrl: string) => Promise<void>;
@@ -122,7 +122,7 @@ interface DajemContextValue {
       city: string;
       state: string;
       postalCode?: string;
-      countryCode: "NG";
+      countryCode: string;
       status: SurveyDeliveryStatus;
     };
   }) => Promise<void>;
@@ -178,6 +178,15 @@ interface DajemContextValue {
     promoLabel?: string;
   }) => Promise<void>;
   updateFarmDeliverySettings: (payload: FarmDeliverySettings) => Promise<void>;
+  updateProfile: (payload: {
+    name: string;
+    phone: string;
+    country: string;
+    address: string;
+    state: string;
+    localGovernment: string;
+  }) => Promise<void>;
+  updateBrandLogo: (imageUrl: string) => Promise<void>;
   updatePropertyListingAgentPayment: (propertyId: string, status: NonNullable<PropertyListing["agentListingPaymentStatus"]>, paymentProofPath?: string) => Promise<void>;
   startPaymentCheckout: (provider: PaymentProvider, options?: { purpose?: PaymentPurpose; propertyListingId?: string; delivery?: FarmDeliveryInput }) => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
   startFlutterwaveCheckout: () => Promise<{ order?: Order; payment?: DajemActionResponse["payment"] }>;
@@ -215,7 +224,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
   const [authModalOpen, setAuthModalOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState<AuthMode>("login");
   const [authError, setAuthError] = React.useState<string | null>(null);
-  const [authPreview, setAuthPreview] = React.useState<CommunicationPreview | null>(null);
+  const [authNotice, setAuthNotice] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
     const nextSnapshot = await fetchSnapshot();
@@ -267,14 +276,14 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
   const openAuthModal = React.useCallback((mode: AuthMode = "login") => {
     setAuthMode(mode);
     setAuthError(null);
-    setAuthPreview(null);
+    setAuthNotice(null);
     setAuthModalOpen(true);
   }, []);
 
   const closeAuthModal = React.useCallback(() => {
     setAuthModalOpen(false);
     setAuthError(null);
-    setAuthPreview(null);
+    setAuthNotice(null);
   }, []);
 
   const navigateToDashboard = React.useCallback(() => {
@@ -338,11 +347,14 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     localGovernment: string;
     password: string;
   }) => {
-    await postAction("register", payload);
-    setAuthModalOpen(false);
-    setAuthPreview(null);
-    navigateToDashboard();
-  }, [navigateToDashboard, postAction]);
+    const result = await postAction("register", payload);
+    setAuthNotice(result.message ?? "Check your email to verify your account before signing in.");
+  }, [postAction]);
+
+  const resendVerification = React.useCallback(async (email: string) => {
+    const result = await postAction("resend-verification", { email });
+    setAuthNotice(result.message ?? "Check your email for a new verification link.");
+  }, [postAction]);
 
   const login = React.useCallback(async (payload: { email: string; password: string }) => {
     await postAction("login", payload);
@@ -354,7 +366,6 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
   const logout = React.useCallback(async () => {
     await postAction("logout");
     setAuthModalOpen(false);
-    setAuthPreview(null);
   }, [postAction]);
 
   const navigateToUrl = React.useCallback(async (targetUrl: string) => {
@@ -431,12 +442,13 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     isBusy: busyAction !== null,
     authMode,
     authError,
-    authPreview,
+    authNotice,
     openAuthModal,
     closeAuthModal,
     refresh,
     requireAuth,
     register,
+    resendVerification,
     login,
     logout,
     navigateToUrl,
@@ -499,6 +511,12 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     updateFarmDeliverySettings: async (payload) => {
       await postAction("update-farm-delivery-settings", payload);
     },
+    updateProfile: async (payload) => {
+      await postAction("update-profile", payload);
+    },
+    updateBrandLogo: async (imageUrl) => {
+      await postAction("update-brand-logo", { imageUrl });
+    },
     updatePropertyListingAgentPayment: async (propertyId, status, paymentProofPath) => {
       await postAction("update-property-listing-agent-payment", { propertyId, status, paymentProofPath });
     },
@@ -507,8 +525,8 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     verifyFlutterwaveCheckout,
   }), [
     authError,
+    authNotice,
     authMode,
-    authPreview,
     busyAction,
     closeAuthModal,
     isBootstrapping,
@@ -519,6 +537,7 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     postAction,
     refresh,
     register,
+    resendVerification,
     requireAuth,
     snapshot,
     startPaymentCheckout,
@@ -532,14 +551,14 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
       <AuthModal
         isOpen={authModalOpen}
         mode={authMode}
-        isBusy={busyAction === "login" || busyAction === "register"}
+        isBusy={busyAction === "login" || busyAction === "register" || busyAction === "resend-verification"}
         error={authError}
-        preview={authPreview}
+        notice={authNotice}
         onClose={closeAuthModal}
         onModeChange={setAuthMode}
-        onAuthenticated={navigateToDashboard}
         onLogin={login}
         onRegister={register}
+        onResendVerification={resendVerification}
       />
     </DajemContext.Provider>
   );

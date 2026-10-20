@@ -4,9 +4,9 @@ import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
 import { Footer, Header, HeroSlideshow, SectionNav, dajemCompanyProfiles } from "@repo/ui";
 
 const businesses = [
-  { number: "01", name: "DAJEM Farms", category: "FOOD & AGRICULTURE", description: "Fresh farm products, livestock and supplies for your home or business.", image: "/images/farms-hero-farm-v2.png", href: "/farms", action: "Explore Farms" },
-  { number: "02", name: "DAJEM Homes", category: "PROPERTY & HOSPITALITY", description: "Find property, discover short stays and explore investment opportunities.", image: "/images/homes-hero-suite-v2.png", href: "/properties", action: "Explore Homes" },
-  { number: "03", name: "DAJEM Orbital", category: "SURVEY & GEOMATICS", description: "Surveying and land services for informed property decisions.", image: "/images/orbital-hero-field-v2.png", href: "/survey", action: "Explore Orbital" },
+  { number: "01", name: "DAJEM Orbital", category: "SURVEY & GEOMATICS", description: "Surveying and land services for informed property decisions.", image: "/images/orbital-hero-field-v2.png", href: "/survey", action: "Explore Orbital" },
+  { number: "02", name: "DAJEM Farms", category: "FOOD & AGRICULTURE", description: "Fresh farm products, livestock and supplies for your home or business.", image: "/images/farms-hero-farm-v2.png", href: "/farms", action: "Explore Farms" },
+  { number: "03", name: "DAJEM Homes", category: "PROPERTY & HOSPITALITY", description: "Find property, discover short stays and explore investment opportunities.", image: "/images/homes-hero-suite-v2.png", href: "/properties", action: "Explore Homes" },
 ];
 
 export default function LandingPage() {
@@ -17,9 +17,9 @@ export default function LandingPage() {
       <SectionNav label="DAJEM Group" items={[{ href: "#companies", label: "Our businesses" }, { href: "#about", label: "About" }, { href: "#contact", label: "Contact" }]} />
       <HeroSlideshow className="dajem-mobile-hero min-h-[35rem] py-12 sm:min-h-[40rem] sm:py-20" contentClassName="landing-hero-copy" overlayClassName="bg-gradient-to-r from-slate-950/90 via-slate-950/75 to-slate-950/45" slides={[
         { src: "/images/group-hero-boardroom-v2.png", label: "DAJEM Group", actionLabel: "Explore our businesses", href: "/#companies" },
+        { src: "/images/orbital-hero-field-v2.png", label: "DAJEM Orbital", actionLabel: "Request a survey", href: "/survey/inquiry" },
         { src: "/images/farms-hero-farm-v2.png", label: "DAJEM Farms", actionLabel: "Shop farm products", href: "/farms/shop" },
         { src: "/images/homes-hero-suite-v2.png", label: "DAJEM Homes", actionLabel: "Find a property", href: "/properties/listings" },
-        { src: "/images/orbital-hero-field-v2.png", label: "DAJEM Orbital", actionLabel: "Request a survey", href: "/survey/inquiry" },
       ]}>
         <div className="mx-auto flex w-full max-w-6xl items-center px-5 py-10 sm:px-8"><div className="max-w-2xl text-left text-white">
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white sm:text-xs"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Rooted in Enugu. Built for progress.</p>

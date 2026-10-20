@@ -81,6 +81,7 @@ function createAdminUser(): ServerUser | null {
     phone: seed.phone,
     role: "admin",
     createdAt: nowIso(),
+    emailVerified: true,
     passwordSalt: salt,
     passwordHash: hashPassword(seed.password, salt),
   };
@@ -129,6 +130,7 @@ function createDefaultState(): PlatformState {
     communicationLogs: [],
     farmDeliverySettings: defaultFarmDeliverySettings(),
     supportTickets: [],
+    auditLogs: [],
   };
 }
 
@@ -199,6 +201,8 @@ function sanitizeState(raw: unknown): PlatformState {
   const users = Array.isArray(candidate.users)
     ? candidate.users.filter((user): user is ServerUser => Boolean(user && typeof user === "object"))
       .map(removeLegacyIdentityFields)
+      // Existing accounts predate verification, so retain their established access.
+      .map((user) => ({ ...user, emailVerified: typeof user.emailVerified === "boolean" ? user.emailVerified : true }))
     : [];
   const configuredAdmin = createAdminUser();
   const adminEmail = configuredAdmin?.email.toLowerCase();
@@ -220,6 +224,8 @@ function sanitizeState(raw: unknown): PlatformState {
     communicationLogs: Array.isArray(candidate.communicationLogs) ? candidate.communicationLogs : [],
     farmDeliverySettings: normalizeFarmDeliverySettings(candidate.farmDeliverySettings),
     supportTickets: Array.isArray(candidate.supportTickets) ? candidate.supportTickets : [],
+    auditLogs: Array.isArray(candidate.auditLogs) ? candidate.auditLogs.slice(0, 1000) : [],
+    brandLogoUrl: typeof candidate.brandLogoUrl === "string" ? candidate.brandLogoUrl.slice(0, 2000) : undefined,
   };
 }
 
@@ -473,6 +479,7 @@ export function publicUser(user: ServerUser): User {
     phone: user.phone,
     role: user.role,
     createdAt: user.createdAt,
+    emailVerified: user.emailVerified,
     country: user.country,
     address: user.address,
     state: user.state,

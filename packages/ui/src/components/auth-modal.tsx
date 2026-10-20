@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, EyeOff, Mail, MessageSquareText, ShieldCheck } from "lucide-react";
-import type { CommunicationPreview } from "../lib/store";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
 import { Input } from "./input";
@@ -15,10 +14,9 @@ interface AuthModalProps {
   mode: "login" | "signup";
   isBusy: boolean;
   error: string | null;
-  preview: CommunicationPreview | null;
+  notice: string | null;
   onClose: () => void;
   onModeChange: (mode: "login" | "signup") => void;
-  onAuthenticated: () => void;
   onLogin: (payload: { email: string; password: string }) => Promise<void>;
   onRegister: (payload: {
     name: string;
@@ -30,6 +28,7 @@ interface AuthModalProps {
     localGovernment: string;
     password: string;
   }) => Promise<void>;
+  onResendVerification: (email: string) => Promise<void>;
 }
 
 const phoneCountries = [
@@ -56,12 +55,12 @@ export function AuthModal({
   mode,
   isBusy,
   error,
-  preview,
+  notice,
   onClose,
   onModeChange,
-  onAuthenticated,
   onLogin,
   onRegister,
+  onResendVerification,
 }: AuthModalProps) {
   const [loginForm, setLoginForm] = React.useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = React.useState({
@@ -106,51 +105,9 @@ export function AuthModal({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={preview ? "Registration Communication Preview" : "Welcome to Dajem Group Limited"}
+      title="Welcome to Dajem Group Limited"
     >
-      {preview ? (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-            <div className="mb-2 flex items-center gap-2 text-emerald-600 dark:text-emerald-300">
-              <ShieldCheck className="h-4 w-4" />
-              <span className="text-sm font-semibold">Account created and signed in</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              This is the styled SMS and email simulator that appears after registration.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border bg-card p-4">
-              <div className="mb-3 flex items-center gap-2 text-cyan-600 dark:text-cyan-300">
-                <MessageSquareText className="h-4 w-4" />
-                <span className="text-sm font-semibold">SMS Dispatch</span>
-              </div>
-              <p className="text-xs text-muted-foreground">To: {preview.sms.to}</p>
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {preview.sms.message}
-              </p>
-            </div>
-
-            <div className="rounded-xl border bg-card p-4">
-              <div className="mb-3 flex items-center gap-2 text-blue-600 dark:text-blue-300">
-                <Mail className="h-4 w-4" />
-                <span className="text-sm font-semibold">Email Dispatch</span>
-              </div>
-              <p className="text-xs text-muted-foreground">To: {preview.email.to}</p>
-              <p className="text-xs text-muted-foreground">Subject: {preview.email.subject}</p>
-              <p className="mt-3 text-sm leading-relaxed text-foreground">
-                {preview.email.message}
-              </p>
-            </div>
-          </div>
-
-          <Button className="w-full bg-primary text-white" onClick={() => { onClose(); onAuthenticated(); }}>
-            Open my dashboard
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-5">
+      <div className="space-y-5">
           <div className="rounded-xl bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10 p-4">
             <div className="mb-3 flex gap-2">
               <button
@@ -175,6 +132,7 @@ export function AuthModal({
               {formError ?? error}
             </div>
           )}
+          {notice && <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">{notice}</div>}
 
           {mode === "login" ? (
             <form
@@ -225,6 +183,8 @@ export function AuthModal({
               <Button type="submit" className="w-full bg-primary text-white" disabled={isBusy}>
                 {isBusy ? "Signing in..." : "Login to Dajem"}
               </Button>
+              <a href="/auth/reset" className="block text-center text-sm font-semibold text-primary hover:underline">Forgot your password?</a>
+              <button type="button" className="block w-full text-center text-sm font-semibold text-primary hover:underline disabled:opacity-50" disabled={isBusy} onClick={() => void onResendVerification(loginForm.email)}>Resend verification email</button>
             </form>
           ) : (
             <form
@@ -380,8 +340,7 @@ export function AuthModal({
               </Button>
             </form>
           )}
-        </div>
-      )}
+      </div>
     </Dialog>
   );
 }

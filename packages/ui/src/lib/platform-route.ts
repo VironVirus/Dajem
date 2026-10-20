@@ -6,6 +6,11 @@ import {
   getSnapshot,
   loginUser,
   registerUser,
+  resendVerificationEmail,
+  requestPasswordReset,
+  resetPasswordWithToken,
+  updateUserProfile,
+  updateBrandLogo,
   removeCartItem,
   submitBid,
   submitPropertyListing,
@@ -70,9 +75,8 @@ export async function POST(request: NextRequest) {
         const response = NextResponse.json({
           snapshot: result.snapshot,
           message: result.message,
-          preview: result.preview,
         });
-        writeSessionCookie(response, result.sessionEmail);
+        if (result.sessionEmail) writeSessionCookie(response, result.sessionEmail);
         return response;
       }
       case "login": {
@@ -133,6 +137,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await updateFarmDeliverySettings(sessionEmail, payload));
       case "update-support-ticket":
         return NextResponse.json(await updateSupportTicket(sessionEmail, payload));
+      case "update-profile":
+        return NextResponse.json(await updateUserProfile(sessionEmail, payload));
+      case "update-brand-logo":
+        return NextResponse.json(await updateBrandLogo(sessionEmail, payload));
+      case "request-password-reset":
+        return NextResponse.json(await requestPasswordReset(payload));
+      case "resend-verification":
+        return NextResponse.json(await resendVerificationEmail(payload));
+      case "reset-password":
+        return NextResponse.json(await resetPasswordWithToken(payload));
       default:
         return jsonError(new Error("Unsupported platform action."), 404);
     }

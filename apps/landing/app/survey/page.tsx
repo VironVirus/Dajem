@@ -80,7 +80,7 @@ type ReestablishmentMode =
   | "reestablish-destroyed-beacon";
 type ChangeOfTitleState = "undeveloped" | "developed";
 type AcquisitionSource = "community" | "estate-developer" | "dajem" | "other";
-type DeliveryZone = "enugu" | "southeast" | "other";
+type DeliveryZone = "enugu" | "southeast" | "other" | "international";
 type DeliveryRateSource = "dajem-estimate" | "dhl-live";
 type UploadedDocumentAttachment = {
   documentName: string;
@@ -98,6 +98,7 @@ interface SurveyDeliveryCheckout {
   address: string;
   city: string;
   state: string;
+  countryCode: string;
   postalCode: string;
   zone: DeliveryZone;
   fee: number;
@@ -293,6 +294,8 @@ const perimeterExtraItems: EstimateLineItem[] = [
   { label: "Beacons", amount: 5000 },
 ];
 
+const optionalExtraCostOptions = perimeterExtraItems.map((item) => ({ ...item, id: item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-") }));
+
 const documentSubmissionOptions = [
   "Land Purchase Receipt",
   "Allocation Letter",
@@ -320,6 +323,7 @@ const initialSurveyDelivery: SurveyDeliveryCheckout = {
   address: "",
   city: "",
   state: "Enugu",
+  countryCode: "NG",
   postalCode: "",
   zone: "enugu",
   fee: 0,
@@ -520,6 +524,7 @@ function calculateSurveyEstimate(inputs: {
   reestablishmentMode: ReestablishmentMode;
   reestablishmentCount: string;
   changeOfTitleState: ChangeOfTitleState;
+  selectedExtras: string[];
 }) {
   const serviceLabel = getCalculatorServiceLabel(inputs.serviceType);
   const areaSelection = formatAreaSelection(inputs.parcelSize, inputs.parcelUnit);
@@ -532,7 +537,7 @@ function calculateSurveyEstimate(inputs: {
     selections.push(
       `DHL delivery service: ${inputs.delivery.serviceName}`,
       `Delivery recipient: ${inputs.delivery.recipientName}`,
-      `Delivery address: ${inputs.delivery.address}, ${inputs.delivery.city}, ${inputs.delivery.state}${inputs.delivery.postalCode ? ` ${inputs.delivery.postalCode}` : ""}, Nigeria`,
+      `Delivery address: ${inputs.delivery.address}, ${inputs.delivery.city}, ${inputs.delivery.state}${inputs.delivery.postalCode ? ` ${inputs.delivery.postalCode}` : ""}, ${inputs.delivery.countryCode === "NG" ? "Nigeria" : inputs.delivery.countryCode}`,
       `Delivery contact: ${inputs.delivery.phone}${inputs.delivery.email ? ` | ${inputs.delivery.email}` : ""}`,
       `Delivery rate: ${formatCurrency(inputs.delivery.fee)} (${inputs.delivery.rateSource === "dhl-live" ? "Live DHL account rate" : "DAJEM estimated DHL rate"})`,
       `Estimated delivery: ${inputs.delivery.estimatedDelivery}`,
@@ -546,17 +551,23 @@ function calculateSurveyEstimate(inputs: {
     notes: inputs.delivery.added ? [...notes, deliveryFulfillmentNote] : notes,
   });
 
-  const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[]) => ({
+  const addAmountAndSelections = (items: EstimateLineItem[], extraSelections: string[], detail: string, notes: string[], fieldOperationsIncluded = false) => {
+    const selectedExtras = fieldOperationsIncluded
+      ? []
+      : perimeterExtraItems.filter((item) => inputs.selectedExtras.includes(item.label));
+    items.push(...selectedExtras);
+    return {
     serviceType: inputs.serviceType,
     serviceLabel,
     amount: sumLineItems(items),
     detail,
     lineItems: items,
-    selections: [...selections, ...extraSelections],
+    selections: [...selections, ...extraSelections, ...selectedExtras.map((item) => `Extra selected: ${item.label}`)],
     notes: inputs.delivery.added
       ? [...notes, deliveryFulfillmentNote]
       : notes,
-  });
+    };
+  };
 
   if (inputs.serviceType === "parcellation") {
     const plots = parsePositiveNumber(inputs.plotCount);
@@ -715,6 +726,7 @@ function calculateSurveyEstimate(inputs: {
       ],
       detail,
       notes,
+      squareMetres >= 1000,
     );
   }
 
@@ -746,6 +758,7 @@ function calculateSurveyEstimate(inputs: {
         "Perimeter summary includes transportation, security, casual labourers, skilled labourer, and beacons.",
         "These posted perimeter extras have been added to the total automatically.",
       ],
+      true,
     );
   }
 
@@ -901,6 +914,7 @@ export default function SurveyPage() {
     reestablishmentMode: "identification-plot" as ReestablishmentMode,
     reestablishmentCount: "1",
     changeOfTitleState: "undeveloped" as ChangeOfTitleState,
+    selectedExtras: [] as string[],
   });
   const [unitConverter, setUnitConverter] = React.useState({
     fromUnit: "sqm",
@@ -963,7 +977,7 @@ export default function SurveyPage() {
           deliveryCheckout?: SurveyDeliveryCheckout;
           inquiryService?: string;
         };
-        if (parsed.calculatorInputs) setCalculatorInputs(parsed.calculatorInputs);
+        if (parsed.calculatorInputs) setCalculatorInputs((current) => ({ ...current, ...parsed.calculatorInputs, selectedExtras: parsed.calculatorInputs?.selectedExtras ?? [] }));
         if (parsed.deliveryCheckout) setDeliveryCheckout(parsed.deliveryCheckout);
         if (parsed.inquiryService) {
           setQuoteForm((current) => ({ ...current, serviceType: parsed.inquiryService ?? current.serviceType }));
@@ -1037,7 +1051,7 @@ export default function SurveyPage() {
             city: deliveryCheckout.city,
             state: deliveryCheckout.state,
             postalCode: deliveryCheckout.postalCode,
-            countryCode: "NG",
+            countryCode: deliveryCheckout.countryCode,
           },
           zone: deliveryCheckout.zone,
         }),
@@ -1258,7 +1272,7 @@ export default function SurveyPage() {
               <Input id={`${idPrefix}-delivery-city`} autoComplete="address-level2" value={deliveryCheckout.city} onChange={(event) => setDeliveryValue("city", event.target.value)} placeholder="Enugu" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor={`${idPrefix}-delivery-state`}>State</Label>
+              <Label htmlFor={`${idPrefix}-delivery-state`}>{deliveryCheckout.zone === "international" ? "State / Province" : "State"}</Label>
               <Input id={`${idPrefix}-delivery-state`} autoComplete="address-level1" value={deliveryCheckout.state} onChange={(event) => setDeliveryValue("state", event.target.value)} placeholder="Enugu" />
             </div>
             <div className="space-y-1.5">
@@ -1273,14 +1287,16 @@ export default function SurveyPage() {
                 { value: "enugu", label: "Within Enugu State" },
                 { value: "southeast", label: "Abia, Imo, Anambra or Ebonyi" },
                 { value: "other", label: "Other Nigerian States" },
+                { value: "international", label: "Outside Nigeria" },
               ]}
             />
+            {deliveryCheckout.zone === "international" && <div className="space-y-1.5"><Label htmlFor={`${idPrefix}-delivery-country`}>Destination country code</Label><Input id={`${idPrefix}-delivery-country`} value={deliveryCheckout.countryCode === "NG" ? "" : deliveryCheckout.countryCode} onChange={(event) => setDeliveryValue("countryCode", event.target.value.toUpperCase().slice(0, 2))} placeholder="US, GB, GH" maxLength={2} /></div>}
           </div>
 
           <div className="grid gap-3 rounded-xl border bg-muted/25 p-4 text-xs sm:grid-cols-3">
             <div><p className="font-bold text-foreground">Document envelope</p><p className="mt-1 text-muted-foreground">Survey plan package</p></div>
             <div><p className="font-bold text-foreground">0.5 kg</p><p className="mt-1 text-muted-foreground">35 x 25 x 2 cm</p></div>
-            <div><p className="font-bold text-foreground">From Enugu</p><p className="mt-1 text-muted-foreground">Domestic delivery</p></div>
+            <div><p className="font-bold text-foreground">From Enugu</p><p className="mt-1 text-muted-foreground">{deliveryCheckout.zone === "international" ? "International delivery" : "Domestic delivery"}</p></div>
           </div>
 
           {deliveryError && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{deliveryError}</p>}
@@ -1466,6 +1482,18 @@ export default function SurveyPage() {
         />
       </div>
 
+      <fieldset className="rounded-xl border border-amber-400/30 bg-amber-50/50 p-4 dark:bg-amber-950/15">
+        <legend className="px-1 text-sm font-bold text-foreground">Other field costs</legend>
+        <p className="mb-3 text-xs text-muted-foreground">Select the posted operational costs that apply. Perimeter pricing already includes all five items.</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {optionalExtraCostOptions.map((item) => {
+            const included = serviceType === "perimeter" || (serviceType === "lifting" && toSquareMetres(calculatorInputs.parcelSize, calculatorInputs.parcelUnit) >= 1000);
+            const checked = included || calculatorInputs.selectedExtras.includes(item.label);
+            return <label key={item.id} className="flex items-center justify-between gap-3 rounded-lg border bg-background/80 p-2.5 text-xs text-foreground"><span className="flex items-center gap-2"><input type="checkbox" checked={checked} disabled={included} onChange={(event) => setCalculatorInputs((current) => ({ ...current, selectedExtras: event.target.checked ? [...current.selectedExtras, item.label] : current.selectedExtras.filter((label) => label !== item.label) }))} /><span>{item.label}</span></span><span className="font-bold">{formatCurrency(item.amount)}</span></label>;
+          })}
+        </div>
+      </fieldset>
+
       {renderDeliveryCheckout(idPrefix)}
     </>
   );
@@ -1554,7 +1582,7 @@ export default function SurveyPage() {
             city: deliveryCheckout.city,
             state: deliveryCheckout.state,
             postalCode: deliveryCheckout.postalCode.trim() || undefined,
-            countryCode: "NG",
+            countryCode: deliveryCheckout.countryCode,
             status: "Rate Added",
           }
         : undefined,

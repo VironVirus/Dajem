@@ -11,10 +11,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DAJEM Group Limited | Farms, Homes, Survey & Strategic Management",
+  title: "DAJEM Group Limited | Orbital, Farms, Homes & Strategic Management",
   description:
-    "One unified DAJEM platform for strategic management, DAJEM Farms, DAJEM Homes, and DAJEM Orbital survey services.",
-  keywords: ["DAJEM Group Limited", "DAJEM Farms Limited", "DAJEM Homes Limited", "DAJEM Orbital Resources Limited", "Enugu", "Nigeria"],
+    "One unified DAJEM platform for strategic management, DAJEM Orbital survey services, DAJEM Farms, and DAJEM Homes.",
+  keywords: ["DAJEM Group Limited", "DAJEM Orbital Resources Limited", "DAJEM Farms Limited", "DAJEM Homes Limited", "Enugu", "Nigeria"],
 };
 
 export default function RootLayout({

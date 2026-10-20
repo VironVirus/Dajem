@@ -22,6 +22,7 @@ export interface User {
   phone: string;
   role: UserRole;
   createdAt: string;
+  emailVerified?: boolean;
   country?: string;
   address?: string;
   state?: string;
@@ -31,6 +32,21 @@ export interface User {
 export interface ServerUser extends User {
   passwordHash: string;
   passwordSalt: string;
+  emailVerificationTokenHash?: string;
+  emailVerificationExpiresAt?: string;
+  emailVerificationSentAt?: string;
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  actorUserId: string;
+  actorEmail: string;
+  targetUserId?: string;
+  action: string;
+  detail: string;
+  createdAt: string;
 }
 
 export interface InventoryItem {
@@ -219,7 +235,7 @@ export interface SurveyRequest {
     city: string;
     state: string;
     postalCode?: string;
-    countryCode: "NG";
+    countryCode: string;
     status: SurveyDeliveryStatus;
     trackingNumber?: string;
     dispatchedAt?: string;
@@ -239,18 +255,6 @@ export interface CommunicationLog {
   subject: string;
   message: string;
   createdAt: string;
-}
-
-export interface CommunicationPreview {
-  sms: {
-    to: string;
-    message: string;
-  };
-  email: {
-    to: string;
-    subject: string;
-    message: string;
-  };
 }
 
 export interface FarmDeliveryRate {
@@ -319,6 +323,8 @@ export interface DashboardSnapshot {
   communicationLogs: CommunicationLog[];
   farmDeliverySettings: FarmDeliverySettings;
   supportTickets: SupportTicket[];
+  auditLogs: AuditLog[];
+  brandLogoUrl?: string;
   integrations: IntegrationStatus;
 }
 
@@ -335,12 +341,13 @@ export interface PlatformState {
   communicationLogs: CommunicationLog[];
   farmDeliverySettings: FarmDeliverySettings;
   supportTickets: SupportTicket[];
+  auditLogs: AuditLog[];
+  brandLogoUrl?: string;
 }
 
 export interface DajemActionResponse {
   snapshot: DashboardSnapshot;
   message?: string;
-  preview?: CommunicationPreview;
   order?: Order;
   listing?: PropertyListing;
   payment?: {
@@ -466,14 +473,14 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
     path: "/",
   },
   {
-    id: "poultry",
-    name: dajemCompanyProfiles.poultry.displayName,
-    path: "/farms",
-  },
-  {
     id: "survey",
     name: dajemCompanyProfiles.survey.displayName,
     path: "/survey",
+  },
+  {
+    id: "poultry",
+    name: dajemCompanyProfiles.poultry.displayName,
+    path: "/farms",
   },
   {
     id: "real-estate",
@@ -761,6 +768,7 @@ export const emptySnapshot: DashboardSnapshot = {
     whatsappNumber: "",
   },
   supportTickets: [],
+  auditLogs: [],
   integrations: {
     backend: "filesystem",
     supabaseConfigured: false,
