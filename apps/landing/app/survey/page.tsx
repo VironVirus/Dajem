@@ -1627,9 +1627,8 @@ export default function SurveyPage() {
           className="dajem-mobile-hero py-14 sm:py-20 lg:py-24"
           overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
           slides={[
-            { src: "/images/orbital-field-survey-1.jpg", position: "center", label: "Professional field survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
-            { src: "/images/orbital-field-survey-2.jpg", position: "center", label: "Site measurement and beacon work", actionLabel: "Submit a survey inquiry", href: "/survey/inquiry" },
-            { src: "/images/orbital-hero-generated.png", position: "center", label: "Survey plan completion and delivery", actionLabel: "Track my survey job", href: "/survey/tracker" },
+            { src: "/images/orbital-hero-remediation.jpg", position: "center 42%", label: "Field geomatics & project survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
+            { src: "/images/orbital-hero-route-survey.jpg", position: "center 38%", label: "Route alignment & boundary measurement", actionLabel: "Submit a survey inquiry", href: "/survey/inquiry" },
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
