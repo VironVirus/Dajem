@@ -83,7 +83,7 @@ export function Footer({ compact = false }: FooterProps) {
           {/* Quick Links */}
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-              DAJEM Companies
+              DAJEM Group Subsidiaries
             </h4>
             <ul className="space-y-2">
               {companies.map((company) => (

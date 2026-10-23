@@ -22,7 +22,7 @@ export default function LandingPage() {
         { src: "/images/homes-hero-suite-v2.png", label: "DAJEM Homes", actionLabel: "Find a property", href: "/properties/listings" },
       ]}>
         <div className="mx-auto flex w-full max-w-6xl items-center px-5 py-10 sm:px-8"><div className="max-w-2xl text-left text-white">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white sm:text-xs"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Rooted in Enugu. Built for progress.</p>
+          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/50 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white sm:text-xs"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Rooted in Nigeria. Built for progress.</p>
           <h1 className="text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-6xl">One group.<br /><span className="text-emerald-300">More possibilities.</span></h1>
           <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-100 sm:text-lg">From farm to home, and from land to opportunity, discover services designed around your needs.</p>
           <div className="mt-8 flex flex-wrap gap-3"><a href="#companies" className="inline-flex min-h-12 items-center gap-3 rounded-full bg-white px-6 text-sm font-bold text-slate-950 transition hover:bg-emerald-100">Explore our businesses <ArrowRight className="h-4 w-4" /></a><a href="/support" className="inline-flex min-h-12 items-center rounded-full border border-white/50 bg-slate-950/40 px-6 text-sm font-semibold text-white transition hover:bg-white/15">Talk to us</a></div>
