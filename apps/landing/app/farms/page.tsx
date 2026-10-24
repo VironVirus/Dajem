@@ -57,12 +57,12 @@ type ChickenType = "live" | "processed" | "grilled";
 
 const chickenTypeOptions = [
   { value: "live", label: "Live Chicken" },
-  { value: "processed", label: "Eviscerated/Processed Chicken" },
+  { value: "processed", label: "Eviscerated / Processed Chicken" },
   { value: "grilled", label: "Grilled Chicken" },
 ];
 
-const processedChickenCuts = ["Whole", "Cut 8", "Cut 12", "Cut 15", "Cut 16", "Cut 20", "Cut 25", "Cut 30"];
-const grilledChickenCuts = ["Whole", "Cut 8", "Cut 12", "Cut 15", "Cut 16", "Cut 20"];
+const processedChickenCuts = ["Whole", "8 Cuts", "12 Cuts", "15 Cuts", "16 Cuts", "20 Cuts", "25 Cuts", "30 Cuts"];
+const grilledChickenCuts = ["Whole", "8 Cuts", "12 Cuts", "15 Cuts", "16 Cuts", "20 Cuts"];
 
 const farmNavItems = [
   { href: "/farms", label: "Home", icon: Home },
@@ -91,7 +91,7 @@ const farmPageMeta = {
 
 function getChickenVariantLabel(type: ChickenType, cut: string) {
   if (type === "live") return "Live Chicken";
-  if (type === "processed") return `Eviscerated/Processed Chicken - ${cut}`;
+  if (type === "processed") return `Eviscerated / Processed Chicken - ${cut}`;
   return `Grilled Chicken - ${cut}`;
 }
 
@@ -147,6 +147,7 @@ export default function PoultryPage() {
   });
   const [chickenType, setChickenType] = React.useState<ChickenType>("live");
   const [chickenCut, setChickenCut] = React.useState("Whole");
+  const [chickenSelectorOpen, setChickenSelectorOpen] = React.useState(false);
 
   const filteredProducts = snapshot.inventory.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -161,6 +162,8 @@ export default function PoultryPage() {
   });
 
   const poultryProduct = snapshot.inventory.find((product) => product.productId === "livestock-poultry-01");
+  const grilledChickenProduct = snapshot.inventory.find((product) => product.productId === "grill-chicken-01");
+  const selectedChickenProduct = chickenType === "grilled" ? grilledChickenProduct ?? poultryProduct : poultryProduct;
   const chickenCutOptions = chickenType === "processed" ? processedChickenCuts : chickenType === "grilled" ? grilledChickenCuts : [];
   const selectedChickenVariantLabel = getChickenVariantLabel(chickenType, chickenCut);
   const cartTotal = snapshot.cart.reduce((total, item) => total + item.price * item.quantity, 0);
@@ -189,14 +192,21 @@ export default function PoultryPage() {
   };
 
   const handleAddChickenToCart = async () => {
-    if (!poultryProduct) return;
+    if (!selectedChickenProduct) return;
     if (!requireAuth("signup")) return;
 
-    await addToCart(poultryProduct.productId, 1, {
+    await addToCart(selectedChickenProduct.productId, 1, {
       variantKey: getChickenVariantKey(selectedChickenVariantLabel),
       variantLabel: selectedChickenVariantLabel,
     });
+    setChickenSelectorOpen(false);
     setCartOpen(true);
+  };
+
+  const openChickenSelector = (productId: string) => {
+    setChickenType(productId === "grill-chicken-01" ? "grilled" : "live");
+    setChickenCut("Whole");
+    setChickenSelectorOpen(true);
   };
 
   const openInvoiceReview = () => {
@@ -364,10 +374,10 @@ export default function PoultryPage() {
                 <div className="space-y-3">
                   <Badge className="bg-emerald-600 text-white">Chicken Selection</Badge>
                   <h2 className="text-2xl font-bold text-primary dark:text-foreground">Choose Your Chicken Order Style</h2>
-                  {poultryProduct && (
+                  {selectedChickenProduct && (
                     <div className="rounded-2xl border bg-emerald-500/10 p-4 text-sm">
-                      <p className="font-semibold text-foreground">{poultryProduct.name}</p>
-                      <p className="text-muted-foreground">{formatCurrency(poultryProduct.promoPrice ?? poultryProduct.price)} each</p>
+                      <p className="font-semibold text-foreground">{selectedChickenProduct.name}</p>
+                      <p className="text-muted-foreground">{formatCurrency(selectedChickenProduct.promoPrice ?? selectedChickenProduct.price)} each</p>
                     </div>
                   )}
                 </div>
@@ -384,7 +394,7 @@ export default function PoultryPage() {
                   />
                   {chickenCutOptions.length > 0 ? (
                     <Select
-                      label="Cut Option"
+                      label="Whole or Cut Size"
                       value={chickenCut}
                       onChange={(event) => setChickenCut(event.target.value)}
                       options={chickenCutOptions.map((cut) => ({ value: cut, label: cut }))}
@@ -401,7 +411,7 @@ export default function PoultryPage() {
                   <Button
                     className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700 sm:col-span-2"
                     onClick={() => void handleAddChickenToCart()}
-                    disabled={!poultryProduct || poultryProduct.stockStatus === "Out of Stock" || isBusy}
+                    disabled={!selectedChickenProduct || selectedChickenProduct.stockStatus === "Out of Stock" || isBusy}
                   >
                     <ShoppingCart className="h-4 w-4" />
                     Add Selected Chicken To Cart
@@ -443,7 +453,7 @@ export default function PoultryPage() {
                       <Button
                         size="sm"
                         className="bg-emerald-600 text-white hover:bg-emerald-700"
-                        onClick={() => void (product.productId === "livestock-poultry-01" ? handleAddChickenToCart() : handleAddToCart(product.productId))}
+                        onClick={() => product.productId === "livestock-poultry-01" || product.productId === "grill-chicken-01" ? openChickenSelector(product.productId) : void handleAddToCart(product.productId)}
                       >
                         Add
                       </Button>
@@ -537,7 +547,7 @@ export default function PoultryPage() {
                   <div className="border-t border-border/50 p-3 sm:p-5">
                     <Button
                       className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
-                      onClick={() => void (product.productId === "livestock-poultry-01" ? handleAddChickenToCart() : handleAddToCart(product.productId))}
+                      onClick={() => product.productId === "livestock-poultry-01" || product.productId === "grill-chicken-01" ? openChickenSelector(product.productId) : void handleAddToCart(product.productId)}
                       disabled={product.stockStatus === "Out of Stock" || isBusy}
                     >
                       <ShoppingCart className="h-4 w-4" />
@@ -613,6 +623,57 @@ export default function PoultryPage() {
       </main>
 
       <Footer compact />
+
+      <Dialog isOpen={chickenSelectorOpen} onClose={() => setChickenSelectorOpen(false)} title="Choose Your Chicken">
+        <div className="space-y-5 py-2">
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+            <p className="text-sm font-bold text-foreground">Chicken Selection</p>
+            <p className="mt-1 text-xs text-muted-foreground">Choose live, processed, or grilled chicken. Cut sizes are shown where available.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Select
+              label="Chicken Type"
+              value={chickenType}
+              onChange={(event) => {
+                setChickenType(event.target.value as ChickenType);
+                setChickenCut("Whole");
+              }}
+              options={chickenTypeOptions}
+            />
+            {chickenCutOptions.length > 0 ? (
+              <Select
+                label="Whole or Cut Size"
+                value={chickenCut}
+                onChange={(event) => setChickenCut(event.target.value)}
+                options={chickenCutOptions.map((cut) => ({ value: cut, label: cut }))}
+              />
+            ) : (
+              <div className="rounded-xl border bg-muted/30 p-3 text-sm text-muted-foreground">
+                Live chicken is supplied whole.
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-xl border p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your Selection</p>
+              <p className="mt-1 font-bold text-foreground">{selectedChickenVariantLabel}</p>
+            </div>
+            {selectedChickenProduct && (
+              <p className="text-right font-extrabold text-emerald-700 dark:text-emerald-300">
+                {formatCurrency(selectedChickenProduct.promoPrice ?? selectedChickenProduct.price)}
+              </p>
+            )}
+          </div>
+          <Button
+            className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+            onClick={() => void handleAddChickenToCart()}
+            disabled={!selectedChickenProduct || selectedChickenProduct.stockStatus === "Out of Stock" || isBusy}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Add Selected Chicken To Cart
+          </Button>
+        </div>
+      </Dialog>
 
       {cartCount > 0 && (
         <button

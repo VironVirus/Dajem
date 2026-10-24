@@ -53,6 +53,7 @@ import { Select } from "./select";
 import { Textarea } from "./textarea";
 import { useDajem } from "./dajem-provider";
 import { nigeriaStates } from "../lib/nigeria-locations";
+import { homesListingGroupOptions, rentalResidenceTypeOptions, residenceTypeOptions } from "../lib/store";
 import type {
   AgentListingPaymentStatus,
   ApprovalStatus,
@@ -60,9 +61,8 @@ import type {
   InventoryCategory,
   InventoryItem,
   InventoryStockStatus,
-  PropertyCategory,
   PropertyListing,
-  PropertyType,
+  ResidenceType,
   SurveyDeliveryStatus,
   SurveyService,
   SupportTicketStatus,
@@ -83,6 +83,14 @@ function splitHighlights(value: string) {
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 6);
+}
+
+function homesGroupLabel(group: PropertyListing["listingGroup"], fallback: PropertyListing["type"]) {
+  return homesListingGroupOptions.find((option) => option.value === group)?.label ?? fallback;
+}
+
+function residenceLabel(type: PropertyListing["residenceType"]) {
+  return residenceTypeOptions.find((option) => option.value === type)?.label;
 }
 
 function joinHighlights(value: string[] | undefined) {
@@ -143,22 +151,6 @@ const farmsImageUrl = "/images/farms-hero-farm-v2.png";
 const homesImageUrl = "/images/homes-hero-suite-v2.png";
 const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
 
-const propertyTypes: { value: PropertyType; label: string }[] = [
-  { value: "sale", label: "For Sale" },
-  { value: "short-let", label: "Short-Let" },
-  { value: "hotel", label: "Hotel / Suite" },
-  { value: "management", label: "Management" },
-];
-
-const propertyCategories: { value: PropertyCategory; label: string }[] = [
-  { value: "apartment", label: "Apartment" },
-  { value: "suite", label: "Suite" },
-  { value: "hotel", label: "Hotel" },
-  { value: "land", label: "Land" },
-  { value: "commercial", label: "Commercial" },
-  { value: "short-let", label: "Short-Let" },
-];
-
 const blankInventory: InventoryItem = {
   productId: "",
   name: "",
@@ -189,6 +181,8 @@ const blankProperty: PropertyForm = {
   price: 0,
   type: "short-let",
   category: "short-let",
+  listingGroup: "short-let",
+  residenceType: "self-contain",
   beds: 1,
   baths: 1,
   size: 80,
@@ -508,6 +502,8 @@ export function AdminView() {
         price: draft.price,
         type: draft.type,
         category: draft.category,
+        listingGroup: draft.listingGroup,
+        residenceType: draft.listingGroup === "land-sale" || draft.listingGroup === "land-lease" ? undefined : draft.residenceType,
         beds: draft.beds,
         baths: draft.baths,
         size: draft.size,
@@ -1557,14 +1553,15 @@ export function AdminView() {
                             <Badge variant={property.status === "Approved" ? "default" : property.status === "Rejected" ? "destructive" : "secondary"} className="text-[10px]">
                               {property.status}
                             </Badge>
-                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase">
-                              {property.type}
+                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                              {homesGroupLabel(property.listingGroup, property.type)}
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {property.location} · <strong className="text-foreground">{formatCurrency(property.price)}</strong>
                             {property.beds && ` · ${property.beds} beds`} · {property.size} sqm
                           </p>
+                          {property.residenceType && <p className="mt-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300">{residenceLabel(property.residenceType)}</p>}
                           {property.submittedByEmail && (
                             <p className="mt-1 text-[11px] text-muted-foreground">
                               Agent: <strong className="text-foreground">{property.submittedByName}</strong> ({property.submittedByEmail})
@@ -1702,17 +1699,30 @@ export function AdminView() {
                     />
                   </div>
                   <Select
-                    label="Type"
-                    value={propertyDraft.type}
-                    onChange={(e) => setPropertyDraft((cur) => ({ ...cur, type: e.target.value as PropertyType }))}
-                    options={propertyTypes}
+                    label="Property Group"
+                    value={propertyDraft.listingGroup ?? "short-let"}
+                    onChange={(e) => {
+                      const selected = homesListingGroupOptions.find((option) => option.value === e.target.value);
+                      if (selected) setPropertyDraft((cur) => ({
+                        ...cur,
+                        listingGroup: selected.value,
+                        type: selected.type,
+                        category: selected.category,
+                        residenceType: selected.value === "house-rent" ? "self-contain" : cur.residenceType,
+                      }));
+                    }}
+                    options={homesListingGroupOptions}
                   />
-                  <Select
-                    label="Category"
-                    value={propertyDraft.category}
-                    onChange={(e) => setPropertyDraft((cur) => ({ ...cur, category: e.target.value as PropertyCategory }))}
-                    options={propertyCategories}
-                  />
+                  {propertyDraft.listingGroup === "land-sale" || propertyDraft.listingGroup === "land-lease" ? (
+                    <div className="rounded-xl border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">Empty plot listing</div>
+                  ) : (
+                    <Select
+                      label="Home Type"
+                      value={propertyDraft.residenceType ?? "self-contain"}
+                      onChange={(e) => setPropertyDraft((cur) => ({ ...cur, residenceType: e.target.value as ResidenceType }))}
+                      options={propertyDraft.listingGroup === "house-rent" ? rentalResidenceTypeOptions : residenceTypeOptions}
+                    />
+                  )}
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2604,17 +2614,30 @@ export function AdminView() {
                 />
               </div>
               <Select
-                label="Type"
-                value={editingProperty.type}
-                onChange={(e) => setEditingProperty({ ...editingProperty, type: e.target.value as PropertyType })}
-                options={propertyTypes}
+                label="Property Group"
+                value={editingProperty.listingGroup ?? "short-let"}
+                onChange={(e) => {
+                  const selected = homesListingGroupOptions.find((option) => option.value === e.target.value);
+                  if (selected) setEditingProperty({
+                    ...editingProperty,
+                    listingGroup: selected.value,
+                    type: selected.type,
+                    category: selected.category,
+                    residenceType: selected.value === "house-rent" ? "self-contain" : editingProperty.residenceType,
+                  });
+                }}
+                options={homesListingGroupOptions}
               />
-              <Select
-                label="Category"
-                value={editingProperty.category}
-                onChange={(e) => setEditingProperty({ ...editingProperty, category: e.target.value as PropertyCategory })}
-                options={propertyCategories}
-              />
+              {editingProperty.listingGroup === "land-sale" || editingProperty.listingGroup === "land-lease" ? (
+                <div className="rounded-xl border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">Empty plot listing</div>
+              ) : (
+                <Select
+                  label="Home Type"
+                  value={editingProperty.residenceType ?? "self-contain"}
+                  onChange={(e) => setEditingProperty({ ...editingProperty, residenceType: e.target.value as ResidenceType })}
+                  options={editingProperty.listingGroup === "house-rent" ? rentalResidenceTypeOptions : residenceTypeOptions}
+                />
+              )}
               <Select
                 label="Status"
                 value={editingProperty.status}

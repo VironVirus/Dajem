@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Mail, MapPin, ExternalLink, Globe } from "lucide-react";
-import { dajemCompanyProfiles, getAppBaseUrl, getCompanyLinks } from "../lib/store";
+import { Mail, MapPin, ExternalLink, Globe, Facebook, Instagram, Youtube } from "lucide-react";
+import { dajemCompanyProfiles, dajemSocialLinks, getAppBaseUrl, getCompanyLinks } from "../lib/store";
 import { useDajem } from "./dajem-provider";
 
 interface FooterProps {
@@ -51,6 +51,11 @@ export function Footer({ compact = false }: FooterProps) {
               </a>
             ))}
             <a href={`${landingUrl}#contact`} className="font-semibold hover:text-foreground">Contact</a>
+            {dajemSocialLinks.map((social) => (
+              <a key={social.id} href={social.url} target="_blank" rel="noreferrer" className="font-semibold hover:text-foreground">
+                {social.label}
+              </a>
+            ))}
           </div>
         </div>
       </footer>
@@ -77,6 +82,24 @@ export function Footer({ compact = false }: FooterProps) {
             <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-3 py-1 text-xs text-muted-foreground">
               <Globe className="h-3.5 w-3.5 text-primary" />
               <span className="font-semibold">Unified DAJEM Enterprise</span>
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="DAJEM Group social media">
+              {dajemSocialLinks.map((social) => {
+                const Icon = social.id === "facebook" ? Facebook : social.id === "instagram" ? Instagram : social.id === "youtube" ? Youtube : null;
+                return (
+                  <a
+                    key={social.id}
+                    href={social.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Follow DAJEM Group on ${social.label}`}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 text-xs font-bold text-foreground transition hover:border-primary/40 hover:text-primary"
+                  >
+                    {Icon ? <Icon className="h-3.5 w-3.5" /> : <span aria-hidden="true" className="font-black">X</span>}
+                    {social.label}
+                  </a>
+                );
+              })}
             </div>
           </div>
 

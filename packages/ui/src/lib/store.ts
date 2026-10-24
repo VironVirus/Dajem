@@ -15,6 +15,40 @@ export type PaymentProvider = "flutterwave";
 export type PaymentApp = "farms" | "homes" | "survey";
 export type PaymentPurpose = "farm-order" | "property-listing-fee" | "survey-payment";
 
+export const homesListingGroupOptions: Array<{
+  value: HomesListingGroup;
+  label: string;
+  type: PropertyType;
+  category: PropertyCategory;
+}> = [
+  { value: "land-sale", label: "Empty Plots of Land for Sale", type: "sale", category: "land" },
+  { value: "land-lease", label: "Empty Plots of Land for Lease", type: "management", category: "land" },
+  { value: "house-rent", label: "Houses for Lease / Rent", type: "management", category: "apartment" },
+  { value: "house-sale", label: "Houses for Sale", type: "sale", category: "apartment" },
+  { value: "short-let", label: "Short-Let Apartments", type: "short-let", category: "short-let" },
+];
+
+export const residenceTypeOptions: Array<{ value: ResidenceType; label: string }> = [
+  { value: "self-contain", label: "1 Room Self Contain" },
+  { value: "one-bedroom", label: "1-Bedroom Apartment" },
+  { value: "two-bedroom", label: "2-Bedroom Apartment" },
+  { value: "three-bedroom", label: "3-Bedroom Apartment" },
+  { value: "single-room", label: "Single Room" },
+  { value: "bungalow", label: "Bungalow" },
+  { value: "duplex", label: "Duplex" },
+];
+
+export const rentalResidenceTypeOptions = residenceTypeOptions.filter((option) =>
+  (["self-contain", "two-bedroom", "three-bedroom", "bungalow", "duplex"] as ResidenceType[]).includes(option.value),
+);
+
+export const dajemSocialLinks = [
+  { id: "facebook", label: "Facebook", url: "https://www.facebook.com/dajemgroup1" },
+  { id: "instagram", label: "Instagram", url: "https://www.instagram.com/dajemgroup1" },
+  { id: "youtube", label: "YouTube", url: "https://youtube.com/@dajemgroup1" },
+  { id: "x", label: "X", url: "https://x.com/dajemgroup1" },
+] as const;
+
 export interface User {
   id: string;
   name: string;
@@ -660,6 +694,8 @@ export const seedPropertyListings: PropertyListing[] = [
     price: 85000,
     type: "short-let",
     category: "short-let",
+    listingGroup: "short-let",
+    residenceType: "two-bedroom",
     beds: 2,
     baths: 2,
     size: 140,
@@ -679,6 +715,8 @@ export const seedPropertyListings: PropertyListing[] = [
     price: 180000,
     type: "hotel",
     category: "suite",
+    listingGroup: "short-let",
+    residenceType: "self-contain",
     beds: 1,
     baths: 1,
     size: 75,
@@ -698,6 +736,7 @@ export const seedPropertyListings: PropertyListing[] = [
     price: 45000000,
     type: "sale",
     category: "land",
+    listingGroup: "land-sale",
     size: 1200,
     featured: false,
     imageBg: "from-amber-700/25 to-emerald-700/10",

@@ -22,6 +22,9 @@ import {
   Sheet,
   Textarea,
   dajemCompanyProfiles,
+  homesListingGroupOptions,
+  rentalResidenceTypeOptions,
+  residenceTypeOptions,
   useDajem,
   type PropertyCategory,
   type HomesListingGroup,
@@ -72,30 +75,16 @@ const propertyCategoryOptions: { value: PropertyCategory | "all"; label: string 
   { value: "short-let", label: "Short-Let" },
 ];
 
-const homesGroupOptions: { value: HomesListingGroup; label: string; type: PropertyType; category: PropertyCategory }[] = [
-  { value: "land-sale", label: "Lands for Sale", type: "sale", category: "land" },
-  { value: "land-lease", label: "Lands for Lease", type: "management", category: "land" },
-  { value: "house-rent", label: "House for Rent / Lease", type: "management", category: "apartment" },
-  { value: "house-sale", label: "House for Sale", type: "sale", category: "apartment" },
-  { value: "short-let", label: "Short-let Apartments", type: "short-let", category: "short-let" },
-];
-
-const residenceOptions: { value: ResidenceType; label: string }[] = [
-  { value: "self-contain", label: "Self contain" },
-  { value: "one-bedroom", label: "One bedroom" },
-  { value: "two-bedroom", label: "Two bedroom" },
-  { value: "three-bedroom", label: "Three bedroom" },
-  { value: "single-room", label: "Single room" },
-  { value: "bungalow", label: "Bungalow" },
-  { value: "duplex", label: "Duplex" },
-];
-
 function propertyTypeLabel(type: PropertyType) {
   return propertyTypeOptions.find((entry) => entry.value === type)?.label ?? type;
 }
 
 function propertyGroupLabel(group: HomesListingGroup | undefined, type: PropertyType) {
-  return homesGroupOptions.find((entry) => entry.value === group)?.label ?? propertyTypeLabel(type);
+  return homesListingGroupOptions.find((entry) => entry.value === group)?.label ?? propertyTypeLabel(type);
+}
+
+function residenceTypeLabel(type: ResidenceType | undefined) {
+  return residenceTypeOptions.find((entry) => entry.value === type)?.label;
 }
 
 const homesNavItems = [
@@ -138,6 +127,7 @@ export default function RealEstatePage() {
   const [selectedType, setSelectedType] = React.useState<PropertyType | "all">("all");
   const [selectedCategory, setSelectedCategory] = React.useState<PropertyCategory | "all">("all");
   const [selectedGroup, setSelectedGroup] = React.useState<HomesListingGroup | "all">("all");
+  const [selectedResidence, setSelectedResidence] = React.useState<ResidenceType | "all">("all");
   const [selectedPrice, setSelectedPrice] = React.useState<string>("all");
   const [activeProperty, setActiveProperty] = React.useState<PropertyListing | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
@@ -152,7 +142,7 @@ export default function RealEstatePage() {
     type: "short-let" as PropertyType,
     category: "short-let" as PropertyCategory,
     listingGroup: "short-let" as HomesListingGroup,
-    residenceType: "one-bedroom" as ResidenceType,
+    residenceType: "self-contain" as ResidenceType,
     price: "",
     size: "",
     beds: "",
@@ -164,6 +154,15 @@ export default function RealEstatePage() {
     requestContactPublication: true,
   });
 
+  React.useEffect(() => {
+    if (pageView !== "listings") return;
+    const requestedGroup = new URLSearchParams(window.location.search).get("group");
+    if (homesListingGroupOptions.some((option) => option.value === requestedGroup)) {
+      setSelectedGroup(requestedGroup as HomesListingGroup);
+      setSelectedResidence("all");
+    }
+  }, [pageView]);
+
   const approvedProperties = snapshot.propertyListings.filter((property) => property.status === "Approved");
   const filteredProperties = approvedProperties.filter((property) => {
     const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -172,6 +171,7 @@ export default function RealEstatePage() {
     const matchesType = selectedType === "all" || property.type === selectedType;
     const matchesCategory = selectedCategory === "all" || property.category === selectedCategory;
     const matchesGroup = selectedGroup === "all" || property.listingGroup === selectedGroup;
+    const matchesResidence = selectedResidence === "all" || property.residenceType === selectedResidence;
 
     let matchesPrice = true;
     if (selectedPrice !== "all") {
@@ -181,7 +181,7 @@ export default function RealEstatePage() {
       if (selectedPrice === "150m-plus") matchesPrice = property.price > 150000000;
     }
 
-    return matchesSearch && matchesType && matchesCategory && matchesGroup && matchesPrice;
+    return matchesSearch && matchesType && matchesCategory && matchesGroup && matchesResidence && matchesPrice;
   });
 
   const handleBidSubmit = async (event: React.FormEvent) => {
@@ -233,7 +233,7 @@ export default function RealEstatePage() {
       type: "short-let",
       category: "short-let",
       listingGroup: "short-let",
-      residenceType: "one-bedroom",
+      residenceType: "self-contain",
       price: "",
       size: "",
       beds: "",
@@ -356,6 +356,30 @@ export default function RealEstatePage() {
 
         <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
 
+        <section className="border-b border-border bg-card/40 py-8 sm:py-10">
+          <div className="container mx-auto max-w-6xl px-5 sm:px-6">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Property Categories</p>
+                <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">What are you looking for?</h2>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+              {homesListingGroupOptions.map((group) => (
+                <button
+                  key={group.value}
+                  type="button"
+                  onClick={() => router.push(`/properties/listings?group=${group.value}`)}
+                  className="min-h-24 rounded-2xl border border-blue-500/15 bg-background/80 p-4 text-left text-sm font-bold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-md"
+                >
+                  <Building className="mb-3 h-5 w-5 text-blue-600" />
+                  {group.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <SubsidiaryRouteGrid
           title="Open the right property workspace"
           accent="blue"
@@ -395,11 +419,22 @@ export default function RealEstatePage() {
 
           <Card className="mb-10 border bg-card/60 p-6 backdrop-blur-sm">
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-              <Button size="sm" variant={selectedGroup === "all" ? "default" : "outline"} onClick={() => setSelectedGroup("all")}>All</Button>
-              {homesGroupOptions.map((group) => (
-                <Button key={group.value} size="sm" variant={selectedGroup === group.value ? "default" : "outline"} className="h-auto min-h-10 whitespace-normal text-xs" onClick={() => setSelectedGroup(group.value)}>{group.label}</Button>
+              <Button size="sm" variant={selectedGroup === "all" ? "default" : "outline"} onClick={() => { setSelectedGroup("all"); setSelectedResidence("all"); }}>All</Button>
+              {homesListingGroupOptions.map((group) => (
+                <Button key={group.value} size="sm" variant={selectedGroup === group.value ? "default" : "outline"} className="h-auto min-h-10 whitespace-normal text-xs" onClick={() => { setSelectedGroup(group.value); setSelectedResidence("all"); }}>{group.label}</Button>
               ))}
             </div>
+            {selectedGroup === "house-rent" && (
+              <div className="mb-5 rounded-2xl border border-blue-500/15 bg-blue-500/5 p-3">
+                <p className="mb-2 text-xs font-bold text-foreground">Choose a house type</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                  <Button size="sm" variant={selectedResidence === "all" ? "default" : "outline"} className="h-auto min-h-9 text-xs" onClick={() => setSelectedResidence("all")}>All house types</Button>
+                  {rentalResidenceTypeOptions.map((option) => (
+                    <Button key={option.value} size="sm" variant={selectedResidence === option.value ? "default" : "outline"} className="h-auto min-h-9 whitespace-normal text-xs" onClick={() => setSelectedResidence(option.value)}>{option.label}</Button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="space-y-1.5 lg:col-span-2">
                 <Label htmlFor="search">Search Keywords</Label>
@@ -466,6 +501,9 @@ export default function RealEstatePage() {
                       <Tag className="h-3 w-3 text-blue-500" />
                       <span className="capitalize">{property.category}</span>
                     </div>
+                    {property.residenceType && (
+                      <p className="mt-2 w-max rounded-full bg-background/90 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm">{residenceTypeLabel(property.residenceType)}</p>
+                    )}
                   </div>
 
                   <CardHeader className="flex-1 p-5">
@@ -528,6 +566,7 @@ export default function RealEstatePage() {
                   setSelectedType("all");
                   setSelectedCategory("all");
                   setSelectedGroup("all");
+                  setSelectedResidence("all");
                   setSelectedPrice("all");
                 }}
               >
@@ -572,13 +611,13 @@ export default function RealEstatePage() {
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                   <Select label="Property group" value={listingForm.listingGroup} onChange={(event) => {
-                    const selected = homesGroupOptions.find((entry) => entry.value === event.target.value);
-                    if (selected) setListingForm((current) => ({ ...current, listingGroup: selected.value, type: selected.type, category: selected.category }));
-                  }} options={homesGroupOptions.map((entry) => ({ value: entry.value, label: entry.label }))} />
+                    const selected = homesListingGroupOptions.find((entry) => entry.value === event.target.value);
+                    if (selected) setListingForm((current) => ({ ...current, listingGroup: selected.value, type: selected.type, category: selected.category, residenceType: selected.value === "house-rent" ? "self-contain" : current.residenceType }));
+                  }} options={homesListingGroupOptions.map((entry) => ({ value: entry.value, label: entry.label }))} />
                   {listingForm.listingGroup === "land-sale" || listingForm.listingGroup === "land-lease" ? (
                     <div className="rounded-xl border bg-muted/30 px-3 py-2.5 text-sm text-muted-foreground">Land listing</div>
                   ) : (
-                    <Select label="Home type" value={listingForm.residenceType} onChange={(event) => setListingForm((current) => ({ ...current, residenceType: event.target.value as ResidenceType }))} options={residenceOptions} />
+                    <Select label="Home type" value={listingForm.residenceType} onChange={(event) => setListingForm((current) => ({ ...current, residenceType: event.target.value as ResidenceType }))} options={listingForm.listingGroup === "house-rent" ? rentalResidenceTypeOptions : residenceTypeOptions} />
                   )}
                   <div className="space-y-1.5">
                     <Label htmlFor="p-price">Expected Price</Label>
