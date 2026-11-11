@@ -11,13 +11,10 @@ import {
   Dialog,
   Footer,
   Header,
-  HeroSlideshow,
   Input,
   Label,
   SubsidiaryNav,
   SubsidiaryPageIntro,
-  SubsidiaryRouteGrid,
-  TrustRibbon,
   Select,
   Sheet,
   Textarea,
@@ -319,97 +316,68 @@ export default function RealEstatePage() {
         )}
 
         {pageView === "home" && (
-          <>
-        <HeroSlideshow
-          className="dajem-mobile-hero flex min-h-[22rem] items-center py-8 sm:min-h-0 sm:py-24"
-          overlayClassName="bg-[linear-gradient(135deg,rgba(239,246,255,0.28),rgba(239,246,255,0.5),rgba(255,255,255,0.82))] dark:bg-[linear-gradient(135deg,rgba(30,64,175,0.24),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
-          slides={[
-            { src: "/images/homes-hero-suite-v2.png", position: "center", label: "Verified homes and short-lets", actionLabel: "Browse available properties", href: "/properties/listings" },
-            { src: "/images/homes-hero-generated.png", position: "center", label: "Property sales and management", actionLabel: "Submit your property", href: "/properties/submit" },
-          ]}
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1d4ed812_1px,transparent_1px),linear-gradient(to_bottom,#1d4ed812_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
-
-          <div className="container mx-auto max-w-6xl px-4 text-center sm:px-6">
-            <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
-              <Badge variant="secondary" className="border border-blue-500/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/15">
-                Find your place
-              </Badge>
-              <h1 className="text-[2.1rem] font-bold leading-[1.02] sm:text-5xl">
-                <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-2 block text-[1.02rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:mt-3 sm:text-[1.45rem]">
-                  Spaces for your next chapter.
-                </span>
-              </h1>
-              <p className="dajem-hero-lede mx-auto max-w-3xl text-sm leading-relaxed sm:text-base">
-                Explore homes, land and short stays, or list a property with us.
-              </p>
-              <div className="flex flex-col justify-center gap-2.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
-                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => router.push("/properties/listings")}>
-                  Browse Listings
-                </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/properties/submit")}>
-                  Submit Property
-                </Button>
+          <section className="container mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 sm:py-8">
+            <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
+              <div className="relative h-36 bg-slate-900 sm:h-52">
+                <img
+                  src="/images/homes-hero-suite-v2.jpg"
+                  alt="DAJEM Homes properties and short-lets"
+                  loading="eager"
+                  decoding="async"
+                  className="h-full w-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+                <div className="absolute inset-x-4 bottom-3.5 sm:inset-x-6 sm:bottom-5">
+                  <span className="inline-block rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-blue-200">
+                    Property &amp; Hospitality
+                  </span>
+                  <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {profile.shortName}
+                  </h1>
+                </div>
+              </div>
+              <div className="space-y-4 p-4 sm:p-6">
+                <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                  Browse verified land, houses, rentals &amp; short-lets, place bids, or list your own property.
+                </p>
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+                  <Button size="lg" className="w-full sm:w-auto rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700" onClick={() => router.push("/properties/listings")}>
+                    Browse Listings ({approvedProperties.length})
+                  </Button>
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full font-bold" onClick={() => router.push("/properties/submit")}>
+                    + Submit Property
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </HeroSlideshow>
 
-        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
-
-        <section className="border-b border-border bg-card/40 py-8 sm:py-10">
-          <div className="container mx-auto max-w-6xl px-5 sm:px-6">
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Property Categories</p>
-                <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">What are you looking for?</h2>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              {homesListingGroupOptions.map((group) => (
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-foreground sm:text-lg">Browse by type</h2>
                 <button
-                  key={group.value}
                   type="button"
-                  onClick={() => router.push(`/properties/listings?group=${group.value}`)}
-                  className="min-h-24 rounded-2xl border border-blue-500/15 bg-background/80 p-4 text-left text-sm font-bold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-md"
+                  onClick={() => router.push("/dashboard")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400"
                 >
-                  <Building className="mb-3 h-5 w-5 text-blue-600" />
-                  {group.label}
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  My Bids &amp; Submissions
                 </button>
-              ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+                {homesListingGroupOptions.map((group) => (
+                  <button
+                    key={group.value}
+                    type="button"
+                    onClick={() => router.push(`/properties/listings?group=${group.value}`)}
+                    className="flex flex-col justify-between rounded-2xl border border-border bg-card p-3.5 text-left text-xs font-extrabold text-foreground shadow-sm transition hover:border-blue-500/45 hover:shadow-md mobile-tap-target sm:text-sm"
+                  >
+                    <Building className="mb-2.5 h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span>{group.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
-
-        <SubsidiaryRouteGrid
-          title="Open the right property workspace"
-          accent="blue"
-          items={[
-            { ...homesNavItems[1], meta: `${approvedProperties.length} approved`, description: "Browse available properties." },
-            { ...homesNavItems[2], meta: "Owners and agents", description: "Submit a property for approval." },
-            { href: "/dashboard", label: "My Activity", icon: LayoutDashboard, meta: "Shared dashboard", description: "Track bids and submissions." },
-            { href: `mailto:${profile.email}`, label: "Property Desk", icon: Building, meta: "Direct contact", description: "Contact DAJEM Homes." },
-          ]}
-        />
-
-        <section id="contact-details" className="border-y border-border bg-muted/20 py-8 sm:py-12">
-          <div className="container mx-auto grid max-w-6xl gap-3 px-5 sm:gap-4 sm:px-6 md:grid-cols-3">
-            <div className="rounded-xl border bg-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Office</p>
-              <p className="mt-2 text-sm text-foreground">{profile.address}</p>
-            </div>
-            <div className="rounded-xl border bg-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email</p>
-              <p className="mt-2 text-sm text-foreground">{profile.email}</p>
-            </div>
-            <div className="rounded-xl border bg-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Focus</p>
-              <p className="mt-2 text-sm text-foreground">Hospitality, sales, development, and management.</p>
-            </div>
-          </div>
-        </section>
-          </>
+          </section>
         )}
 
         {pageView === "listings" && (
@@ -432,7 +400,7 @@ export default function RealEstatePage() {
             </Button>
           </div>
 
-          <Card className="mb-6 border bg-card/70 p-3.5 backdrop-blur-sm sm:mb-10 sm:p-6">
+          <Card className="mb-6 border bg-card p-3.5 sm:mb-10 sm:p-6">
             {/* Search + Filter Toggle on Mobile */}
             <div className="mb-3 flex items-center gap-2">
               <div className="relative flex-1">
@@ -556,12 +524,12 @@ export default function RealEstatePage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <div className="flex w-max items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                      <div className="flex w-max items-center gap-1.5 rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm">
                         <Tag className="h-3 w-3 text-blue-500" />
                         <span className="capitalize">{property.category}</span>
                       </div>
                       {property.residenceType && (
-                        <p className="w-max rounded-full bg-background/90 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm backdrop-blur-sm">
+                        <p className="w-max rounded-full bg-background/95 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm">
                           {residenceTypeLabel(property.residenceType)}
                         </p>
                       )}

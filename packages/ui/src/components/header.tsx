@@ -261,7 +261,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-border/50 bg-background/85 backdrop-blur-2xl transition-colors dark:border-white/10 dark:bg-slate-950/85 lg:sticky">
+      <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-border/50 bg-background/95 backdrop-blur-md transition-colors dark:border-white/10 dark:bg-slate-950/95 lg:sticky">
         <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6 lg:h-[4.5rem] lg:px-8">
           {/* Brand Mark with Monogram Crest */}
           <a
@@ -399,7 +399,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   {openMenu === "ecosystem" && (
                     <motion.div
                       role="menu"
-                      className="absolute right-0 top-full z-50 mt-3 w-[34rem] rounded-[1.6rem] border border-border/60 bg-background/95 p-4 shadow-2xl shadow-slate-950/20 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+                      className="absolute right-0 top-full z-50 mt-3 w-[34rem] rounded-[1.6rem] border border-border/60 bg-background p-4 shadow-2xl shadow-slate-950/20 dark:border-white/10 dark:bg-slate-950"
                       initial={{ opacity: 0, y: -8, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -604,7 +604,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   {openMenu === "account" && (
                     <motion.div
                       role="menu"
-                      className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border border-border/60 bg-background/95 p-2 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+                      className="absolute right-0 top-full z-50 mt-3 w-64 rounded-2xl border border-border/60 bg-background p-2 shadow-2xl dark:border-white/10 dark:bg-slate-950"
                       initial={{ opacity: 0, y: -8, scale: 0.98 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -665,7 +665,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
           <div
             role="navigation"
             aria-label="DAJEM super-app switcher"
-            className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-full border border-border/60 bg-muted/60 p-1 shadow-inner backdrop-blur-xl dark:border-white/15 dark:bg-slate-900/90"
+            className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-full border border-border/60 bg-muted/90 p-1 shadow-inner dark:border-white/15 dark:bg-slate-900"
           >
             <a
               href={groupHref}
@@ -751,14 +751,14 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
         {mobileCompaniesOpen && (
           <>
             <motion.div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-50 bg-black/65 lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileCompaniesOpen(false)}
             />
             <motion.div
-              className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom,12px))] z-50 mx-auto max-w-lg rounded-[2rem] border border-white/20 bg-background/96 p-4 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96 lg:hidden"
+              className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom,12px))] z-50 mx-auto max-w-lg rounded-[2rem] border border-border/70 bg-background p-4 shadow-2xl dark:border-white/10 dark:bg-slate-950 lg:hidden"
               initial={{ opacity: 0, y: 32, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -988,7 +988,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
 
       {/* Native In-App APK Update Modal */}
       {updateModalOpen && updateInfo && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4">
           <div className="w-full max-w-sm space-y-4 rounded-3xl border border-border/70 bg-card p-5 text-card-foreground shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5">

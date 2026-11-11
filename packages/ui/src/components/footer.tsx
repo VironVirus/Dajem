@@ -33,11 +33,11 @@ export function Footer({ compact = false }: FooterProps) {
 
   if (compact) {
     return (
-      <footer className="border-t border-border/60 bg-card/70 text-card-foreground">
-        <div className="container mx-auto flex max-w-6xl flex-col gap-4 px-5 py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <footer className="border-t border-border/60 bg-card/90 text-card-foreground">
+        <div className="container mx-auto flex max-w-6xl flex-col gap-3 px-5 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
             <p className="font-bold text-foreground">{group.displayName}</p>
-            <p className="mt-1">&copy; {currentYear} · {group.registrationNumber}</p>
+            <p className="mt-0.5">&copy; {currentYear} · Enugu, Nigeria</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             {companies.map((company) => (
@@ -50,8 +50,8 @@ export function Footer({ compact = false }: FooterProps) {
                 {company.name.replace(" Limited", "").replace("DAJEM ", "")}
               </a>
             ))}
-            <a href={`${landingUrl}#contact`} className="font-semibold hover:text-foreground">Contact</a>
-            <a href="/mobile-designs" onClick={(event) => handleNavigate(event, "/mobile-designs")} className="font-semibold text-primary hover:underline">Mobile App Designs</a>
+            <a href="/support" onClick={(event) => handleNavigate(event, "/support")} className="font-semibold hover:text-foreground">Support</a>
+            <a href="/download" onClick={(event) => handleNavigate(event, "/download")} className="font-semibold text-primary hover:underline">Android App</a>
             {dajemSocialLinks.map((social) => (
               <a key={social.id} href={social.url} target="_blank" rel="noreferrer" className="font-semibold hover:text-foreground">
                 {social.label}
@@ -151,27 +151,27 @@ export function Footer({ compact = false }: FooterProps) {
             </ul>
           </div>
 
-          {/* Trust and Certifications */}
+          {/* Unified Operations */}
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-foreground">
-              Corporate Governance
+              Unified Operations
             </h4>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Institutional coordination across DAJEM Orbital Resources, DAJEM Farms, and DAJEM Homes from the corporate base in Enugu.
             </p>
             <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
               <p className="font-bold flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                CAC Registered & Certified
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                One Unified DAJEM Account
               </p>
-              <p className="font-mono text-[11px] mt-0.5 text-muted-foreground">{group.registrationNumber}</p>
+              <p className="text-[11px] mt-0.5 text-muted-foreground">Track surveys, real estate & farm orders from one portal.</p>
             </div>
           </div>
         </div>
 
         {/* Bottom Banner */}
         <div className="border-t border-border/50 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
-          <p>&copy; {currentYear} {group.displayName}. All rights reserved. Registered in Nigeria · {group.registrationNumber}</p>
+          <p>&copy; {currentYear} {group.displayName}. All rights reserved. Enugu, Nigeria.</p>
           <div className="flex items-center gap-5">
             <a href={`${landingUrl}#privacy`} className="hover:text-foreground transition-colors">
               Privacy Policy

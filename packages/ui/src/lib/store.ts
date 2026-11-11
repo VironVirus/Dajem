@@ -415,9 +415,9 @@ export interface DajemCompanyLink {
   path: string;
 }
 
-const farmsImageUrl = "/images/farms-hero-farm-v2.png";
-const homesImageUrl = "/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.jpg";
+const homesImageUrl = "/images/homes-hero-suite-v2.jpg";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.jpg";
 
 export const dajemCompanyProfiles: Record<DajemApp, DajemCompanyProfile> = {
   landing: {
@@ -544,7 +544,7 @@ export const seedInventory: InventoryItem[] = [
     promoEndsAt: "2026-07-31T23:59:59.000Z",
     promoLabel: "Farm promo",
     imageBg: "bg-emerald-500/10 text-emerald-700",
-    imageUrl: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "livestock-fish-01",
@@ -558,7 +558,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "1.5kg average",
     shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
-    imageUrl: "https://images.unsplash.com/photo-1534043464124-3be32fe00099?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1534043464124-3be32fe00099?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "livestock-goat-01",
@@ -572,7 +572,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "18kg average",
     shippingWeightKg: 18,
     imageBg: "bg-emerald-500/10 text-emerald-700",
-    imageUrl: "https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "livestock-sheep-01",
@@ -586,7 +586,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "22kg average",
     shippingWeightKg: 22,
     imageBg: "bg-green-500/10 text-green-700",
-    imageUrl: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "livestock-turkey-01",
@@ -600,7 +600,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "5kg average",
     shippingWeightKg: 5,
     imageBg: "bg-lime-500/10 text-lime-700",
-    imageUrl: "https://images.unsplash.com/photo-1579613832125-5d34a13ffe0a?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1579613832125-5d34a13ffe0a?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "grill-chicken-01",
@@ -612,7 +612,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 65,
     shippingWeightKg: 1.2,
     imageBg: "bg-orange-500/10 text-orange-700",
-    imageUrl: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "grill-fish-01",
@@ -624,7 +624,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 55,
     shippingWeightKg: 1.3,
     imageBg: "bg-sky-500/10 text-sky-700",
-    imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "eggs-crate-01",
@@ -636,7 +636,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 180,
     shippingWeightKg: 2,
     imageBg: "bg-yellow-500/10 text-yellow-700",
-    imageUrl: "https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "produce-oil-01",
@@ -648,7 +648,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 60,
     shippingWeightKg: 4,
     imageBg: "bg-amber-500/10 text-amber-700",
-    imageUrl: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "consultancy-01",
@@ -672,7 +672,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 80,
     shippingWeightKg: 3,
     imageBg: "bg-green-500/10 text-green-700",
-    imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "equip-drinker-01",
@@ -684,7 +684,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 65,
     shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
-    imageUrl: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=480&q=70",
   },
   {
     productId: "agro-allied-01",
@@ -696,7 +696,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 45,
     shippingWeightKg: 4,
     imageBg: "bg-lime-500/10 text-lime-700",
-    imageUrl: "https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&w=480&q=70",
   },
 ];
 
@@ -715,7 +715,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 140,
     featured: true,
     imageBg: "from-emerald-700/25 to-slate-900/10",
-    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=480&q=70",
     summary: "A serviced short-let apartment positioned for business travellers and family stays in Enugu.",
     highlights: ["Managed hospitality support", "Flexible stay options", "Secure residential setting", "24/7 Solar Inverter"],
     status: "Approved",
@@ -736,7 +736,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 75,
     featured: true,
     imageBg: "from-blue-700/25 to-emerald-700/10",
-    imageUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=480&q=70",
     summary: "A premium suite concept for hospitality management, hotel operations, and managed stays.",
     highlights: ["Hotel operations ready", "Managed guest services", "Corporate stay friendly", "Private Jacuzzi"],
     status: "Approved",
@@ -754,7 +754,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 900,
     featured: true,
     imageBg: "from-amber-700/25 to-emerald-700/10",
-    imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=480&q=70",
     summary: "Development land for investors seeking real estate development, marketing, and management support.",
     highlights: ["Development advisory", "Tarred road access", "Registered survey beacons", "Dry level soil"],
     status: "Approved",
@@ -775,7 +775,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 650,
     featured: true,
     imageBg: "from-blue-900/30 to-slate-900/10",
-    imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=480&q=70",
     summary: "Contemporary architectural detached duplex with swimming pool, smart automation, and C of O.",
     highlights: ["Private swimming pool", "Governor's consent C of O", "CCTV & Armed security", "Smart home automation"],
     status: "Approved",
@@ -796,7 +796,7 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 380,
     featured: false,
     imageBg: "from-indigo-900/30 to-slate-900/10",
-    imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=480&q=70",
     summary: "Newly finished luxury terrace duplex in an exclusive gated estate with paved access and uniform security.",
     highlights: ["Fitted designer kitchen", "Attached BQ", "Central water treatment", "24/7 Gated security"],
     status: "Approved",

@@ -12,13 +12,10 @@ import {
   Dialog,
   Footer,
   Header,
-  HeroSlideshow,
   Input,
   Label,
   SubsidiaryNav,
   SubsidiaryPageIntro,
-  SubsidiaryRouteGrid,
-  TrustRibbon,
   Select,
   Sheet,
   Textarea,
@@ -302,134 +299,87 @@ export default function PoultryPage() {
         )}
 
         {pageView === "home" && (
-          <>
-        <HeroSlideshow
-          className="dajem-mobile-hero py-8 sm:py-20 lg:py-24"
-          overlayClassName="bg-[linear-gradient(135deg,rgba(236,253,245,0.3),rgba(236,253,245,0.52),rgba(255,255,255,0.84))] dark:bg-[linear-gradient(135deg,rgba(6,78,59,0.28),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
-          slides={[
-            { src: "/images/farms-hero-farm-v2.png", position: "center", label: "Fresh livestock and farm produce", actionLabel: "Shop fresh farm products", href: "/farms/shop" },
-            { src: "/images/farms-hero-generated.png", position: "center", label: "Prepared poultry orders", actionLabel: "Customize a chicken order", href: "/farms/chicken" },
-          ]}
-        >
-          <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl -z-10" />
-          <div className="absolute bottom-10 left-10 h-96 w-96 rounded-full bg-emerald-500/5 blur-3xl -z-10" />
-
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 sm:px-6 md:grid-cols-2 md:gap-12">
-            <div className="dajem-hero-copy-panel space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
-              <Badge variant="secondary" className="border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15">
-                From our farm to you
-              </Badge>
-              <h1 className="text-[2.1rem] font-bold leading-[1.02] sm:text-5xl">
-                <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-2 block text-[1.02rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:mt-3 sm:text-[1.45rem]">
-                  Fresh food, raised with care.
-                </span>
-              </h1>
-              <p className="dajem-hero-lede text-sm leading-relaxed sm:text-base">
-                Shop poultry, livestock, eggs, grills and farm supplies in one place.
-              </p>
-
-              <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-2">
-                <Button
-                  size="lg"
-                  className="sheen-glow w-full sm:w-auto rounded-full bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-600/25 hover:bg-emerald-700 transition-all"
-                  onClick={() => router.push("/farms/shop")}
-                >
-                  <ShoppingCart className="h-5 w-5 mr-1" />
-                  Shop farm products
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all"
-                  onClick={() => cartOpen ? setCartOpen(false) : setCartOpen(true)}
-                >
-                  View cart ({cartCount})
-                </Button>
+          <section className="container mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 sm:py-8">
+            <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
+              <div className="relative h-36 bg-slate-900 sm:h-52">
+                <img
+                  src="/images/farms-hero-farm-v2.jpg"
+                  alt="DAJEM Farms livestock and produce"
+                  loading="eager"
+                  decoding="async"
+                  className="h-full w-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+                <div className="absolute inset-x-4 bottom-3.5 sm:inset-x-6 sm:bottom-5">
+                  <span className="inline-block rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-200">
+                    Fresh Food &amp; Poultry
+                  </span>
+                  <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {profile.shortName}
+                  </h1>
+                </div>
+              </div>
+              <div className="space-y-4 p-4 sm:p-6">
+                <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                  Shop poultry, catfish, livestock, eggs, farm produce, customized chicken cuts, or request bulk pricing.
+                </p>
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto rounded-full bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                    onClick={() => router.push("/farms/shop")}
+                  >
+                    <ShoppingCart className="mr-1.5 h-4 w-4" />
+                    Shop Farm Products ({snapshot.inventory.length})
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto rounded-full font-bold"
+                    onClick={() => router.push("/farms/chicken")}
+                  >
+                    <Drumstick className="mr-1.5 h-4 w-4" />
+                    Chicken Studio
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto rounded-full font-bold"
+                    onClick={() => setCartOpen(!cartOpen)}
+                  >
+                    View Cart ({cartCount})
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="dajem-hero-info-panel mx-auto hidden w-full max-w-md space-y-4 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 md:block">
-              <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <h4 className="text-base font-extrabold text-emerald-700 dark:text-emerald-300">
-                  Farm-to-Table Marketplace
-                </h4>
-                <Badge variant="default" className="bg-emerald-600 text-white">
-                  {profile.registrationNumber}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 text-xs">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <p className="font-extrabold text-foreground">Chicken Cut Studio</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Live, processed or grilled (up to 30 cuts)</p>
-                </div>
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <p className="font-extrabold text-foreground">Enugu Metro Delivery</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Free delivery inside Enugu metropolis</p>
-                </div>
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <p className="font-extrabold text-foreground">{snapshot.inventory.length} Active Items</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Poultry, catfish, goat, eggs & produce</p>
-                </div>
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <p className="font-extrabold text-foreground">Instant Checkout</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Flutterwave receipts & bulk quotes</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 border-t border-border/60 pt-3 text-xs font-semibold text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Shared account cart
-                </div>
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-emerald-500" />
-                  Tracked fulfillment
-                </div>
-              </div>
-            </div>
-          </div>
-        </HeroSlideshow>
-
-        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
-
-        <section className="border-b border-border bg-card/40 py-6 sm:py-10">
-          <div className="container mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="mb-3 flex items-end justify-between gap-4 sm:mb-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Farm Categories</p>
-                <h2 className="mt-1 text-lg font-bold text-foreground sm:text-2xl">Browse by category</h2>
-              </div>
-              <Button type="button" variant="ghost" size="sm" className="text-xs font-bold text-emerald-700 dark:text-emerald-300" onClick={() => router.push("/farms/shop")}>
-                View All ▸
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
-              {farmCategoryOptions.map((category) => (
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-base font-extrabold text-foreground sm:text-lg">Browse by category</h2>
                 <button
-                  key={category.value}
                   type="button"
-                  onClick={() => router.push(`/farms/shop?category=${category.value}`)}
-                  className="rounded-2xl border border-emerald-500/15 bg-background/85 p-3 text-left text-xs font-bold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/45 hover:shadow-md mobile-tap-target"
+                  onClick={() => router.push("/farms/bulk-order")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"
                 >
-                  <Store className="mb-2 h-4 w-4 text-emerald-600" />
-                  <span className="block line-clamp-1">{category.label}</span>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  Bulk Orders
                 </button>
-              ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-8">
+                {farmCategoryOptions.map((category) => (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => router.push(`/farms/shop?category=${category.value}`)}
+                    className="rounded-2xl border border-border bg-card p-3 text-left text-xs font-extrabold text-foreground shadow-sm transition hover:border-emerald-500/45 hover:shadow-md mobile-tap-target"
+                  >
+                    <Store className="mb-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="block line-clamp-1">{category.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
-
-        <SubsidiaryRouteGrid
-          title="What would you like to do?"
-          accent="emerald"
-          items={[
-            { ...farmNavItems[1], meta: `${snapshot.inventory.length} products`, description: "Browse products and current offers." },
-            { ...farmNavItems[2], meta: "Made to order", description: "Select preparation and cut." },
-            { ...farmNavItems[3], meta: "Business supply", description: "Request volume pricing." },
-            { href: "/dashboard", label: "Orders", icon: Truck, meta: "Track activity", description: "Review your orders." },
-          ]}
-        />
-          </>
+          </section>
         )}
 
         {pageView === "chicken" && (
@@ -606,7 +556,7 @@ export default function PoultryPage() {
                         {product.promoLabel || "Offer"}
                       </span>
                     )}
-                    <span className={`absolute right-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[9px] font-bold backdrop-blur-sm sm:right-2.5 sm:top-2.5 sm:px-2.5 sm:text-[10px] ${product.stockStatus === "In Stock" ? "text-emerald-600 dark:text-emerald-400" : product.stockStatus === "Low Stock" ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
+                    <span className={`absolute right-2 top-2 rounded-full bg-background/95 px-2 py-0.5 text-[9px] font-bold sm:right-2.5 sm:top-2.5 sm:px-2.5 sm:text-[10px] ${product.stockStatus === "In Stock" ? "text-emerald-600 dark:text-emerald-400" : product.stockStatus === "Low Stock" ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
                       {product.stockStatus}
                     </span>
                   </div>

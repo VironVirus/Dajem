@@ -147,9 +147,9 @@ function listingGroupFor(type: PropertyType, category: PropertyCategory, group?:
   return type === "sale" ? "house-sale" : "house-rent";
 }
 
-const farmsImageUrl = "/images/farms-hero-farm-v2.png";
-const homesImageUrl = "/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.jpg";
+const homesImageUrl = "/images/homes-hero-suite-v2.jpg";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.jpg";
 const PROPERTY_LISTING_FEE = 20000;
 
 function getCurrentUser(state: PlatformState, sessionEmail: string | null) {

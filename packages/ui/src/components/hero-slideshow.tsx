@@ -121,14 +121,16 @@ export function HeroSlideshow({
               alt=""
               aria-hidden="true"
               src={slide.src}
+              loading={index === 0 ? "eager" : "lazy"}
+              decoding="async"
               className={cn(
                 "dajem-hero-slide-image h-full w-full object-cover",
                 kenBurnsClass,
               )}
               style={{ objectPosition: slide.position ?? "center" }}
             />
-            {/* Cinematic Gradient Overlays */}
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.38),rgba(2,6,23,0.1)_55%,rgba(2,6,23,0.28)),linear-gradient(180deg,rgba(15,23,42,0.06),rgba(15,23,42,0.42))]" />
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.45),rgba(2,6,23,0.12)_55%,rgba(2,6,23,0.32)),linear-gradient(180deg,rgba(15,23,42,0.08),rgba(15,23,42,0.46))]" />
           </div>
         );
       })}
@@ -140,14 +142,6 @@ export function HeroSlideshow({
           overlayClassName,
         )}
       />
-
-      {/* Floating Ambient Glow Orbs */}
-      <div className="dajem-ambient-orb absolute -left-20 top-12 -z-10 h-56 w-56 rounded-full bg-primary/25 blur-3xl dark:bg-cyan-400/15" />
-      <div
-        className="dajem-ambient-orb absolute -right-16 bottom-12 -z-10 h-64 w-64 rounded-full bg-emerald-400/25 blur-3xl dark:bg-emerald-400/15"
-        style={{ animationDelay: "-5s" }}
-      />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.35),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(16,185,129,0.16),transparent_35%)]" />
 
       {/* Hero Children Content */}
       <div
@@ -167,7 +161,7 @@ export function HeroSlideshow({
           {activeSlideContent?.href ? (
             <a
               href={activeSlideContent.href}
-              className="sheen-glow group pointer-events-auto inline-flex min-h-10 max-w-[calc(100%-9rem)] items-center gap-2 rounded-full border border-white/35 bg-slate-950/85 px-4 py-2 text-xs font-bold text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:bg-slate-900 hover:border-white/60 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:max-w-sm sm:text-sm mobile-tap-target"
+              className="group pointer-events-auto inline-flex min-h-10 max-w-[calc(100%-9rem)] items-center gap-2 rounded-full border border-white/35 bg-slate-950/90 px-4 py-2 text-xs font-bold text-white shadow-lg transition-transform duration-200 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:max-w-sm sm:text-sm mobile-tap-target"
             >
               <span className="truncate">
                 {activeSlideContent.actionLabel ?? activeSlideContent.label ?? "Explore"}
@@ -180,7 +174,7 @@ export function HeroSlideshow({
 
           {/* Slideshow Progress & Controls Pill */}
           {hasMultipleSlides && (
-            <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-background/85 p-1.5 text-foreground shadow-2xl backdrop-blur-2xl transition-all dark:border-white/15 dark:bg-slate-950/85 dark:text-white">
+            <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-background/95 p-1.5 text-foreground shadow-lg transition-all dark:border-white/15 dark:bg-slate-950/95 dark:text-white">
               {/* Prev Button */}
               <button
                 type="button"

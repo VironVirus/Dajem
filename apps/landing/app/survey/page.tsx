@@ -11,13 +11,10 @@ import {
   Dialog,
   Footer,
   Header,
-  HeroSlideshow,
   Input,
   Label,
   SubsidiaryNav,
   SubsidiaryPageIntro,
-  SubsidiaryRouteGrid,
-  TrustRibbon,
   Select,
   Textarea,
   dajemCompanyProfiles,
@@ -1657,92 +1654,66 @@ export default function SurveyPage() {
         )}
 
         {pageView === "home" && (
-          <>
-        <HeroSlideshow
-          className="dajem-mobile-hero py-8 sm:py-20 lg:py-24"
-          overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
-          slides={[
-            { src: "/images/orbital-hero-remediation.jpg", position: "center 42%", label: "Field geomatics & project survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
-            { src: "/images/orbital-hero-route-survey.jpg", position: "center 38%", label: "Route alignment & boundary measurement", actionLabel: "Submit a survey inquiry", href: "/survey/inquiry" },
-          ]}
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12">
-            <div className="dajem-hero-copy-panel space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
-              <Badge variant="secondary" className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/15">
-                Surveying & geomatics
-              </Badge>
-              <h1 className="text-[2.1rem] font-bold leading-[1.02] sm:text-5xl">
-                <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-2 block text-[1.02rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:mt-3 sm:text-[1.45rem]">
-                  Estimate, book consult, submit papers &amp; track DHL shipping.
-                </span>
-              </h1>
-              <p className="dajem-hero-lede text-sm leading-relaxed sm:text-base">
-                Explore land surveys, mapping and project support tailored to your needs.
-              </p>
-              <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:gap-4 sm:pt-2">
-                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => router.push("/survey/estimate")}>
-                  1. Get Survey Estimate
-                </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/survey/inquiry")}>
-                  2. Book &amp; Submit Papers
-                </Button>
-              </div>
-            </div>
-
-            <div className="dajem-hero-info-panel hidden space-y-4 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5 lg:block">
-              <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <h4 className="flex items-center gap-2 text-base font-extrabold text-foreground">
-                  <Sparkles className="h-4 w-4 text-cyan-500" />
-                  Cadastral & Geomatics Desk
-                </h4>
-                <Badge variant="outline" className="font-mono text-[10px] text-cyan-700 dark:text-cyan-300">
-                  {profile.registrationNumber}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5 text-xs">
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-                  <p className="font-extrabold text-foreground">10+ Survey Types</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Perimeter, Topo, Parcellation & Title</p>
-                </div>
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-                  <p className="font-extrabold text-foreground">Instant Estimator</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Live fee bands & area converter</p>
-                </div>
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-                  <p className="font-extrabold text-foreground">Registry-Ready</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">5–10 day field & plan turnaround</p>
-                </div>
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
-                  <p className="font-extrabold text-foreground">DHL Plan Delivery</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">Tracked nationwide & global dispatch</p>
+          <section className="container mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 sm:py-8">
+            <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
+              <div className="relative h-36 bg-slate-900 sm:h-52">
+                <img
+                  src="/images/orbital-hero-remediation.jpg"
+                  alt="DAJEM Orbital surveying & geomatics"
+                  loading="eager"
+                  decoding="async"
+                  className="h-full w-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+                <div className="absolute inset-x-4 bottom-3.5 sm:inset-x-6 sm:bottom-5">
+                  <span className="inline-block rounded-full bg-cyan-500/20 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-cyan-200">
+                    Surveying &amp; Geomatics
+                  </span>
+                  <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {profile.shortName}
+                  </h1>
                 </div>
               </div>
-              <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3.5 text-xs text-muted-foreground">
-                <p className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-500" />
-                  <span>{profile.address}</span>
+              <div className="space-y-4 p-4 sm:p-6">
+                <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                  Estimate survey fees, book consultations, submit site papers, and track DHL survey plan delivery from one workflow.
                 </p>
-                <p className="font-mono text-[11px] text-foreground">{profile.email}</p>
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+                  <Button size="lg" className="w-full sm:w-auto rounded-full bg-cyan-600 text-white font-bold hover:bg-cyan-700" onClick={() => router.push("/survey/estimate")}>
+                    1. Get Survey Estimate
+                  </Button>
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full font-bold" onClick={() => router.push("/survey/inquiry")}>
+                    2. Book &amp; Submit Papers
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </HeroSlideshow>
 
-        <TrustRibbon companyName={profile.displayName} registrationNumber={profile.registrationNumber} />
-
-        <SubsidiaryRouteGrid
-          title="Choose your Orbital workspace"
-          accent="cyan"
-          items={[
-            { ...orbitalNavItems[1], meta: `${services.length} approved`, description: "Browse survey services." },
-            { ...orbitalNavItems[2], meta: "Live calculation", description: "Calculate survey costs." },
-            { ...orbitalNavItems[3], meta: "Documents ready", description: "Submit a formal request." },
-            { ...orbitalNavItems[4], meta: `${userSurveys.length} requests`, description: "Track requests and delivery." },
-          ]}
-        />
-          </>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { href: "/survey/estimate", label: "Fee Estimator", meta: "Calculate cost bands", icon: Calculator },
+                { href: "/survey/inquiry", label: "Inquiry & Upload", meta: "Consult & upload docs", icon: FileUp },
+                { href: "/survey/services", label: "Survey Catalog", meta: `${services.length} approved services`, icon: Compass },
+                { href: "/survey/tracker", label: "Ship & Track", meta: `${userSurveys.length} active requests`, icon: PackageCheck },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => router.push(item.href)}
+                    className="flex flex-col justify-between rounded-2xl border border-border bg-card p-3.5 text-left shadow-sm transition hover:border-cyan-500/40 hover:shadow-md mobile-tap-target"
+                  >
+                    <Icon className="mb-2.5 h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                    <div>
+                      <p className="text-xs font-extrabold text-foreground sm:text-sm">{item.label}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">{item.meta}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {pageView === "services" && (
@@ -1795,7 +1766,7 @@ export default function SurveyPage() {
         {pageView === "estimate" && (
         <section id="calculator" className="border-y border-border bg-muted/30 py-6 sm:py-16">
           <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-6 px-4 lg:grid-cols-12 lg:gap-8">
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-500/30 bg-card/90 p-3.5 shadow-sm backdrop-blur-md lg:hidden">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-500/30 bg-card p-3.5 shadow-sm lg:hidden">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
                   Live Estimated Budget

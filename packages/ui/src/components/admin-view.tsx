@@ -147,9 +147,9 @@ const approvalStatuses: { value: ApprovalStatus; label: string }[] = [
   { value: "Rejected", label: "Rejected" },
 ];
 
-const farmsImageUrl = "/images/farms-hero-farm-v2.png";
-const homesImageUrl = "/images/homes-hero-suite-v2.png";
-const orbitalImageUrl = "/images/orbital-hero-field-v2.png";
+const farmsImageUrl = "/images/farms-hero-farm-v2.jpg";
+const homesImageUrl = "/images/homes-hero-suite-v2.jpg";
+const orbitalImageUrl = "/images/orbital-hero-field-v2.jpg";
 
 const blankInventory: InventoryItem = {
   productId: "",

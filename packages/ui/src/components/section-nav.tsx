@@ -47,7 +47,7 @@ export function SectionNav({ items, label = "this page", className }: SectionNav
     <nav
       aria-label={label}
       className={cn(
-        "sticky top-[6.65rem] z-30 border-b border-border/50 bg-background/85 py-2 backdrop-blur-2xl transition-all dark:border-white/10 dark:bg-slate-950/85 lg:top-[4.5rem]",
+        "sticky top-[6.65rem] z-30 border-b border-border/50 bg-background/95 py-2 backdrop-blur-sm transition-all dark:border-white/10 dark:bg-slate-950/95 lg:top-[4.5rem]",
         className,
       )}
     >

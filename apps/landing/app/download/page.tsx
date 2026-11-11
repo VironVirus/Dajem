@@ -58,7 +58,7 @@ export default function DownloadPage() {
         <div className="text-center max-w-2xl mx-auto space-y-4">
           <Badge variant="outline" className="px-3.5 py-1 text-xs font-black border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-full">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2" />
-            Official Android APK Release • v1.0.2
+            Official Android APK Release • v1.0.3
           </Badge>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
@@ -75,7 +75,7 @@ export default function DownloadPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="space-y-4 text-center md:text-left flex-1">
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs text-muted-foreground font-mono">
-                <span className="px-2.5 py-1 rounded-md bg-muted font-bold text-foreground">v1.0.2 Unified</span>
+                <span className="px-2.5 py-1 rounded-md bg-muted font-bold text-foreground">v1.0.3 Fast</span>
                 <span>•</span>
                 <span>Android 8.0+</span>
                 <span>•</span>

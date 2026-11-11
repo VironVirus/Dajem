@@ -72,7 +72,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/48 px-4 pt-[12vh] backdrop-blur-sm"
+          className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-950/60 px-4 pt-[12vh]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -82,7 +82,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             role="dialog"
             aria-modal="true"
             aria-label="DAJEM command palette"
-            className="w-full max-w-2xl overflow-hidden rounded-[1.6rem] border border-white/20 bg-background/96 shadow-2xl shadow-slate-950/30 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/96"
+            className="w-full max-w-2xl overflow-hidden rounded-[1.6rem] border border-border bg-background shadow-2xl shadow-slate-950/30 dark:border-white/10 dark:bg-slate-950"
             initial={{ opacity: 0, y: -18, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.98 }}
