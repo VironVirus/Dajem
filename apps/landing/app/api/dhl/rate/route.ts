@@ -13,7 +13,7 @@ const fallbackRates: Record<DeliveryZone, { amount: number; estimatedDelivery: s
 
 function assertSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (!origin) throw new Error("Request origin is required.");
 
   const host = request.headers.get("host");
   if (!host || new URL(origin).host !== host) {

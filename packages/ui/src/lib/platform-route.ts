@@ -36,12 +36,13 @@ import {
   readSessionEmail,
   writeSessionCookie,
 } from "./server/session";
+import { assertLegacyLoginAllowed, clearLegacyLoginFailures, legacyLoginKey, recordLegacyLoginFailure } from "./server/legacy-login-throttle";
 
 export const dynamic = "force-dynamic";
 
 function assertSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (!origin) throw new Error("Request origin is required.");
 
   const host = request.headers.get("host");
   if (!host || new URL(origin).host !== host) {
@@ -51,13 +52,16 @@ function assertSameOrigin(request: NextRequest) {
 
 function jsonError(error: unknown, status = 400) {
   const message = error instanceof Error ? error.message : "Something went wrong.";
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json({ error: message }, {
+    status: message.startsWith("Too many sign-in attempts.") ? 429 : status,
+    headers: { "Cache-Control": "private, no-store" },
+  });
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const snapshot = await getSnapshot(readSessionEmail(request));
-    return NextResponse.json({ snapshot });
+    const snapshot = await getSnapshot(await readSessionEmail(request));
+    return NextResponse.json({ snapshot }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return jsonError(error, 500);
   }
@@ -66,7 +70,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const sessionEmail = readSessionEmail(request);
+    const sessionEmail = await readSessionEmail(request);
     const body = await request.json();
     const action = body?.action as string | undefined;
     const payload = body?.payload ?? {};
@@ -78,16 +82,26 @@ export async function POST(request: NextRequest) {
           snapshot: result.snapshot,
           message: result.message,
         });
-        if (result.sessionEmail) writeSessionCookie(response, result.sessionEmail);
+        if (result.sessionEmail) await writeSessionCookie(response, result.sessionEmail);
         return response;
       }
       case "login": {
-        const result = await loginUser(sessionEmail, payload);
+        const ip = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+        const loginKey = legacyLoginKey(String(payload.email ?? ""), ip);
+        assertLegacyLoginAllowed(loginKey);
+        let result;
+        try {
+          result = await loginUser(sessionEmail, payload);
+        } catch (error) {
+          recordLegacyLoginFailure(loginKey);
+          throw error;
+        }
+        clearLegacyLoginFailures(loginKey);
         const response = NextResponse.json({
           snapshot: result.snapshot,
           message: result.message,
         });
-        writeSessionCookie(response, result.sessionEmail);
+        await writeSessionCookie(response, result.sessionEmail, result.mfaConfirmed);
         return response;
       }
       case "logout": {
@@ -152,13 +166,13 @@ export async function POST(request: NextRequest) {
       case "complete-supabase-auth": {
         const result = await completeSupabaseAuthentication(String(payload.accessToken ?? ""));
         const response = NextResponse.json({ snapshot: result.snapshot, message: result.message });
-        writeSessionCookie(response, result.sessionEmail);
+        await writeSessionCookie(response, result.sessionEmail, result.mfaConfirmed);
         return response;
       }
       case "complete-supabase-mfa-enrollment": {
         const result = await completeSupabaseMfaEnrollment(String(payload.accessToken ?? ""));
         const response = NextResponse.json({ snapshot: result.snapshot, message: result.message });
-        writeSessionCookie(response, result.sessionEmail);
+        await writeSessionCookie(response, result.sessionEmail, result.mfaConfirmed);
         return response;
       }
       default:

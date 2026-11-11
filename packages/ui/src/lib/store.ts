@@ -66,6 +66,7 @@ export interface User {
 
 export interface ServerUser extends User {
   authUserId?: string;
+  sessionVersion?: string;
   passwordHash: string;
   passwordSalt: string;
   emailVerificationTokenHash?: string;
@@ -135,7 +136,7 @@ export interface Order {
   reference: string;
   provider: "Flutterwave" | "Flutterwave Mock";
   paymentStatus: "Paid" | "Pending" | "Failed";
-  status: "Processing" | "Completed";
+  status: "Processing" | "Action Required" | "Completed";
   invoiceNumber: string;
   app: PaymentApp;
   purpose: PaymentPurpose;
@@ -176,6 +177,7 @@ export function shippingWeightKg(item: Pick<InventoryItem | CartItem, "shippingW
 
 export interface PropertyListing {
   id: string;
+  isExternalSubmission?: boolean;
   title: string;
   location: string;
   price: number;
@@ -528,7 +530,7 @@ export const dajemCompanyLinks: DajemCompanyLink[] = [
 export const seedInventory: InventoryItem[] = [
   {
     productId: "livestock-poultry-01",
-    name: "Poultry",
+    name: "Poultry (Broiler Chicken)",
     category: "livestock",
     price: 12500,
     description: "Healthy poultry supplied for household, farm, and bulk purchase needs.",
@@ -542,7 +544,7 @@ export const seedInventory: InventoryItem[] = [
     promoEndsAt: "2026-07-31T23:59:59.000Z",
     promoLabel: "Farm promo",
     imageBg: "bg-emerald-500/10 text-emerald-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "livestock-fish-01",
@@ -556,7 +558,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "1.5kg average",
     shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1534043464124-3be32fe00099?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "livestock-goat-01",
@@ -570,7 +572,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "18kg average",
     shippingWeightKg: 18,
     imageBg: "bg-emerald-500/10 text-emerald-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "livestock-sheep-01",
@@ -584,7 +586,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "22kg average",
     shippingWeightKg: 22,
     imageBg: "bg-green-500/10 text-green-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "livestock-turkey-01",
@@ -598,7 +600,7 @@ export const seedInventory: InventoryItem[] = [
     weight: "5kg average",
     shippingWeightKg: 5,
     imageBg: "bg-lime-500/10 text-lime-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1579613832125-5d34a13ffe0a?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "grill-chicken-01",
@@ -610,7 +612,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 65,
     shippingWeightKg: 1.2,
     imageBg: "bg-orange-500/10 text-orange-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "grill-fish-01",
@@ -622,7 +624,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 55,
     shippingWeightKg: 1.3,
     imageBg: "bg-sky-500/10 text-sky-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "eggs-crate-01",
@@ -634,7 +636,19 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 180,
     shippingWeightKg: 2,
     imageBg: "bg-yellow-500/10 text-yellow-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    productId: "produce-oil-01",
+    name: "Pure Palm Oil (4 Litres)",
+    category: "produce",
+    price: 9000,
+    description: "100% unadulterated village mill processed red palm oil in sealed 4L keg.",
+    stockStatus: "In Stock",
+    availableUnits: 60,
+    shippingWeightKg: 4,
+    imageBg: "bg-amber-500/10 text-amber-700",
+    imageUrl: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "consultancy-01",
@@ -658,7 +672,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 80,
     shippingWeightKg: 3,
     imageBg: "bg-green-500/10 text-green-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "equip-drinker-01",
@@ -670,7 +684,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 65,
     shippingWeightKg: 1.5,
     imageBg: "bg-cyan-500/10 text-cyan-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=800&q=80",
   },
   {
     productId: "agro-allied-01",
@@ -682,7 +696,7 @@ export const seedInventory: InventoryItem[] = [
     availableUnits: 45,
     shippingWeightKg: 4,
     imageBg: "bg-lime-500/10 text-lime-700",
-    imageUrl: farmsImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&w=800&q=80",
   },
 ];
 
@@ -701,9 +715,9 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 140,
     featured: true,
     imageBg: "from-emerald-700/25 to-slate-900/10",
-    imageUrl: homesImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
     summary: "A serviced short-let apartment positioned for business travellers and family stays in Enugu.",
-    highlights: ["Managed hospitality support", "Flexible stay options", "Secure residential setting"],
+    highlights: ["Managed hospitality support", "Flexible stay options", "Secure residential setting", "24/7 Solar Inverter"],
     status: "Approved",
     createdAt: "2025-09-08T00:00:00.000Z",
     date: "08 Sep 2025",
@@ -711,7 +725,7 @@ export const seedPropertyListings: PropertyListing[] = [
   {
     id: "prop-02",
     title: "Hospitality Management Suite",
-    location: "Enugu, Enugu State",
+    location: "Independence Layout, Enugu",
     price: 180000,
     type: "hotel",
     category: "suite",
@@ -722,9 +736,9 @@ export const seedPropertyListings: PropertyListing[] = [
     size: 75,
     featured: true,
     imageBg: "from-blue-700/25 to-emerald-700/10",
-    imageUrl: homesImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
     summary: "A premium suite concept for hospitality management, hotel operations, and managed stays.",
-    highlights: ["Hotel operations ready", "Managed guest services", "Corporate stay friendly"],
+    highlights: ["Hotel operations ready", "Managed guest services", "Corporate stay friendly", "Private Jacuzzi"],
     status: "Approved",
     createdAt: "2025-09-08T00:00:00.000Z",
     date: "08 Sep 2025",
@@ -732,20 +746,62 @@ export const seedPropertyListings: PropertyListing[] = [
   {
     id: "prop-03",
     title: "Real Estate Development Plot",
-    location: "Enugu Growth Corridor",
-    price: 45000000,
+    location: "Centenary City Corridor, Enugu",
+    price: 32000000,
     type: "sale",
     category: "land",
     listingGroup: "land-sale",
-    size: 1200,
-    featured: false,
+    size: 900,
+    featured: true,
     imageBg: "from-amber-700/25 to-emerald-700/10",
-    imageUrl: homesImageUrl,
+    imageUrl: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80",
     summary: "Development land for investors seeking real estate development, marketing, and management support.",
-    highlights: ["Development advisory", "Sales and marketing support", "Property management pathway"],
+    highlights: ["Development advisory", "Tarred road access", "Registered survey beacons", "Dry level soil"],
     status: "Approved",
     createdAt: "2025-09-08T00:00:00.000Z",
     date: "08 Sep 2025",
+  },
+  {
+    id: "prop-04",
+    title: "5-Bed Detached Smart Duplex + Pool",
+    location: "Golf Estate, GRA Enugu",
+    price: 185000000,
+    type: "sale",
+    category: "apartment",
+    listingGroup: "house-sale",
+    residenceType: "duplex",
+    beds: 5,
+    baths: 6,
+    size: 650,
+    featured: true,
+    imageBg: "from-blue-900/30 to-slate-900/10",
+    imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
+    summary: "Contemporary architectural detached duplex with swimming pool, smart automation, and C of O.",
+    highlights: ["Private swimming pool", "Governor's consent C of O", "CCTV & Armed security", "Smart home automation"],
+    status: "Approved",
+    createdAt: "2025-10-12T00:00:00.000Z",
+    date: "12 Oct 2025",
+  },
+  {
+    id: "prop-05",
+    title: "4-Bedroom Modern Terrace Duplex",
+    location: "New Haven Extension, Enugu",
+    price: 95000000,
+    type: "sale",
+    category: "apartment",
+    listingGroup: "house-sale",
+    residenceType: "duplex",
+    beds: 4,
+    baths: 4,
+    size: 380,
+    featured: false,
+    imageBg: "from-indigo-900/30 to-slate-900/10",
+    imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+    summary: "Newly finished luxury terrace duplex in an exclusive gated estate with paved access and uniform security.",
+    highlights: ["Fitted designer kitchen", "Attached BQ", "Central water treatment", "24/7 Gated security"],
+    status: "Approved",
+    createdAt: "2025-10-15T00:00:00.000Z",
+    date: "15 Oct 2025",
   },
 ];
 

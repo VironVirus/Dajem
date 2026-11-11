@@ -330,21 +330,41 @@ export default function PoultryPage() {
               </div>
             </div>
 
-            <div className="dajem-hero-info-panel mx-auto hidden max-w-md space-y-4 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-8 md:block">
-              <div className="flex items-start justify-between">
-                <h4 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">Connected Checkout</h4>
+            <div className="dajem-hero-info-panel mx-auto hidden w-full max-w-md space-y-4 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 md:block">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <h4 className="text-base font-extrabold text-emerald-700 dark:text-emerald-300">
+                  Farm-to-Table Marketplace
+                </h4>
                 <Badge variant="default" className="bg-emerald-600 text-white">
-                  Secure payments
+                  {profile.registrationNumber}
                 </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-xs font-semibold text-muted-foreground">
+              <div className="grid grid-cols-2 gap-2.5 text-xs">
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="font-extrabold text-foreground">Chicken Cut Studio</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Live, processed or grilled (up to 30 cuts)</p>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="font-extrabold text-foreground">Enugu Metro Delivery</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Free delivery inside Enugu metropolis</p>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="font-extrabold text-foreground">{snapshot.inventory.length} Active Items</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Poultry, catfish, goat, eggs & produce</p>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="font-extrabold text-foreground">Instant Checkout</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Flutterwave receipts & bulk quotes</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 border-t border-border/60 pt-3 text-xs font-semibold text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Shared cart
+                  Shared account cart
                 </div>
                 <div className="flex items-center gap-2">
                   <Truck className="h-4 w-4 text-emerald-500" />
-                  Order tracking
+                  Tracked fulfillment
                 </div>
               </div>
             </div>
@@ -466,43 +486,69 @@ export default function PoultryPage() {
         )}
 
         <section id="catalog" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
-          <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-            {[{ value: "all", label: "All products" }, { value: "livestock", label: "Livestock" }, { value: "grills", label: "Grills" }, { value: "eggs", label: "Eggs" }, { value: "produce", label: "Produce" }, { value: "equipment", label: "Equipment" }, { value: "consultancy", label: "Services" }].map((category) => (
-              <Button key={category.value} size="sm" variant={selectedCategory === category.value ? "default" : "outline"} className="h-auto min-h-10 justify-center whitespace-normal text-xs" onClick={() => setSelectedCategory(category.value)}>{category.label}</Button>
-            ))}
-          </div>
-          <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <Badge variant="secondary" className="mb-3">{profile.displayName}</Badge>
+              <Badge variant="secondary" className="mb-2">{profile.displayName}</Badge>
               <h2 className="text-3xl font-bold text-primary dark:text-foreground">Browse Farm Products</h2>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                Showing {filteredProducts.length} of {snapshot.inventory.length} fresh farm items
+              </p>
             </div>
 
-            <div className="flex w-full flex-col items-center gap-4 sm:flex-row md:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground opacity-50" />
+            <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center md:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  className="h-9 pl-9"
+                  className="h-10 pl-9"
+                  placeholder="Search poultry, catfish, eggs, produce..."
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </div>
-              <div className="w-full sm:w-auto">
-                <Select
-                  value={selectedCategory}
-                  onChange={(event) => setSelectedCategory(event.target.value)}
-                  options={[
-                    { value: "all", label: "All Categories" },
-                    { value: "livestock", label: "Livestock" },
-                    { value: "grills", label: "Grills" },
-                    { value: "eggs", label: "Eggs" },
-                    { value: "consultancy", label: "Farm Consultancy" },
-                    { value: "produce", label: "Farm Produce" },
-                    { value: "equipment", label: "Farm Equipment" },
-                    { value: "agro-allied", label: "Agro-Allied Products" },
-                  ]}
-                />
-              </div>
+              {(searchTerm || selectedCategory !== "all") && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 text-xs font-bold"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("all");
+                  }}
+                >
+                  Reset
+                </Button>
+              )}
             </div>
+          </div>
+
+          <div className="mb-8 flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[
+              { value: "all", label: "All Products" },
+              { value: "livestock", label: "Livestock" },
+              { value: "grills", label: "Grills" },
+              { value: "eggs", label: "Eggs" },
+              { value: "produce", label: "Farm Produce" },
+              { value: "equipment", label: "Equipment" },
+              { value: "agro-allied", label: "Agro-Allied" },
+              { value: "consultancy", label: "Consultancy" },
+            ].map((category) => {
+              const active = selectedCategory === category.value;
+              return (
+                <button
+                  key={category.value}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.value)}
+                  className={`inline-flex shrink-0 items-center rounded-full border px-4 py-2 text-xs font-bold transition ${
+                    active
+                      ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                      : "border-border/80 bg-card text-muted-foreground hover:border-emerald-500/40 hover:text-foreground"
+                  }`}
+                >
+                  {category.label}
+                </button>
+              );
+            })}
           </div>
 
           {filteredProducts.length > 0 ? (
@@ -510,48 +556,58 @@ export default function PoultryPage() {
               {filteredProducts.map((product) => {
                 const displayPrice = product.promoPrice ?? product.price;
                 const hasPromo = Boolean(product.promoPrice && (product.originalPrice ?? product.price) > product.promoPrice);
+                const isCustomizableChicken = product.productId === "livestock-poultry-01" || product.productId === "grill-chicken-01";
                 return (
-                <Card key={product.productId} className="flex h-full flex-col overflow-hidden hover:-translate-y-1 duration-300">
+                <Card key={product.productId} className="group flex h-full flex-col overflow-hidden hover:-translate-y-1 duration-300">
                   <div
-                    className={`flex h-32 items-center justify-center border-b bg-cover bg-center sm:h-40 ${product.imageBg}`}
-                    style={product.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(255,255,255,.58), rgba(255,255,255,.28)), url(${product.imageUrl})` } : undefined}
+                    className={`relative flex h-32 items-center justify-center border-b bg-cover bg-center sm:h-44 ${product.imageBg}`}
+                    style={product.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15,23,42,.22), rgba(16,185,129,.14)), url(${product.imageUrl})` } : undefined}
                   >
                     {!product.imageUrl && <Egg className="h-12 w-12 opacity-80" />}
+                    {hasPromo && (
+                      <span className="absolute left-2.5 top-2.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
+                        {product.promoLabel || "Offer"}
+                      </span>
+                    )}
+                    <span className={`absolute right-2.5 top-2.5 rounded-full bg-background/90 px-2.5 py-0.5 text-[10px] font-bold backdrop-blur-sm ${product.stockStatus === "In Stock" ? "text-emerald-600 dark:text-emerald-400" : product.stockStatus === "Low Stock" ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
+                      {product.stockStatus}
+                    </span>
                   </div>
-                  <CardHeader className="flex-1 p-3 sm:p-5">
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <Badge variant="outline" className="capitalize">{product.category}</Badge>
-                      <span className={`text-xs font-semibold ${product.stockStatus === "In Stock" ? "text-emerald-500" : product.stockStatus === "Low Stock" ? "text-amber-500" : "text-destructive"}`}>
-                        {product.stockStatus}
+                  <CardHeader className="flex-1 p-3.5 sm:p-5">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <Badge variant="outline" className="text-[10px] capitalize">{product.category}</Badge>
+                      <span className="text-[10px] font-bold text-muted-foreground">
+                        {product.availableUnits} left
                       </span>
                     </div>
                     <CardTitle className="text-base font-bold leading-snug sm:text-lg">{product.name}</CardTitle>
-                    <CardDescription className="mt-1 line-clamp-3 text-xs">{product.description}</CardDescription>
+                    <CardDescription className="mt-1 line-clamp-2 text-xs">{product.description}</CardDescription>
                     {(product.age || product.weight) && (
-                      <p className="text-[11px] font-semibold text-muted-foreground">{[product.age, product.weight].filter(Boolean).join(" - ")}</p>
+                      <p className="mt-2 inline-block w-max rounded-md bg-muted/70 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        {[product.age, product.weight].filter(Boolean).join(" · ")}
+                      </p>
                     )}
                   </CardHeader>
-                  <CardContent className="flex items-center justify-between gap-2 px-3 pb-4 pt-0 sm:px-5">
-                    <div>
-                      <span className="text-lg font-extrabold text-primary dark:text-foreground">
+                  <CardContent className="flex items-baseline justify-between gap-2 px-3.5 pb-3 pt-0 sm:px-5">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-lg font-black text-emerald-700 dark:text-emerald-400 sm:text-xl">
                         {formatCurrency(displayPrice)}
                       </span>
                       {hasPromo && (
-                        <p className="text-xs text-muted-foreground line-through">{formatCurrency(product.originalPrice ?? product.price)}</p>
+                        <span className="text-xs text-muted-foreground line-through">
+                          {formatCurrency(product.originalPrice ?? product.price)}
+                        </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      {product.availableUnits} left
-                    </span>
                   </CardContent>
-                  <div className="border-t border-border/50 p-3 sm:p-5">
+                  <div className="border-t border-border/50 p-3 sm:p-4">
                     <Button
-                      className="w-full bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
-                      onClick={() => product.productId === "livestock-poultry-01" || product.productId === "grill-chicken-01" ? openChickenSelector(product.productId) : void handleAddToCart(product.productId)}
+                      className="w-full rounded-xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+                      onClick={() => isCustomizableChicken ? openChickenSelector(product.productId) : void handleAddToCart(product.productId)}
                       disabled={product.stockStatus === "Out of Stock" || isBusy}
                     >
                       <ShoppingCart className="h-4 w-4" />
-                      Add
+                      <span>{isCustomizableChicken ? "Select Cut & Add" : "Add to Cart"}</span>
                     </Button>
                   </div>
                 </Card>

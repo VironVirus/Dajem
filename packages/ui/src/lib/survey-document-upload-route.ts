@@ -14,7 +14,7 @@ const ALLOWED_MIME_TYPES = new Set([
 
 function assertSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (!origin) throw new Error("Request origin is required.");
 
   const host = request.headers.get("host");
   if (!host || new URL(origin).host !== host) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
 
-    const sessionEmail = readSessionEmail(request);
+    const sessionEmail = await readSessionEmail(request);
     if (!sessionEmail) {
       return jsonError(new Error("Please log in before uploading documents."), 401);
     }

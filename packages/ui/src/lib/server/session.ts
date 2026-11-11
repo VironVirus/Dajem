@@ -1,8 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { readPlatformState } from "./platform-backend";
 
 export const SESSION_COOKIE = "dajem_session";
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8;
+const ADMIN_MAX_AGE_SECONDS = 60 * 60;
 
 export function getSessionSecret() {
   const secret = process.env.DAJEM_SESSION_SECRET;
@@ -19,7 +21,9 @@ function sign(payload: string) {
   return createHmac("sha256", getSessionSecret()).update(payload).digest("hex");
 }
 
-function encode(payload: { email: string; issuedAt: string }) {
+type SessionPayload = { email: string; userId: string; sessionVersion: string; mfaConfirmed: boolean; issuedAt: string; version: 2 };
+
+function encode(payload: SessionPayload) {
   const raw = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   return `${raw}.${sign(raw)}`;
 }
@@ -34,10 +38,8 @@ function decode(token: string) {
   if (!safe) return null;
 
   try {
-    const payload = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as {
-      email: string;
-      issuedAt: string;
-    };
+    const payload = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as SessionPayload;
+    if (payload.version !== 2 || typeof payload.email !== "string" || typeof payload.userId !== "string" || typeof payload.sessionVersion !== "string") return null;
 
     const issuedAt = Date.parse(payload.issuedAt);
     if (!Number.isFinite(issuedAt)) return null;
@@ -45,25 +47,36 @@ function decode(token: string) {
     const ageMs = Date.now() - issuedAt;
     if (ageMs < 0 || ageMs > SESSION_MAX_AGE_SECONDS * 1000) return null;
 
-    return payload.email?.toLowerCase() ?? null;
+    return payload;
   } catch {
     return null;
   }
 }
 
-export function readSessionEmail(request: NextRequest) {
+export async function readSessionEmail(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return decode(token);
+  const payload = decode(token);
+  if (!payload) return null;
+  const state = await readPlatformState();
+  const user = state.users.find((entry) => entry.id === payload.userId && entry.email.toLowerCase() === payload.email.toLowerCase());
+  if (!user || !user.emailVerified || (user.sessionVersion ?? "initial") !== payload.sessionVersion) return null;
+  if (user.mfaEnabled && !payload.mfaConfirmed) return null;
+  if (user.role === "admin" && Date.now() - Date.parse(payload.issuedAt) > ADMIN_MAX_AGE_SECONDS * 1000) return null;
+  return user.email;
 }
 
-export function writeSessionCookie(response: NextResponse, email: string) {
-  response.cookies.set(SESSION_COOKIE, encode({ email: email.toLowerCase(), issuedAt: new Date().toISOString() }), {
+export async function writeSessionCookie(response: NextResponse, email: string, mfaConfirmed = false) {
+  const state = await readPlatformState();
+  const user = state.users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
+  if (!user?.emailVerified || (user.mfaEnabled && !mfaConfirmed)) throw new Error("Account verification is required before signing in.");
+  const maxAge = user.role === "admin" ? ADMIN_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS;
+  response.cookies.set(SESSION_COOKIE, encode({ email: user.email, userId: user.id, sessionVersion: user.sessionVersion ?? "initial", mfaConfirmed, issuedAt: new Date().toISOString(), version: 2 }), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+    maxAge,
   });
 }
 

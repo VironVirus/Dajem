@@ -72,7 +72,6 @@ Optional values to add later only when those features are ready:
 ```text
 NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY=
 FLUTTERWAVE_SECRET_KEY=
-DAJEM_ALLOW_MOCK_PAYMENTS=false
 DHL_API_KEY=
 DHL_API_SECRET=
 DHL_ACCOUNT_NUMBER=
@@ -99,7 +98,7 @@ The existing `SUPABASE_SERVICE_ROLE_KEY` stays server-only. Never expose it in b
 
 Run `supabase/dajem_media.sql` in Supabase SQL Editor once before using image uploads. It creates the public `dajem-media` bucket used by the server to store 5 MB-or-smaller, WebP-converted, DAJEM-watermarked images. Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser code.
 
-For a private test deployment only, set `DAJEM_ALLOW_MOCK_PAYMENTS=true`. This enables Flutterwave's local mock checkout without collecting money; set it back to `false` before making the site public.
+For a private test deployment, use Flutterwave test keys. Mock checkout is limited to local development and cannot mark orders paid on a production build.
 
 ## 4. Push The Repo To GitHub
 
@@ -222,7 +221,7 @@ Complete these steps after the new code is pushed and the Hostinger deployment h
 8. Save the Hostinger variables, redeploy, then restart the app.
 9. Make a small controlled payment and confirm that a receipt appears in `/dashboard` under **Bills**.
 
-Do not enable `DAJEM_ALLOW_MOCK_PAYMENTS` on the public website. It is reserved for a private Flutterwave test environment and should remain `false` in production.
+Mock checkout is unavailable in production builds, even if an old `DAJEM_ALLOW_MOCK_PAYMENTS` setting remains in Hostinger. Use Flutterwave test keys on staging.
 
 ### Flutterwave Test Mode
 

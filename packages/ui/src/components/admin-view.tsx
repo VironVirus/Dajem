@@ -783,7 +783,7 @@ export function AdminView() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {[
               { label: "Registered Users", value: snapshot.users.length, icon: Users, tone: "text-blue-500 bg-blue-500/10", action: () => setActiveArea("users") },
-              { label: "Completed Orders", value: snapshot.orders.length, icon: Package, tone: "text-emerald-500 bg-emerald-500/10", action: () => setActiveArea("reports") },
+              { label: "Paid Orders", value: snapshot.orders.length, icon: Package, tone: "text-emerald-500 bg-emerald-500/10", action: () => setActiveArea("reports") },
               { label: "Pending Properties", value: pendingPropertiesCount, icon: Home, tone: "text-amber-500 bg-amber-500/10", action: () => { setActiveArea("homes"); setHomesAction("listings"); } },
               { label: "Active Surveys", value: openSurveysCount, icon: ClipboardList, tone: "text-cyan-500 bg-cyan-500/10", action: () => { setActiveArea("orbital"); setOrbitalAction("inquiries"); } },
             ].map((metric) => (
@@ -917,7 +917,7 @@ export function AdminView() {
                       <div className="min-w-0">
                         <p className="truncate font-bold text-foreground">{row.activity}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`inline-block rounded px-1.5 py-0.2 text-[9px] font-black uppercase ${row.area === "Farms" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : row.area === "Homes" ? "bg-blue-500/15 text-blue-700 dark:text-blue-300" : "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"}`}>
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-black uppercase ${row.area === "Farms" ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : row.area === "Homes" ? "bg-blue-500/15 text-blue-700 dark:text-blue-300" : "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300"}`}>
                             {row.area}
                           </span>
                           <span className="text-[10px] text-muted-foreground">· {row.status}</span>
@@ -1166,7 +1166,7 @@ export function AdminView() {
                   {farmOrders.map((order) => (
                     <article key={order.id} className="rounded-2xl border border-border/80 bg-card/60 p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-foreground text-sm">{order.invoiceNumber}</p><Badge variant={order.status === "Completed" ? "default" : "secondary"} className="text-[10px]">{order.status}</Badge>{order.delivery?.requiresWhatsAppConfirmation && <Badge variant="outline" className="text-[10px]">Delivery arrangement needed</Badge>}</div><p className="mt-1 text-xs text-muted-foreground">{order.userEmail} · {order.date} · {formatCurrency(order.total)}</p></div>
+                        <div><div className="flex flex-wrap items-center gap-2"><p className="font-bold text-foreground text-sm">{order.invoiceNumber}</p><Badge variant={order.status === "Completed" ? "default" : order.status === "Action Required" ? "destructive" : "secondary"} className="text-[10px]">{order.status}</Badge>{order.delivery?.requiresWhatsAppConfirmation && <Badge variant="outline" className="text-[10px]">Delivery arrangement needed</Badge>}</div><p className="mt-1 text-xs text-muted-foreground">{order.userEmail} · {order.date} · {formatCurrency(order.total)}</p></div>
                         <p className="text-[11px] font-semibold text-muted-foreground">Order ID: {order.id}</p>
                       </div>
                       <div className="mt-3 grid gap-3 text-xs sm:grid-cols-2">

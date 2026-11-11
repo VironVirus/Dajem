@@ -1,0 +1,36 @@
+{
+  "appId": "com.dajemgroup.app",
+  "appName": "DAJEM Group",
+  "webDir": "apps/landing/out",
+  "server": {
+    "url": "https://dajemgroup.com/app?v=1.0.1&vc=101",
+    "cleartext": false,
+    "allowNavigation": [
+      "dajemgroup.com",
+      "*.dajemgroup.com",
+      "*.flutterwave.com",
+      "checkout.flutterwave.com"
+    ]
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#040812",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "backgroundColor": "#040812",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1400,
+      "backgroundColor": "#040812",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#040812"
+    }
+  }
+}
+

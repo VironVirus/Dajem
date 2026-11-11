@@ -442,6 +442,7 @@ export default function RealEstatePage() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
                   <Input
                     id="search"
+                    placeholder="Search location, title, or highlight..."
                     className="pl-9"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
@@ -478,32 +479,38 @@ export default function RealEstatePage() {
           {filteredProperties.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {filteredProperties.map((property) => {
-                const listedBy = property.submittedByName ?? profile.displayName;
-                const isOfficial = !property.submittedByEmail;
+                const listedBy = property.agentName ?? property.submittedByName ?? profile.displayName;
+                const isOfficial = !(property.isExternalSubmission ?? Boolean(property.submittedByEmail));
                 return (
                 <Card key={property.id} className="group relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-lg">
                   <div
                     className={`flex h-56 flex-col justify-between rounded-t-xl border-b bg-gradient-to-br bg-cover bg-center p-4 ${property.imageBg}`}
-                    style={property.imageUrl ? { backgroundImage: `linear-gradient(135deg, rgba(15,23,42,.28), rgba(37,99,235,.18)), url(${property.imageUrl})` } : undefined}
+                    style={property.imageUrl ? { backgroundImage: `linear-gradient(180deg, rgba(15,23,42,.38) 0%, rgba(15,23,42,.08) 50%, rgba(15,23,42,.55) 100%), url(${property.imageUrl})` } : undefined}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <Badge variant="default" className={property.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
                         {propertyGroupLabel(property.listingGroup, property.type)}
                       </Badge>
-                      {isOfficial && <Badge className="bg-blue-600 text-white">Official</Badge>}
-                      {property.featured && (
-                        <Badge className="border-transparent bg-amber-500 text-white hover:bg-amber-600">
-                          Featured
-                        </Badge>
+                      <div className="flex items-center gap-1.5">
+                        {isOfficial && <Badge className="bg-blue-600 text-white">Official</Badge>}
+                        {property.featured && (
+                          <Badge className="border-transparent bg-amber-500 text-white hover:bg-amber-600">
+                            Featured
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="flex w-max items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                        <Tag className="h-3 w-3 text-blue-500" />
+                        <span className="capitalize">{property.category}</span>
+                      </div>
+                      {property.residenceType && (
+                        <p className="w-max rounded-full bg-background/90 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm backdrop-blur-sm">
+                          {residenceTypeLabel(property.residenceType)}
+                        </p>
                       )}
                     </div>
-                    <div className="flex w-max items-center gap-1.5 rounded-full bg-background/85 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
-                      <Tag className="h-3 w-3 text-blue-500" />
-                      <span className="capitalize">{property.category}</span>
-                    </div>
-                    {property.residenceType && (
-                      <p className="mt-2 w-max rounded-full bg-background/90 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm">{residenceTypeLabel(property.residenceType)}</p>
-                    )}
                   </div>
 
                   <CardHeader className="flex-1 p-5">
@@ -681,7 +688,7 @@ export default function RealEstatePage() {
                 <Badge variant="default" className={activeProperty.type === "sale" ? "bg-primary text-white" : "bg-blue-600 text-white"}>
                   {propertyGroupLabel(activeProperty.listingGroup, activeProperty.type)}
                 </Badge>
-                {!activeProperty.submittedByEmail && <Badge className="bg-blue-600 text-white">Official</Badge>}
+                {!(activeProperty.isExternalSubmission ?? Boolean(activeProperty.submittedByEmail)) && <Badge className="bg-blue-600 text-white">Official</Badge>}
                 {activeProperty.featured && <Badge className="bg-amber-500 text-white">Featured</Badge>}
               </div>
               <p className="text-3xl font-extrabold text-primary dark:text-foreground">
@@ -689,7 +696,9 @@ export default function RealEstatePage() {
               </p>
               <p className="mt-3 text-sm text-muted-foreground">{activeProperty.summary}</p>
               <p className="mt-3 text-xs font-semibold text-muted-foreground">
-                Listed by {activeProperty.submittedByName ?? profile.displayName}
+                {activeProperty.agentListingPaymentStatus === "Paid" || !(activeProperty.isExternalSubmission ?? Boolean(activeProperty.submittedByEmail))
+                  ? `Listed by ${activeProperty.agentName ?? activeProperty.submittedByName ?? profile.displayName}`
+                  : "External listing - agent contact pending"}
               </p>
             </div>
 
@@ -708,8 +717,8 @@ export default function RealEstatePage() {
               </div>
             </div>
 
-            {(!activeProperty.submittedByEmail || activeProperty.agentListingPaymentStatus === "Paid") ? (
-              activeProperty.submittedByEmail && (
+            {(!(activeProperty.isExternalSubmission ?? Boolean(activeProperty.submittedByEmail)) || activeProperty.agentListingPaymentStatus === "Paid") ? (
+              (activeProperty.isExternalSubmission ?? Boolean(activeProperty.submittedByEmail)) && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-950 dark:bg-blue-950/20 dark:text-blue-100">
                   <p className="font-bold">Agent contact</p>
                   <p className="mt-1">{activeProperty.agentName ?? activeProperty.submittedByName} · {activeProperty.agentPhone ?? activeProperty.submittedByPhone}</p>

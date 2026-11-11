@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       token: url.searchParams.get("token") ?? "",
     });
     const redirect = NextResponse.redirect(new URL("/dashboard?verified=1", request.url));
-    writeSessionCookie(redirect, result.sessionEmail);
+    await writeSessionCookie(redirect, result.sessionEmail);
     return redirect;
   } catch {
     return NextResponse.redirect(new URL("/?verification=failed", request.url));

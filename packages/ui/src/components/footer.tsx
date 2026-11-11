@@ -51,6 +51,7 @@ export function Footer({ compact = false }: FooterProps) {
               </a>
             ))}
             <a href={`${landingUrl}#contact`} className="font-semibold hover:text-foreground">Contact</a>
+            <a href="/mobile-designs" onClick={(event) => handleNavigate(event, "/mobile-designs")} className="font-semibold text-primary hover:underline">Mobile App Designs</a>
             {dajemSocialLinks.map((social) => (
               <a key={social.id} href={social.url} target="_blank" rel="noreferrer" className="font-semibold hover:text-foreground">
                 {social.label}
@@ -121,6 +122,24 @@ export function Footer({ compact = false }: FooterProps) {
                   </a>
                 </li>
               ))}
+              <li>
+                <a
+                  href="/download"
+                  onClick={(event) => handleNavigate(event, "/download")}
+                  className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-colors"
+                >
+                  <span>📱 Download Android App (.APK)</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/app"
+                  onClick={(event) => handleNavigate(event, "/app")}
+                  className="text-xs sm:text-sm font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5 transition-colors"
+                >
+                  <span>⚡ Launch Mobile Web App</span>
+                </a>
+              </li>
             </ul>
           </div>
 

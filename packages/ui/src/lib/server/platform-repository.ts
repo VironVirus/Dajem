@@ -33,7 +33,9 @@ import type {
 } from "../store";
 import { shippingWeightKg } from "../store";
 import { normalizeFarmDeliveryInput, quoteFarmDelivery, type FarmDeliveryInput } from "../farm-delivery";
-import { getIntegrationStatus, getSupabaseAdminClient, getSupabaseAuthClient, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
+import { getIntegrationStatus, getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseMediaBucket, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
+import { propertyListingForViewer } from "./public-listing";
+import { mockPaymentsAllowed } from "../payment-policy";
 
 function nowIso() {
   return new Date().toISOString();
@@ -129,7 +131,12 @@ function invoicePrefix(app: PaymentApp) {
 function makeInvoiceNumber(state: PlatformState, app: PaymentApp) {
   const dateKey = nowIso().slice(0, 10).replace(/-/g, "");
   const prefix = `${invoicePrefix(app)}${dateKey}`;
-  const serial = state.orders.filter((order) => order.invoiceNumber?.startsWith(prefix)).length + 1;
+  const serial = [...state.orders, ...state.paymentIntents].reduce((highest, entry) => {
+    const value = entry.invoiceNumber;
+    if (!value?.startsWith(prefix)) return highest;
+    const number = Number(value.slice(prefix.length));
+    return Number.isSafeInteger(number) ? Math.max(highest, number) : highest;
+  }, 0) + 1;
   return `${prefix}${String(serial).padStart(6, "0")}`;
 }
 
@@ -138,10 +145,6 @@ function listingGroupFor(type: PropertyType, category: PropertyCategory, group?:
   if (category === "land") return type === "sale" ? "land-sale" : "land-lease";
   if (type === "short-let" || category === "short-let" || category === "suite") return "short-let";
   return type === "sale" ? "house-sale" : "house-rent";
-}
-
-function allowMockPayments() {
-  return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
 }
 
 const farmsImageUrl = "/images/farms-hero-farm-v2.png";
@@ -282,6 +285,12 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
   const currentUser = getCurrentUser(state, sessionEmail);
   const isAdmin = currentUser?.role === "admin";
   const email = currentUser?.email ?? "";
+  const visibleProperties = isAdmin
+    ? state.propertyListings
+    : state.propertyListings.filter((listing) => (
+        listing.status === "Approved"
+        || (email && normalizeEmail(listing.submittedByEmail ?? "") === normalizeEmail(email))
+      )).map((listing) => propertyListingForViewer(listing, email));
 
   return {
     currentUser: currentUser ? publicUser(currentUser) : null,
@@ -291,12 +300,7 @@ function snapshotFor(state: PlatformState, sessionEmail: string | null): Dashboa
     bids: isAdmin ? state.bids : state.bids.filter((bid) => normalizeEmail(bid.userEmail) === normalizeEmail(email)),
     surveys: isAdmin ? state.surveys : state.surveys.filter((survey) => normalizeEmail(survey.userEmail) === normalizeEmail(email)),
     inventory: state.inventory,
-    propertyListings: isAdmin
-      ? state.propertyListings
-      : state.propertyListings.filter((listing) => (
-        listing.status === "Approved"
-        || normalizeEmail(listing.submittedByEmail ?? "") === normalizeEmail(email)
-      )),
+    propertyListings: visibleProperties,
     surveyServices: isAdmin
       ? state.surveyServices
       : state.surveyServices.filter((service) => service.status === "Approved"),
@@ -329,12 +333,13 @@ export async function quoteFarmDeliveryForCheckout(sessionEmail: string | null, 
 
 export async function updateFarmDeliverySettings(sessionEmail: string | null, payload: FarmDeliverySettings) {
   const { state } = await updatePlatformState((draft) => {
-    requireAdmin(draft, sessionEmail);
+    const admin = requireAdmin(draft, sessionEmail);
     draft.farmDeliverySettings = {
       stateRates: [],
       restOfCountryFee: 0,
       whatsappNumber: String(payload.whatsappNumber ?? "").replace(/\D/g, "").slice(0, 15),
     };
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Farm delivery contact updated", detail: "Delivery support contact changed." });
   });
   return { snapshot: snapshotFor(state, sessionEmail), message: "Farm delivery contact saved." };
 }
@@ -571,6 +576,7 @@ export async function loginUser(
 
   return {
     sessionEmail: user.email,
+    mfaConfirmed: false,
     snapshot: snapshotFor(state, user.email),
     message: `Welcome back, ${user.name}.`,
   };
@@ -584,16 +590,19 @@ export async function completeSupabaseAuthentication(accessToken: string) {
   if (error || !authUser?.email || !authUser.email_confirmed_at) throw new Error("Your email must be verified before you can sign in.");
   const email = normalizeEmail(authUser.email);
   const assuranceLevel = accessTokenAssuranceLevel(accessToken);
+  const hasVerifiedFactor = Boolean(authUser.factors?.some((factor) => factor.status === "verified"));
   const { state } = await updatePlatformState((draft) => {
     const user = draft.users.find((entry) => entry.authUserId === authUser.id || normalizeEmail(entry.email) === email);
     if (!user) throw new Error("Your customer profile is not ready yet. Please contact DAJEM support.");
-    if (user.mfaEnabled && assuranceLevel !== "aal2") throw new Error("Google Authenticator confirmation is required for this account.");
+    if ((user.mfaEnabled || hasVerifiedFactor) && assuranceLevel !== "aal2") throw new Error("Google Authenticator confirmation is required for this account.");
+    if (user.authUserId && user.authUserId !== authUser.id) user.sessionVersion = randomUUID();
     user.authUserId = authUser.id;
     user.emailVerified = true;
+    if (hasVerifiedFactor) user.mfaEnabled = true;
     addTwoFactorSetupPrompt(draft, user);
     appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Supabase account verified", detail: "Supabase Auth confirmed the customer email." });
   });
-  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Your email is confirmed. Set up Google Authenticator in Profile to receive your verified badge." };
+  return { sessionEmail: email, mfaConfirmed: assuranceLevel === "aal2", snapshot: snapshotFor(state, email), message: "Your email is confirmed. Set up Google Authenticator in Profile to receive your verified badge." };
 }
 
 export async function completeSupabaseMfaEnrollment(accessToken: string) {
@@ -611,11 +620,12 @@ export async function completeSupabaseMfaEnrollment(accessToken: string) {
     user.authUserId = authUser.id;
     user.emailVerified = true;
     user.mfaEnabled = true;
+    user.sessionVersion = randomUUID();
     appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Google Authenticator enabled", detail: "Two-factor authentication was confirmed through Supabase Auth." });
     draft.communicationLogs.unshift(buildEmailLog(user.email, "Account verified", "Google Authenticator is active. Your DAJEM account now carries the Verified client badge."));
     draft.communicationLogs.splice(1000);
   });
-  return { sessionEmail: email, snapshot: snapshotFor(state, email), message: "Google Authenticator is active and your account is verified." };
+  return { sessionEmail: email, mfaConfirmed: true, snapshot: snapshotFor(state, email), message: "Google Authenticator is active and your account is verified." };
 }
 
 export async function verifyUserEmail(payload: { email: string; token: string }) {
@@ -689,6 +699,7 @@ export async function resetPasswordWithToken(payload: { email: string; token: st
     const salt = randomUUID();
     user.passwordSalt = salt;
     user.passwordHash = hashPassword(password, salt);
+    user.sessionVersion = randomUUID();
     user.passwordResetTokenHash = undefined;
     user.passwordResetExpiresAt = undefined;
     appendAuditLog(draft, { actor: publicUser(user), targetUserId: user.id, action: "Password reset completed", detail: "The account password was changed using an email recovery link." });
@@ -1196,7 +1207,7 @@ export async function updateInventoryItem(
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
-    requireAdmin(draft, sessionEmail);
+    const admin = requireAdmin(draft, sessionEmail);
     const productId = payload.productId?.trim();
     const item = productId ? draft.inventory.find((entry) => entry.productId === productId) : null;
     const price = Number(payload.price);
@@ -1207,6 +1218,8 @@ export async function updateInventoryItem(
     }
 
     if (item) {
+      const previousPrice = item.price;
+      const previousUnits = item.availableUnits;
       item.name = payload.name?.trim() || item.name;
       item.category = payload.category ?? item.category;
       item.price = price;
@@ -1224,6 +1237,7 @@ export async function updateInventoryItem(
       item.promoPrice = Number.isFinite(Number(payload.promoPrice)) && Number(payload.promoPrice) > 0 ? Number(payload.promoPrice) : undefined;
       item.promoEndsAt = payload.promoEndsAt?.trim() || undefined;
       item.promoLabel = payload.promoLabel?.trim() || undefined;
+      appendAuditLog(draft, { actor: publicUser(admin), action: "Farm inventory updated", detail: `${item.productId}: price ${previousPrice} to ${item.price}; units ${previousUnits} to ${item.availableUnits}.` });
       return;
     }
 
@@ -1253,6 +1267,7 @@ export async function updateInventoryItem(
       promoEndsAt: payload.promoEndsAt?.trim() || undefined,
       promoLabel: payload.promoLabel?.trim() || undefined,
     });
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Farm inventory created", detail: `${draft.inventory[0].productId}: price ${price}; units ${availableUnits}.` });
   });
 
   return {
@@ -1292,13 +1307,19 @@ export async function updatePropertyListingAgentPayment(
 ) {
   const allowedStatuses: AgentListingPaymentStatus[] = ["Not Requested", "Awaiting Payment", "Payment Submitted", "Paid"];
   const { state } = await updatePlatformState((draft) => {
-    requireAdmin(draft, sessionEmail);
+    const admin = requireAdmin(draft, sessionEmail);
     if (!allowedStatuses.includes(payload.status)) throw new Error("Select a valid agent payment status.");
     const listing = draft.propertyListings.find((entry) => entry.id === payload.propertyId);
     if (!listing) throw new Error("Property listing not found.");
 
+    const previousStatus = listing.agentListingPaymentStatus ?? "Not Requested";
+    const proofPath = listing.agentPaymentProofPath;
+    if (payload.status === "Paid" && !proofPath && !draft.orders.some((order) => order.propertyListingId === listing.id && order.paymentStatus === "Paid")) {
+      throw new Error("A payment proof or verified Flutterwave order is required before confirming this fee.");
+    }
     listing.agentListingPaymentStatus = payload.status;
-    listing.agentPaymentProofPath = String(payload.paymentProofPath ?? "").trim().slice(0, 240) || undefined;
+    listing.agentPaymentProofPath = proofPath;
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Agent listing fee status changed", detail: `${listing.id}: ${previousStatus} to ${payload.status}. Proof ${proofPath ? "attached" : "not attached"}.` });
     if (listing.submittedByEmail) {
       draft.communicationLogs.unshift(buildEmailLog(
         listing.submittedByEmail,
@@ -1318,7 +1339,7 @@ export async function submitPropertyListingPaymentProof(
   sessionEmail: string | null,
   payload: { propertyId: string; paymentProofPath: string },
 ) {
-  const { state } = await updatePlatformState((draft) => {
+  const { state } = await updatePlatformState(async (draft) => {
     const user = requireUser(draft, sessionEmail);
     const listing = draft.propertyListings.find((entry) => entry.id === payload.propertyId);
     if (!listing || normalizeEmail(listing.submittedByEmail ?? "") !== normalizeEmail(user.email)) {
@@ -1326,7 +1347,17 @@ export async function submitPropertyListingPaymentProof(
     }
     if (listing.agentListingPaymentStatus === "Paid") throw new Error("This listing fee has already been confirmed.");
     const paymentProofPath = String(payload.paymentProofPath ?? "").trim().slice(0, 240);
-    if (!paymentProofPath) throw new Error("Upload a valid payment proof first.");
+    const ownerPrefix = `property/${user.email.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80)}/`;
+    const localPreview = process.env.NODE_ENV !== "production" && paymentProofPath.startsWith(`local-preview/${ownerPrefix}`);
+    if ((!paymentProofPath.startsWith(ownerPrefix) && !localPreview) || !paymentProofPath.endsWith(".webp")) {
+      throw new Error("Upload a valid payment proof from your account first.");
+    }
+    if (!localPreview) {
+      const storage = getSupabaseAdminClient();
+      if (!storage) throw new Error("Payment proof storage is not configured.");
+      const { data, error } = await storage.storage.from(getSupabaseMediaBucket()).info(paymentProofPath);
+      if (error || !data) throw new Error("The uploaded payment proof could not be found.");
+    }
     listing.agentPaymentProofPath = paymentProofPath;
     listing.agentListingPaymentStatus = "Payment Submitted";
     draft.communicationLogs.unshift(buildEmailLog(
@@ -1365,7 +1396,7 @@ export async function upsertPropertyListing(
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
-    requireAdmin(draft, sessionEmail);
+    const admin = requireAdmin(draft, sessionEmail);
     const title = String(payload.title ?? "").trim();
     const location = String(payload.location ?? "").trim();
     const summary = String(payload.summary ?? "").trim();
@@ -1377,6 +1408,7 @@ export async function upsertPropertyListing(
     }
 
     const existing = payload.id ? draft.propertyListings.find((entry) => entry.id === payload.id) : null;
+    const previousPrice = existing?.price;
     const next: PropertyListing = {
       id: existing?.id ?? makeId("PROP"),
       title,
@@ -1417,6 +1449,7 @@ export async function upsertPropertyListing(
     } else {
       draft.propertyListings.unshift(next);
     }
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Property listing saved", detail: `${next.id}: price ${previousPrice ?? "new"} to ${next.price}; status ${next.status}.` });
   });
 
   return {
@@ -1439,7 +1472,7 @@ export async function upsertSurveyService(
   },
 ) {
   const { state } = await updatePlatformState((draft) => {
-    requireAdmin(draft, sessionEmail);
+    const admin = requireAdmin(draft, sessionEmail);
     const title = String(payload.title ?? "").trim();
     const description = String(payload.description ?? "").trim();
     const timeline = String(payload.timeline ?? "").trim();
@@ -1450,6 +1483,7 @@ export async function upsertSurveyService(
     }
 
     const existing = payload.id ? draft.surveyServices.find((entry) => entry.id === payload.id) : null;
+    const previousPrice = existing?.priceFrom;
     const next: SurveyService = {
       id: existing?.id ?? makeId("SERV"),
       title,
@@ -1466,6 +1500,7 @@ export async function upsertSurveyService(
     } else {
       draft.surveyServices.unshift(next);
     }
+    appendAuditLog(draft, { actor: publicUser(admin), action: "Survey service saved", detail: `${next.id}: starting price ${previousPrice ?? "new"} to ${next.priceFrom}; status ${next.status}.` });
   });
 
   return {
@@ -1629,7 +1664,7 @@ export async function completePaymentIntent(
       throw new Error("This payment session belongs to another account.");
     }
 
-    if (payload.provider === "Flutterwave Mock" && !allowMockPayments()) {
+    if (payload.provider === "Flutterwave Mock" && !mockPaymentsAllowed(process.env.NODE_ENV)) {
       throw new Error("Mock payments are disabled in production.");
     }
 
@@ -1639,14 +1674,14 @@ export async function completePaymentIntent(
       return existing;
     }
 
-    if (intent.purpose === "farm-order") {
-      for (const item of intent.items) {
-        const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
-        if (!inventoryItem || inventoryItem.availableUnits < item.quantity) {
-          throw new Error(`${item.name} is no longer available in the requested quantity.`);
-        }
-      }
-    }
+    const stockAvailable = intent.purpose !== "farm-order" || intent.items.every((item) => {
+      const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
+      return inventoryItem && inventoryItem.availableUnits >= item.quantity;
+    });
+    const listing = intent.purpose === "property-listing-fee" && intent.propertyListingId
+      ? draft.propertyListings.find((entry) => entry.id === intent.propertyListingId)
+      : undefined;
+    const requiresReview = !stockAvailable || (intent.purpose === "property-listing-fee" && !listing);
 
     intent.status = "paid";
     intent.transactionId = payload.transactionId;
@@ -1660,7 +1695,7 @@ export async function completePaymentIntent(
       reference: intent.txRef,
       provider: payload.provider,
       paymentStatus: "Paid",
-      status: "Processing",
+      status: requiresReview ? "Action Required" : "Processing",
       invoiceNumber: intent.invoiceNumber,
       app: intent.app,
       purpose: intent.purpose,
@@ -1672,22 +1707,29 @@ export async function completePaymentIntent(
     if (intent.purpose === "farm-order") {
       draft.carts[intent.userEmail] = [];
 
-      for (const item of intent.items) {
-        const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId);
-        if (!inventoryItem) continue;
-        inventoryItem.availableUnits = Math.max(0, inventoryItem.availableUnits - item.quantity);
-        inventoryItem.stockStatus = deriveStockStatus(inventoryItem.availableUnits);
+      if (stockAvailable) {
+        for (const item of intent.items) {
+          const inventoryItem = draft.inventory.find((entry) => entry.productId === item.productId)!;
+          inventoryItem.availableUnits -= item.quantity;
+          inventoryItem.stockStatus = deriveStockStatus(inventoryItem.availableUnits);
+        }
       }
     }
 
-    if (intent.purpose === "property-listing-fee" && intent.propertyListingId) {
-      const listing = draft.propertyListings.find((entry) => entry.id === intent.propertyListingId);
-      if (!listing) throw new Error("Property listing no longer exists.");
+    if (listing) {
       listing.agentListingPaymentStatus = "Paid";
       draft.communicationLogs.unshift(buildEmailLog(
         listing.submittedByEmail ?? user.email,
         "Agent contact details activated",
         `Your listing fee for ${listing.title} was confirmed. Your contact details can appear once the listing is approved.`,
+      ));
+    }
+
+    if (requiresReview) {
+      draft.communicationLogs.unshift(buildEmailLog(
+        user.email,
+        "Paid order needs DAJEM support",
+        `Your payment for order ${order.invoiceNumber} was confirmed, but fulfilment needs manual review. DAJEM support will contact you.`,
       ));
     }
 
@@ -1697,7 +1739,9 @@ export async function completePaymentIntent(
   return {
     order: result,
     snapshot: snapshotFor(state, sessionEmail),
-    message: result.purpose === "property-listing-fee"
+    message: result.status === "Action Required"
+      ? "Payment confirmed. Your order needs manual review; DAJEM support will contact you."
+      : result.purpose === "property-listing-fee"
       ? "Listing fee paid. Your contact details will appear after admin approval."
       : "Order paid and added to your dashboard.",
   };

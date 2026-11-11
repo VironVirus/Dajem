@@ -150,7 +150,13 @@ export function HeroSlideshow({
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.35),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(16,185,129,0.16),transparent_35%)]" />
 
       {/* Hero Children Content */}
-      <div className={cn("relative z-0", contentClassName)}>
+      <div
+        className={cn(
+          "relative z-0",
+          (activeSlideContent?.href || hasMultipleSlides) && "pb-14 sm:pb-16",
+          contentClassName,
+        )}
+      >
         {children}
       </div>
 

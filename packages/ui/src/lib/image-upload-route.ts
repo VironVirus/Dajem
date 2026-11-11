@@ -11,7 +11,7 @@ const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function assertSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (!origin) throw new Error("Request origin is required.");
   const host = request.headers.get("host");
   if (!host || new URL(origin).host !== host) throw new Error("Cross-site uploads are not allowed.");
 }
@@ -42,7 +42,7 @@ function watermarkSvg(width: number, height: number) {
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const sessionEmail = readSessionEmail(request);
+    const sessionEmail = await readSessionEmail(request);
     if (!sessionEmail) return NextResponse.json({ error: "Please log in before uploading images." }, { status: 401 });
 
     const contentLength = Number(request.headers.get("content-length") ?? 0);

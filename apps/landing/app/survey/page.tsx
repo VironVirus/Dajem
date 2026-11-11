@@ -1656,14 +1656,40 @@ export default function SurveyPage() {
               </div>
             </div>
 
-            <div className="dajem-hero-info-panel hidden space-y-5 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5 lg:block">
-              <h4 className="flex items-center gap-2 border-b pb-3 text-lg font-bold text-primary dark:text-foreground">
-                <Sparkles className="h-5 w-5 text-cyan-500" />
-                Company Profile
-              </h4>
-              <div className="space-y-4 text-sm text-muted-foreground">
-                <div className="rounded-xl border p-4">{profile.address}</div>
-                <div className="rounded-xl border p-4">{profile.email}</div>
+            <div className="dajem-hero-info-panel hidden space-y-4 rounded-[1.5rem] border p-5 shadow-xl backdrop-blur-xl transition-transform duration-500 hover:-translate-y-1 sm:p-6 lg:col-span-5 lg:block">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <h4 className="flex items-center gap-2 text-base font-extrabold text-foreground">
+                  <Sparkles className="h-4 w-4 text-cyan-500" />
+                  Cadastral & Geomatics Desk
+                </h4>
+                <Badge variant="outline" className="font-mono text-[10px] text-cyan-700 dark:text-cyan-300">
+                  {profile.registrationNumber}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 text-xs">
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                  <p className="font-extrabold text-foreground">10+ Survey Types</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Perimeter, Topo, Parcellation & Title</p>
+                </div>
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                  <p className="font-extrabold text-foreground">Instant Estimator</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Live fee bands & area converter</p>
+                </div>
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                  <p className="font-extrabold text-foreground">Registry-Ready</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">5–10 day field & plan turnaround</p>
+                </div>
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                  <p className="font-extrabold text-foreground">DHL Plan Delivery</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">Tracked nationwide & global dispatch</p>
+                </div>
+              </div>
+              <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3.5 text-xs text-muted-foreground">
+                <p className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-500" />
+                  <span>{profile.address}</span>
+                </p>
+                <p className="font-mono text-[11px] text-foreground">{profile.email}</p>
               </div>
             </div>
           </div>
@@ -1689,20 +1715,40 @@ export default function SurveyPage() {
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <Badge variant="secondary" className="mb-2">DAJEM Orbital Catalog</Badge>
             <h2 className="text-3xl font-bold text-primary dark:text-foreground">Approved Services</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Select a survey service below to calculate an estimate or submit a formal inquiry.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {services.map((service) => (
               <Card key={service.title} className="flex h-full flex-col hover:-translate-y-1 duration-300">
                 <CardHeader className="p-6">
-                  <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${service.color}`}>
+                  <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${service.color}`}>
                     <service.icon className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg font-bold leading-snug">{service.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 p-6 pt-0">
-                  <p className="text-xs leading-relaxed text-muted-foreground">{service.description}</p>
-                  <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-                    {service.priceFrom > 0 ? `From ${formatCurrency(service.priceFrom)} - ${service.timeline}` : service.timeline}
+                <CardContent className="flex flex-1 flex-col justify-between p-6 pt-0">
+                  <div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{service.description}</p>
+                    <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs font-semibold text-foreground">
+                      {service.priceFrom > 0 ? `From ${formatCurrency(service.priceFrom)} · ${service.timeline}` : service.timeline}
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border/50 pt-4">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs font-semibold"
+                      onClick={() => router.push("/survey/estimate")}
+                    >
+                      Estimate
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-cyan-600 text-xs font-semibold text-white hover:bg-cyan-700"
+                      onClick={() => router.push("/survey/inquiry")}
+                    >
+                      Request
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1713,12 +1759,15 @@ export default function SurveyPage() {
 
         {pageView === "estimate" && (
         <section id="calculator" className="border-y border-border bg-muted/30 py-10 sm:py-16">
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-4 lg:grid-cols-2">
-            <Card className="border bg-card p-5 shadow-lg sm:p-8">
-              <h3 className="mb-6 flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">
-                <Calculator className="h-5 w-5 text-cyan-500" />
-                Estimate Pricing Calculator
-              </h3>
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-8 px-4 lg:grid-cols-12">
+            <Card className="border bg-card p-5 shadow-lg sm:p-8 lg:col-span-7">
+              <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/60 pb-4">
+                <h3 className="flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">
+                  <Calculator className="h-5 w-5 text-cyan-500" />
+                  1. Survey Parameters & Field Scope
+                </h3>
+                <Badge variant="outline" className="text-cyan-700 dark:text-cyan-300">Live Fee Schedule</Badge>
+              </div>
               <div className="space-y-4">
                 <Select
                   label="Select Geomatics Survey"
@@ -1728,49 +1777,59 @@ export default function SurveyPage() {
                 />
 
                 {renderSharedEstimatorFields(calculatorInputs.serviceType, "calculator")}
+              </div>
+            </Card>
 
-                <div className="mt-8 space-y-4 rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-6">
-                  <div className="text-center">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estimated Project Budget</p>
-                    {calculatedEstimate.amount ? (
-                      <p className="text-3xl font-extrabold text-cyan-600 dark:text-cyan-400">
-                        {formatCurrency(calculatedEstimate.amount)}
-                      </p>
-                    ) : (
-                      <p className="text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">Official Assessment Required</p>
-                    )}
-                    <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
-                      <Info className="h-3 w-3 shrink-0 text-cyan-500" />
-                      {calculatedEstimate.detail}
+            <div className="space-y-6 lg:sticky lg:top-28 lg:col-span-5">
+              <Card className="overflow-hidden border-cyan-500/30 bg-card shadow-xl">
+                <div className="border-b border-cyan-500/20 bg-gradient-to-br from-cyan-500/15 via-sky-500/10 to-transparent p-6 text-center">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                    2. Estimated Project Budget
+                  </p>
+                  {calculatedEstimate.amount ? (
+                    <p className="mt-1.5 text-3xl font-black tracking-tight text-cyan-600 dark:text-cyan-400 sm:text-4xl">
+                      {formatCurrency(calculatedEstimate.amount)}
                     </p>
-                  </div>
+                  ) : (
+                    <p className="mt-1.5 text-2xl font-extrabold text-cyan-600 dark:text-cyan-400">
+                      Official Assessment Required
+                    </p>
+                  )}
+                  <p className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+                    <Info className="h-3.5 w-3.5 shrink-0 text-cyan-500" />
+                    <span>{calculatedEstimate.detail}</span>
+                  </p>
+                </div>
 
+                <div className="space-y-4 p-5 sm:p-6">
                   {calculatedEstimate.lineItems.length > 0 && (
-                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transaction Summary</p>
-                      <div className="mt-3 space-y-2">
+                    <div className="rounded-xl border border-border/70 bg-muted/25 p-4 text-sm">
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+                        Itemized Cost Breakdown
+                      </p>
+                      <div className="mt-3 space-y-2.5">
                         {calculatedEstimate.lineItems.map((item) => (
-                          <div key={item.label} className="flex items-center justify-between gap-4">
+                          <div key={item.label} className="flex items-start justify-between gap-4 text-xs sm:text-sm">
                             <span className="text-muted-foreground">{item.label}</span>
-                            <span className="font-semibold text-foreground">{formatCurrency(item.amount)}</span>
+                            <span className="shrink-0 font-bold text-foreground">{formatCurrency(item.amount)}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Selected Details</p>
-                      <div className="mt-3 space-y-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 text-xs">
+                      <p className="font-extrabold uppercase tracking-wider text-muted-foreground">Selected Details</p>
+                      <div className="mt-2.5 space-y-1.5">
                         {calculatedEstimate.selections.map((selection) => (
                           <p key={selection} className="text-muted-foreground">{selection}</p>
                         ))}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-cyan-500/20 bg-background/80 p-4 text-sm">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Side Notes</p>
-                      <div className="mt-3 space-y-2">
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 text-xs">
+                      <p className="font-extrabold uppercase tracking-wider text-muted-foreground">Surveyor Notes</p>
+                      <div className="mt-2.5 space-y-1.5">
                         {calculatedEstimate.notes.length > 0 ? calculatedEstimate.notes.map((note) => (
                           <p key={note} className="text-muted-foreground">{note}</p>
                         )) : (
@@ -1780,75 +1839,83 @@ export default function SurveyPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs font-bold text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span>5–10 Days Turnaround</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span>Registry-ready outputs</span>
+                    </div>
+                  </div>
+
                   <Button
                     type="button"
-                    className="w-full bg-cyan-600 text-white hover:bg-cyan-700"
+                    size="lg"
+                    className="w-full rounded-xl bg-cyan-600 font-bold text-white shadow-md shadow-cyan-600/20 hover:bg-cyan-700"
                     onClick={openInquiryFromEstimate}
                   >
                     Use This Estimate In Inquiry Desk
                   </Button>
                 </div>
-              </div>
-            </Card>
+              </Card>
 
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold text-primary dark:text-foreground">Quick Tools</h3>
-              <div className="grid grid-cols-2 gap-4 text-xs font-bold text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-emerald-500" />
-                  <span>5-10 Days Turnaround</span>
+              <Card className="border bg-card p-5 shadow-md sm:p-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h4 className="flex items-center gap-2 text-base font-extrabold text-foreground">
+                    <Ruler className="h-4 w-4 text-cyan-500" />
+                    Land Area Unit Converter
+                  </h4>
+                  <Badge variant="secondary" className="text-[10px]">Quick Tool</Badge>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  <span>Registry-ready outputs</span>
-                </div>
-              </div>
-              <div className="space-y-4 border-t pt-6">
-                <h4 className="text-xl font-bold text-primary dark:text-foreground">Unit Converter</h4>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-                  <Select
-                    label="From"
-                    value={unitConverter.fromUnit}
-                    onChange={(event) => setUnitConverter((current) => ({ ...current, fromUnit: event.target.value }))}
-                    options={areaUnitOptions}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-9 px-3"
-                    onClick={() => setUnitConverter((current) => ({
-                      ...current,
-                      fromUnit: current.toUnit,
-                      toUnit: current.fromUnit,
-                    }))}
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                  </Button>
-                  <Select
-                    label="To"
-                    value={unitConverter.toUnit}
-                    onChange={(event) => setUnitConverter((current) => ({ ...current, toUnit: event.target.value }))}
-                    options={areaUnitOptions}
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="converter-quantity">Quantity</Label>
-                    <Input
-                      id="converter-quantity"
-                      inputMode="decimal"
-                      value={unitConverter.quantity}
-                      onChange={(event) => setUnitConverter((current) => ({ ...current, quantity: event.target.value }))}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+                    <Select
+                      label="From"
+                      value={unitConverter.fromUnit}
+                      onChange={(event) => setUnitConverter((current) => ({ ...current, fromUnit: event.target.value }))}
+                      options={areaUnitOptions}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 px-3"
+                      onClick={() => setUnitConverter((current) => ({
+                        ...current,
+                        fromUnit: current.toUnit,
+                        toUnit: current.fromUnit,
+                      }))}
+                      aria-label="Swap units"
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                    </Button>
+                    <Select
+                      label="To"
+                      value={unitConverter.toUnit}
+                      onChange={(event) => setUnitConverter((current) => ({ ...current, toUnit: event.target.value }))}
+                      options={areaUnitOptions}
                     />
                   </div>
-                  <div className="rounded-lg border bg-card/70 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Converted Value</p>
-                    <p className="mt-1 text-lg font-extrabold text-cyan-600 dark:text-cyan-400">
-                      {formatMeasurement(convertedQuantity)}
-                    </p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="converter-quantity">Quantity</Label>
+                      <Input
+                        id="converter-quantity"
+                        inputMode="decimal"
+                        value={unitConverter.quantity}
+                        onChange={(event) => setUnitConverter((current) => ({ ...current, quantity: event.target.value }))}
+                      />
+                    </div>
+                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Converted Value</p>
+                      <p className="mt-1 text-lg font-black text-cyan-600 dark:text-cyan-400">
+                        {formatMeasurement(convertedQuantity)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </section>
@@ -1897,9 +1964,17 @@ export default function SurveyPage() {
                   <Input
                     id="q-loc"
                     required
+                    placeholder="e.g. Independence Layout, Enugu"
                     value={quoteForm.location}
                     onChange={(event) => setQuoteForm((current) => ({ ...current, location: event.target.value }))}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Billing Classification</Label>
+                  <div className="flex h-10 items-center justify-between rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-3.5 text-sm font-bold text-cyan-800 dark:text-cyan-300">
+                    <span>{billingType}</span>
+                    <Badge variant="outline" className="text-[10px]">Auto-detected</Badge>
+                  </div>
                 </div>
               </div>
 
@@ -2060,32 +2135,44 @@ export default function SurveyPage() {
               </div>
 
               <div className="rounded-xl border bg-muted/30 p-4">
-                <div className="mb-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
                     <p className="font-semibold text-foreground">Document Submission Checklist</p>
-                    <p className="text-xs text-muted-foreground">Select the document you are adding for this device.</p>
+                    <p className="text-xs text-muted-foreground">Select the supporting title documents you are attaching to this inquiry.</p>
                   </div>
+                  <Badge variant="secondary" className="shrink-0 text-xs">
+                    {quoteForm.uploadedDocuments.length} selected
+                  </Badge>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {documentSubmissionOptions.map((documentName) => (
-                    <label key={documentName} className="flex items-center gap-3 rounded-lg border bg-background/70 p-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={quoteForm.uploadedDocuments.includes(documentName)}
-                        onChange={(event) => toggleSubmittedDocument(documentName, event.target.checked)}
-                      />
-                      <span>{documentName}</span>
-                    </label>
-                  ))}
-                </div>
-                <div className="mt-3 text-xs text-muted-foreground">
-                  <p>Summary</p>
-                  <p>1. Land Purchase Receipt.</p>
-                  <p>2. Allocation Letter.</p>
-                  <p>3. Deed of Lease/Assignment/Conveyance/Gift.</p>
-                  <p>4. Irrevocable Power Of Attorney.</p>
-                  <p>5. Old Survey Plan.</p>
-                  <p>6. Others.</p>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {documentSubmissionOptions.map((documentName) => {
+                    const isChecked = quoteForm.uploadedDocuments.includes(documentName);
+                    const hasFile = uploadedFiles.some((f) => f.documentName === documentName);
+                    return (
+                      <label
+                        key={documentName}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 text-sm transition ${
+                          isChecked
+                            ? "border-cyan-500/40 bg-cyan-500/5 font-semibold text-foreground"
+                            : "bg-background/70 text-foreground hover:bg-background"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(event) => toggleSubmittedDocument(documentName, event.target.checked)}
+                          />
+                          <span className="text-xs sm:text-sm">{documentName}</span>
+                        </span>
+                        {isChecked && (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${hasFile ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}>
+                            {hasFile ? "Attached" : "Attach below"}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2187,38 +2274,87 @@ export default function SurveyPage() {
         {pageView === "tracker" && (
         <section id="tracker" className="container mx-auto max-w-6xl px-5 py-10 sm:px-6 sm:py-16">
           {userSurveys.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-sm text-muted-foreground">
-                Submitted survey requests will appear here and in the shared dashboard.
+            <Card className="mx-auto max-w-xl border-dashed text-center">
+              <CardContent className="space-y-4 p-8">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-300">
+                  <Compass className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-base font-extrabold text-foreground">No survey requests tracked yet</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Submitted survey inquiries, document verifications, and DHL survey plan dispatches will appear here and in your shared dashboard.
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 pt-2">
+                  <Button className="bg-cyan-600 text-white hover:bg-cyan-700" onClick={() => router.push("/survey/estimate")}>
+                    Calculate Estimate
+                  </Button>
+                  <Button variant="outline" onClick={() => router.push("/survey/inquiry")}>
+                    Submit Survey Request
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {userSurveys.map((survey) => (
-                <Card key={survey.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between gap-3">
-                      <CardTitle className="text-lg">{survey.location}</CardTitle>
+            <div className="grid gap-5 md:grid-cols-2">
+              {userSurveys.map((survey) => {
+                const stepIndex =
+                  survey.status === "Completed & Sent"
+                    ? 3
+                    : survey.status === "In Progress"
+                      ? 2
+                      : survey.status === "Rejected"
+                        ? 0
+                        : 1;
+                return (
+                <Card key={survey.id} className="overflow-hidden">
+                  <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-xs font-bold text-cyan-600 dark:text-cyan-400">
+                          {survey.applicationNumber ?? survey.id}
+                        </p>
+                        <CardTitle className="mt-1 text-lg">{survey.location}</CardTitle>
+                        <p className="mt-0.5 text-xs font-medium text-muted-foreground">{survey.serviceType}</p>
+                      </div>
                       <Badge variant={survey.status === "Completed & Sent" ? "default" : survey.status === "Rejected" ? "destructive" : survey.status === "In Progress" ? "secondary" : "outline"}>
                         {survey.status}
                       </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-xs font-semibold text-cyan-600">{survey.applicationNumber ?? survey.id}</p>
-                    <p className="text-sm text-muted-foreground">{survey.serviceType}</p>
-                    <details className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-                      <summary className="cursor-pointer font-semibold text-foreground">View submitted details</summary>
-                      <p className="mt-3 whitespace-pre-line">{survey.description}</p>
-                    </details>
-                    {survey.billingType && (
-                      <Badge variant="outline">{survey.billingType}</Badge>
+                    {survey.status !== "Rejected" && (
+                      <div className="mt-4 grid grid-cols-3 gap-1.5 text-[10px] font-bold">
+                        <div className={`rounded-lg px-2 py-1.5 text-center ${stepIndex >= 1 ? "bg-cyan-600 text-white" : "bg-muted text-muted-foreground"}`}>
+                          1. Logged
+                        </div>
+                        <div className={`rounded-lg px-2 py-1.5 text-center ${stepIndex >= 2 ? "bg-cyan-600 text-white" : "bg-muted text-muted-foreground"}`}>
+                          2. Field & Plan
+                        </div>
+                        <div className={`rounded-lg px-2 py-1.5 text-center ${stepIndex >= 3 ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground"}`}>
+                          3. Completed
+                        </div>
+                      </div>
                     )}
+                  </CardHeader>
+                  <CardContent className="space-y-3 pt-4">
+                    <details className="rounded-xl border bg-muted/20 p-3 text-sm text-muted-foreground">
+                      <summary className="cursor-pointer font-semibold text-foreground">View submitted details</summary>
+                      <p className="mt-3 whitespace-pre-line text-xs leading-relaxed">{survey.description}</p>
+                    </details>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {survey.billingType && (
+                        <Badge variant="outline">{survey.billingType}</Badge>
+                      )}
+                      {survey.paymentStatus && (
+                        <Badge variant="secondary" className="text-xs">
+                          Payment: {survey.paymentStatus}
+                        </Badge>
+                      )}
+                    </div>
                     {survey.uploadedDocuments && survey.uploadedDocuments.length > 0 && (
                       <p className="text-xs text-muted-foreground">Documents selected: {survey.uploadedDocuments.join(", ")}</p>
                     )}
                     {survey.documentAttachments && survey.documentAttachments.length > 0 && (
-                      <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                      <div className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
                         {survey.documentAttachments.map((attachment) => (
                           <div key={`${attachment.documentName}-${attachment.fileName}`} className="space-y-0.5">
                             <p>{attachment.documentName}: {attachment.fileName} ({attachment.fileSizeKb} KB)</p>
@@ -2255,9 +2391,6 @@ export default function SurveyPage() {
                         </div>
                       </div>
                     )}
-                    {survey.paymentStatus && (
-                      <p className="text-xs font-semibold text-primary">Payment: {survey.paymentStatus}</p>
-                    )}
                     {survey.processingNote && (
                       <p className="text-xs text-muted-foreground">{survey.processingNote}</p>
                     )}
@@ -2266,7 +2399,8 @@ export default function SurveyPage() {
                     )}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

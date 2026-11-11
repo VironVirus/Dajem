@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPaymentIntent, completePaymentIntent } from "./server/platform-repository";
 import { readSessionEmail } from "./server/session";
+import { mockPaymentsAllowed } from "./payment-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +20,9 @@ function flutterwaveIsConfigured() {
   return Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY);
 }
 
-function allowMockPayments() {
-  return process.env.NODE_ENV !== "production" || process.env.DAJEM_ALLOW_MOCK_PAYMENTS === "true";
-}
-
 function assertSameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (!origin) return;
+  if (!origin) throw new Error("Request origin is required.");
 
   const host = request.headers.get("host");
   if (!host || new URL(origin).host !== host) {
@@ -36,7 +33,7 @@ function assertSameOrigin(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     assertSameOrigin(request);
-    const sessionEmail = readSessionEmail(request);
+    const sessionEmail = await readSessionEmail(request);
     const body = await request.json().catch(() => ({}));
     const purpose = body?.purpose === "property-listing-fee" ? "property-listing-fee" : "farm-order";
     const { intent, snapshot } = await createPaymentIntent(sessionEmail, {
@@ -47,7 +44,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!flutterwaveIsConfigured()) {
-      if (!allowMockPayments()) {
+      if (!mockPaymentsAllowed(process.env.NODE_ENV)) {
         throw new Error("Flutterwave keys are required before checkout can run in production.");
       }
 

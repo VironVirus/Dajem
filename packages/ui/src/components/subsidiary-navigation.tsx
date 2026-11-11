@@ -116,8 +116,9 @@ export function SubsidiaryPageIntro({ eyebrow, title, description, accent }: Sub
 
   return (
     <section className="relative overflow-hidden border-b border-border/60 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08),transparent_55%),linear-gradient(to_bottom,hsl(var(--muted)/0.35),transparent)] py-8 sm:py-12">
-      <div className="container mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] shadow-sm backdrop-blur-sm">
+      <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b opacity-80", styles.glow)} />
+      <div className="container relative mx-auto max-w-6xl px-4 sm:px-6">
+        <div className={cn("inline-flex items-center gap-1.5 rounded-full border bg-card/75 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] shadow-sm backdrop-blur-sm", styles.border)}>
           <Sparkles className={cn("h-3 w-3", styles.eyebrow)} />
           <span className={styles.eyebrow}>{eyebrow}</span>
         </div>
@@ -154,11 +155,12 @@ export function SubsidiaryRouteGrid({ title, description, items, accent }: Subsi
             key={item.href}
             href={item.href}
             className={cn(
-              "group relative flex min-h-36 flex-col overflow-hidden rounded-[1.6rem] border border-border/70 bg-card p-4.5 shadow-sm transition-all duration-300 hover:-translate-y-1 sm:p-5",
+              "group relative flex min-h-40 flex-col overflow-hidden rounded-[1.5rem] border border-border/70 bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1",
               styles.card,
             )}
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b opacity-0 transition-opacity duration-300 group-hover:opacity-100", styles.glow)} />
+            <div className="relative flex items-start justify-between gap-2">
               <span className={cn("flex h-11 w-11 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-105", styles.icon)}>
                 <item.icon className="h-5 w-5" />
               </span>
@@ -166,7 +168,7 @@ export function SubsidiaryRouteGrid({ title, description, items, accent }: Subsi
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </span>
             </div>
-            <div className="mt-auto pt-4">
+            <div className="relative mt-auto pt-4">
               {item.meta && (
                 <p className={cn("mb-1 text-[10px] font-black uppercase tracking-wider", styles.eyebrow)}>
                   {item.meta}

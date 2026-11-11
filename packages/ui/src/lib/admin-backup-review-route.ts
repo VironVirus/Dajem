@@ -8,7 +8,7 @@ const scrypt = promisify(scryptCallback);
 const MAX_ARCHIVE_SIZE = 32 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
-  const email = readSessionEmail(request);
+  const email = await readSessionEmail(request);
   if (!email) return NextResponse.json({ error: "Please sign in as an administrator." }, { status: 401 });
   try {
     const origin = request.headers.get("origin");

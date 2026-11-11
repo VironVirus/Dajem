@@ -8,6 +8,7 @@
     "npm": "10.x"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "postcss-selector-parser": "7.1.6"
   },
   "overrides": {
@@ -21,6 +22,19 @@
     "build": "npm run build --workspace landing",
     "dev": "npm run dev --workspace landing",
     "start": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
-    "deploy:check": "npm run build"
+    "deploy:check": "npm run build",
+    "mobile:sync": "cap sync",
+    "mobile:ios": "cap open ios",
+    "mobile:android": "cap open android",
+    "mobile:add:ios": "cap add ios",
+    "mobile:add:android": "cap add android",
+    "mobile:build": "npm run build && cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
   }
 }

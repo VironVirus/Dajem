@@ -233,28 +233,20 @@
 
   .dajem-hero-copy-panel h1,
   .dajem-hero-copy-panel .dajem-hero-title {
-    color: hsl(222 47% 11%) !important;
+    color: hsl(222 47% 11%);
   }
 
   .dark .dajem-hero-copy-panel h1,
   .dark .dajem-hero-copy-panel .dajem-hero-title {
-    color: #ffffff !important;
-  }
-
-  .dajem-hero-copy-panel h1 span:last-child {
-    color: hsl(215 22% 35%) !important;
-  }
-
-  .dark .dajem-hero-copy-panel h1 span:last-child {
-    color: rgba(226, 232, 240, 0.9) !important;
+    color: #ffffff;
   }
 
   .dajem-hero-copy-panel .dajem-hero-lede {
-    color: hsl(215 20% 36%) !important;
+    color: hsl(215 20% 34%);
   }
 
   .dark .dajem-hero-copy-panel .dajem-hero-lede {
-    color: rgba(241, 245, 249, 0.9) !important;
+    color: rgba(241, 245, 249, 0.9);
   }
 
   /* Refined Glass Surfaces */

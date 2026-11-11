@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Command,
   Compass,
+  Download,
   Egg,
   Grid2X2,
   Headphones,
@@ -21,6 +22,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingCart,
+  Smartphone,
   Sparkles,
   Store,
   UserCircle2,
@@ -181,7 +183,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
             <span className="block text-sm font-extrabold tracking-tight">{app.label}</span>
-            <span className="rounded-full bg-white/20 px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider text-white">
+            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">
               {app.tag}
             </span>
           </span>
@@ -297,6 +299,27 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   <span>Homes</span>
                 </a>
               </nav>
+
+              {/* Mobile App Launch Link */}
+              <a
+                href="/app"
+                onClick={(event) => handleNavigate(event, "/app")}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 text-xs font-black text-cyan-700 shadow-sm transition hover:bg-cyan-500/20 dark:border-cyan-400/25 dark:bg-cyan-500/15 dark:text-cyan-300"
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                <span>Launch App</span>
+              </a>
+
+              {/* Android APK Download Link */}
+              <a
+                href="/download"
+                onClick={(event) => handleNavigate(event, "/download")}
+                className="hidden xl:inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-300"
+                title="Download Android APK"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Get APK</span>
+              </a>
 
               {/* Ecosystem Mega Popover */}
               <div className="relative">
@@ -623,6 +646,49 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   <AppCard key={app.id} app={app} compact />
                 ))}
               </div>
+              <a
+                href="/app"
+                onClick={(event) =>
+                  handleNavigate(event, "/app", () => {
+                    setOpenMenu(null);
+                    setMobileCompaniesOpen(false);
+                  })
+                }
+                className="mt-2.5 flex items-center justify-between rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950 via-slate-900 to-indigo-950 px-4 py-3 text-white shadow-md"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/20">
+                    <Smartphone className="h-4 w-4 text-cyan-300" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-black">Launch DAJEM Mobile App</span>
+                    <span className="block text-[10px] text-cyan-200/80">Option 1 Dynamic Island • Orbital, Homes, Farms</span>
+                  </span>
+                </span>
+                <span className="rounded-full bg-cyan-500 px-3 py-1 text-[10.5px] font-black text-slate-950">Launch ▸</span>
+              </a>
+
+              <a
+                href="/download"
+                onClick={(event) =>
+                  handleNavigate(event, "/download", () => {
+                    setOpenMenu(null);
+                    setMobileCompaniesOpen(false);
+                  })
+                }
+                className="mt-2 flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 px-4 py-2.5 text-white shadow-md"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20">
+                    <Download className="h-3.5 w-3.5 text-emerald-400" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-black">Download Android APK</span>
+                    <span className="block text-[10px] text-emerald-300/80">v1.0.1 • 22 MB • Direct Install</span>
+                  </span>
+                </span>
+                <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-black text-slate-950">Download ▸</span>
+              </a>
             </motion.div>
           </>
         )}
