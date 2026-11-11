@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
   Boxes,
   Building,
   Calculator,
+  CheckCircle2,
   ChevronDown,
   Command,
   Compass,
@@ -19,6 +21,7 @@ import {
   LayoutDashboard,
   LogOut,
   Map,
+  RefreshCw,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -26,6 +29,7 @@ import {
   Sparkles,
   Store,
   UserCircle2,
+  X,
 } from "lucide-react";
 import { Button } from "./button";
 import { CommandPalette } from "./command-palette";
@@ -85,16 +89,78 @@ const appVisuals = {
 } as const;
 
 export function Header({ activeApp, onCartClick }: HeaderProps) {
+  const pathname = usePathname();
   const [currentOrigin, setCurrentOrigin] = React.useState<string | undefined>(undefined);
   const [openMenu, setOpenMenu] = React.useState<OpenMenu>(null);
   const [paletteOpen, setPaletteOpen] = React.useState(false);
   const [mobileCompaniesOpen, setMobileCompaniesOpen] = React.useState(false);
   const [notificationsReadAt, setNotificationsReadAt] = React.useState("");
+  const [nativeVc, setNativeVc] = React.useState<number>(0);
+  const [updateAvailable, setUpdateAvailable] = React.useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = React.useState(false);
+  const [updateToast, setUpdateToast] = React.useState("");
+  const [updateInfo, setUpdateInfo] = React.useState<{
+    version: string;
+    versionCode?: number;
+    apkSize: string;
+    apkUrl: string;
+    releaseNotes: string[];
+  } | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
   const { currentUser, cartCount, navigateToUrl, openAuthModal, logout, snapshot } = useDajem();
   const logoUrl = snapshot.brandLogoUrl || "/images/dajem-logo.jpg";
 
-  React.useEffect(() => setCurrentOrigin(window.location.origin), []);
+  React.useEffect(() => {
+    setCurrentOrigin(window.location.origin);
+    const params = new URLSearchParams(window.location.search);
+    const vcParam = Number(params.get("vc") || "0");
+    const storedVc = Number(window.localStorage.getItem("dajem_native_vc") || "0");
+    const detectedVc = vcParam || storedVc;
+    if (vcParam > 0) {
+      window.localStorage.setItem("dajem_native_vc", String(vcParam));
+    }
+    if (detectedVc > 0) {
+      setNativeVc(detectedVc);
+      fetch("/api/app/version", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.apkUrl) {
+            setUpdateInfo(data);
+            if (Number(data.versionCode || 0) > detectedVc) {
+              setUpdateAvailable(true);
+            }
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, []);
+
+  const checkNativeUpdates = async () => {
+    setMobileCompaniesOpen(false);
+    try {
+      const res = await fetch("/api/app/version", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setUpdateInfo(data);
+        setUpdateAvailable(nativeVc > 0 && Number(data.versionCode || 0) > nativeVc);
+        setUpdateToast("");
+        setUpdateModalOpen(true);
+      }
+    } catch {
+      // Ignore network errors silently
+    }
+  };
+
+  const downloadApkUpdate = () => {
+    const targetUrl = updateInfo?.apkUrl || "/downloads/dajem-app.apk";
+    const link = document.createElement("a");
+    link.href = targetUrl;
+    link.download = "dajem-app.apk";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setUpdateToast("APK download started! Check your notification tray and tap the file to install.");
+  };
 
   React.useEffect(() => {
     if (!currentUser) {
@@ -196,15 +262,15 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-border/50 bg-background/85 backdrop-blur-2xl transition-colors dark:border-white/10 dark:bg-slate-950/85 lg:sticky">
-        <div className="container mx-auto flex h-[4.5rem] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6 lg:h-[4.5rem] lg:px-8">
           {/* Brand Mark with Monogram Crest */}
           <a
             href={currentApp?.url}
             onClick={(event) => (currentApp?.url ? handleNavigate(event, currentApp.url) : undefined)}
-            className="group flex items-center gap-3"
+            className="group flex items-center gap-2.5 sm:gap-3"
             aria-label={`${currentApp.name} home`}
           >
-            <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-2xl bg-slate-950 shadow-md shadow-slate-950/15 ring-1 ring-white/25 transition-transform duration-300 group-hover:scale-105">
+            <span className="flex h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-slate-950 shadow-md shadow-slate-950/15 ring-1 ring-white/25 transition-transform duration-300 group-hover:scale-105 sm:h-11 sm:w-11 sm:rounded-2xl">
               <img src={logoUrl} alt="DAJEM Group" className="h-full w-full object-cover" />
             </span>
             <div className="flex flex-col">
@@ -300,21 +366,11 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                 </a>
               </nav>
 
-              {/* Mobile App Launch Link */}
-              <a
-                href="/app"
-                onClick={(event) => handleNavigate(event, "/app")}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 text-xs font-black text-cyan-700 shadow-sm transition hover:bg-cyan-500/20 dark:border-cyan-400/25 dark:bg-cyan-500/15 dark:text-cyan-300"
-              >
-                <Smartphone className="h-3.5 w-3.5" />
-                <span>Launch App</span>
-              </a>
-
               {/* Android APK Download Link */}
               <a
                 href="/download"
                 onClick={(event) => handleNavigate(event, "/download")}
-                className="hidden xl:inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-300"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-500/20 dark:border-emerald-400/25 dark:bg-emerald-500/15 dark:text-emerald-300"
                 title="Download Android APK"
               >
                 <Download className="h-3.5 w-3.5" />
@@ -603,10 +659,92 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             )}
           </div>
         </div>
+
+        {/* Option 1 Dynamic Island Subsidiary Pill Switcher (Mobile App Bar) */}
+        <div className="border-t border-border/40 px-3 pb-2 pt-1.5 lg:hidden">
+          <div
+            role="navigation"
+            aria-label="DAJEM super-app switcher"
+            className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-full border border-border/60 bg-muted/60 p-1 shadow-inner backdrop-blur-xl dark:border-white/15 dark:bg-slate-900/90"
+          >
+            <a
+              href={groupHref}
+              onClick={(event) => handleNavigate(event, groupHref)}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-full px-2 text-[11px] font-extrabold transition-all mobile-tap-target",
+                activeApp === "landing" && pathname === "/"
+                  ? "bg-slate-950 text-white shadow-md dark:bg-white dark:text-slate-950"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Landmark className="h-3 w-3 shrink-0 text-amber-500" />
+              <span>Group</span>
+            </a>
+            <a
+              href={surveyHref}
+              onClick={(event) => handleNavigate(event, surveyHref)}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-full px-2 text-[11px] font-extrabold transition-all mobile-tap-target",
+                activeApp === "survey"
+                  ? "bg-gradient-to-r from-cyan-600 to-sky-600 text-white shadow-md shadow-cyan-500/25"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Map className="h-3 w-3 shrink-0" />
+              <span>Orbital</span>
+            </a>
+            <a
+              href={homesHref}
+              onClick={(event) => handleNavigate(event, homesHref)}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-full px-2 text-[11px] font-extrabold transition-all mobile-tap-target",
+                activeApp === "real-estate"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <House className="h-3 w-3 shrink-0" />
+              <span>Homes</span>
+            </a>
+            <a
+              href={farmsHref}
+              onClick={(event) => handleNavigate(event, farmsHref)}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-full px-2 text-[11px] font-extrabold transition-all mobile-tap-target",
+                activeApp === "poultry"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Egg className="h-3 w-3 shrink-0" />
+              <span>Farms</span>
+            </a>
+          </div>
+
+          {/* Native APK Update Available Strip */}
+          {updateAvailable && updateInfo && (
+            <button
+              type="button"
+              onClick={() => {
+                setUpdateToast("");
+                setUpdateModalOpen(true);
+              }}
+              className="mx-auto mt-1.5 flex w-full max-w-md items-center justify-between rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-3 py-1 text-[10.5px] font-black text-white shadow-md shadow-emerald-600/25"
+            >
+              <span className="flex items-center gap-1.5 truncate">
+                <Sparkles className="h-3 w-3 shrink-0" />
+                <span className="truncate">New App Update Available: v{updateInfo.version} ({updateInfo.apkSize})</span>
+              </span>
+              <span className="rounded-full bg-slate-950 px-2 py-0.5 text-[9px] font-extrabold text-emerald-400">
+                Update ▸
+              </span>
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Spacer for fixed header on mobile */}
-      <div className="h-[4.5rem] lg:hidden" aria-hidden="true" />
+      <div className={cn(updateAvailable && updateInfo ? "h-[8.5rem]" : "h-[6.65rem]", "lg:hidden")} aria-hidden="true" />
 
       {/* Mobile Companies Bottom Sheet */}
       <AnimatePresence>
@@ -646,49 +784,47 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
                   <AppCard key={app.id} app={app} compact />
                 ))}
               </div>
-              <a
-                href="/app"
-                onClick={(event) =>
-                  handleNavigate(event, "/app", () => {
-                    setOpenMenu(null);
-                    setMobileCompaniesOpen(false);
-                  })
-                }
-                className="mt-2.5 flex items-center justify-between rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950 via-slate-900 to-indigo-950 px-4 py-3 text-white shadow-md"
-              >
-                <span className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/20">
-                    <Smartphone className="h-4 w-4 text-cyan-300" />
-                  </span>
-                  <span>
-                    <span className="block text-xs font-black">Launch DAJEM Mobile App</span>
-                    <span className="block text-[10px] text-cyan-200/80">Option 1 Dynamic Island • Orbital, Homes, Farms</span>
-                  </span>
-                </span>
-                <span className="rounded-full bg-cyan-500 px-3 py-1 text-[10.5px] font-black text-slate-950">Launch ▸</span>
-              </a>
 
-              <a
-                href="/download"
-                onClick={(event) =>
-                  handleNavigate(event, "/download", () => {
-                    setOpenMenu(null);
-                    setMobileCompaniesOpen(false);
-                  })
-                }
-                className="mt-2 flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 px-4 py-2.5 text-white shadow-md"
-              >
-                <span className="flex items-center gap-2.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20">
-                    <Download className="h-3.5 w-3.5 text-emerald-400" />
+              {nativeVc > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void checkNativeUpdates()}
+                  className="mt-2.5 flex w-full items-center justify-between rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 px-4 py-3 text-left text-white shadow-md"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20">
+                      <RefreshCw className="h-4 w-4 text-emerald-400" />
+                    </span>
+                    <span>
+                      <span className="block text-xs font-black">Check for App Updates</span>
+                      <span className="block text-[10px] text-emerald-300/80">Installed Android Build #{nativeVc} · Hostinger Synced</span>
+                    </span>
                   </span>
-                  <span>
-                    <span className="block text-xs font-black">Download Android APK</span>
-                    <span className="block text-[10px] text-emerald-300/80">v1.0.1 • 22 MB • Direct Install</span>
+                  <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-black text-slate-950">Check ▸</span>
+                </button>
+              ) : (
+                <a
+                  href="/download"
+                  onClick={(event) =>
+                    handleNavigate(event, "/download", () => {
+                      setOpenMenu(null);
+                      setMobileCompaniesOpen(false);
+                    })
+                  }
+                  className="mt-2.5 flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 px-4 py-3 text-white shadow-md"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20">
+                      <Download className="h-4 w-4 text-emerald-400" />
+                    </span>
+                    <span>
+                      <span className="block text-xs font-black">Download Android App (.APK)</span>
+                      <span className="block text-[10px] text-emerald-300/80">Direct phone install · Auto updates</span>
+                    </span>
                   </span>
-                </span>
-                <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-black text-slate-950">Download ▸</span>
-              </a>
+                  <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-black text-slate-950">Get APK ▸</span>
+                </a>
+              )}
             </motion.div>
           </>
         )}
@@ -704,7 +840,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
           <a
             href={groupHref}
             onClick={(event) => handleNavigate(event, groupHref)}
-            className={cn("dajem-dock-item", activeApp === "landing" && "is-active")}
+            className={cn("dajem-dock-item", activeApp === "landing" && pathname === "/" && "is-active")}
             aria-label="Home"
           >
             <span className="dock-icon-wrapper">
@@ -745,9 +881,9 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
               </button>
             ) : (
               <a
-                href={farmsHref}
+                href={`${farmsHref}/shop`}
                 onClick={(event) => handleNavigate(event, `${farmsHref}/shop`)}
-                className="dajem-dock-item"
+                className={cn("dajem-dock-item", pathname.startsWith("/farms/shop") && "is-active")}
                 aria-label="Farm Shop"
               >
                 <span className="dock-icon-wrapper">
@@ -760,7 +896,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             <a
               href={`${homesHref}/listings`}
               onClick={(event) => handleNavigate(event, `${homesHref}/listings`)}
-              className="dajem-dock-item"
+              className={cn("dajem-dock-item", pathname.startsWith("/properties/listings") && "is-active")}
               aria-label="Property Listings"
             >
               <span className="dock-icon-wrapper">
@@ -772,7 +908,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             <a
               href={`${surveyHref}/estimate`}
               onClick={(event) => handleNavigate(event, `${surveyHref}/estimate`)}
-              className="dajem-dock-item"
+              className={cn("dajem-dock-item", pathname.startsWith("/survey/estimate") && "is-active")}
               aria-label="Survey Estimator"
             >
               <span className="dock-icon-wrapper">
@@ -799,7 +935,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             <a
               href={dashboardHref}
               onClick={(event) => handleNavigate(event, dashboardHref)}
-              className="dajem-dock-item"
+              className={cn("dajem-dock-item", pathname.startsWith("/dashboard") && "is-active")}
               aria-label="Dashboard"
             >
               <span className="dock-icon-wrapper">
@@ -826,7 +962,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             <button
               type="button"
               onClick={() => setOpenMenu("account")}
-              className="dajem-dock-item"
+              className={cn("dajem-dock-item", openMenu === "account" && "is-active")}
               aria-label="Account profile"
             >
               <span className="dock-icon-wrapper">
@@ -838,7 +974,7 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
             <a
               href={supportHref}
               onClick={(event) => handleNavigate(event, supportHref)}
-              className="dajem-dock-item"
+              className={cn("dajem-dock-item", pathname.startsWith("/support") && "is-active")}
               aria-label="Support"
             >
               <span className="dock-icon-wrapper">
@@ -849,6 +985,74 @@ export function Header({ activeApp, onCartClick }: HeaderProps) {
           )}
         </div>
       </nav>
+
+      {/* Native In-App APK Update Modal */}
+      {updateModalOpen && updateInfo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm space-y-4 rounded-3xl border border-border/70 bg-card p-5 text-card-foreground shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  <Download className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    DAJEM Android Updater
+                  </p>
+                  <h3 className="text-sm font-black">
+                    {nativeVc > 0 && Number(updateInfo.versionCode || 0) <= nativeVc
+                      ? `Up to Date (v${updateInfo.version})`
+                      : `Update Available (v${updateInfo.version})`}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUpdateModalOpen(false)}
+                className="rounded-full bg-muted p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Close update modal"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3.5 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">Package</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  dajem-app.apk ({updateInfo.apkSize})
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-foreground">Release Notes:</p>
+              <ul className="list-inside list-disc space-y-1 text-[11px] text-muted-foreground">
+                {updateInfo.releaseNotes.map((note, idx) => (
+                  <li key={idx}>{note}</li>
+                ))}
+              </ul>
+            </div>
+
+            {updateToast ? (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{updateToast}</span>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={downloadApkUpdate}
+                className="w-full rounded-xl bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+              >
+                <Download className="h-4 w-4" />
+                <span>
+                  {nativeVc > 0 && Number(updateInfo.versionCode || 0) <= nativeVc
+                    ? `Re-download Latest APK (${updateInfo.apkSize})`
+                    : `Download & Install v${updateInfo.version}`}
+                </span>
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </>

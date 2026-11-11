@@ -48,13 +48,13 @@ npm install @capacitor/core @capacitor/ios @capacitor/android @capacitor/status-
 ```
 
 ### Step 2: Set Your Production Hostinger Domain
-In [`capacitor.config.json`](../capacitor.config.json), `server.url` points directly to the Option 1 Mobile Super-App route:
+In [`capacitor.config.json`](../capacitor.config.json), `server.url` points directly to the unified Option 1 mobile-styled DAJEM web application:
 ```json
 {
   "appId": "com.dajemgroup.app",
   "appName": "DAJEM Group",
   "server": {
-    "url": "https://dajemgroup.com/app",
+    "url": "https://dajemgroup.com/?v=1.0.2&vc=102",
     "cleartext": false
   }
 }
@@ -92,10 +92,10 @@ The compiled Android application package is hosted directly on your website for 
 
 * **Direct APK Download URL**: `https://dajemgroup.com/downloads/dajem-app.apk`
 * **Download Portal Page**: `https://dajemgroup.com/download`
-* **Physical File Location**: `apps/landing/public/downloads/dajem-app.apk` (22 MB)
+* **Physical File Location**: `apps/landing/public/downloads/dajem-app.apk`
 
 ### Installing on Any Android Phone:
-1. Open `https://dajemgroup.com/download` in your mobile browser (or scan the QR code).
+1. Open `https://dajemgroup.com/download` in your mobile browser.
 2. Tap **Download Android APK**.
 3. If prompted with *"File might be harmful"*, tap **Download anyway** (standard for non-Google Play direct APK installations).
 4. Tap the downloaded file in your notification bar and select **Install**.
@@ -109,8 +109,8 @@ DAJEM Mobile employs a **dual-layer update architecture**:
 1. **Instant Web/Content Updates (0 Download Required)**:
    - Any layout changes, new listings, price adjustments, or survey fees committed to Hostinger update **instantly** inside the app via Capacitor Remote URL.
 2. **Native APK Updates (Automatic In-App Download)**:
-   - When a new native version is built, the app calls `GET /api/app/version`.
-   - If a new version exists, a prominent **Update Banner** (`Update Available: v1.0.1`) displays at the top of the app.
-   - Tapping the banner presents the **DAJEM Update Manager Modal**, which displays the changelog and downloads the new APK package directly to the phone for instant installation.
-   - Users can also manually check at any time by tapping **"Check for App Updates"** in the app footer.
+   - When a new native version is built, the app calls `GET /api/app/version` and compares `versionCode` against the installed native build.
+   - If a newer native APK is available, a prominent **Update Banner** displays at the top of the app.
+   - Tapping the banner opens the **DAJEM Android Updater Modal**, which displays the changelog and downloads the new APK package via Android's native `DownloadManager` (`MainActivity.java`) for one-tap installation.
+   - Users can also manually check at any time from **Ecosystem ▸ Check for App Updates**.
 

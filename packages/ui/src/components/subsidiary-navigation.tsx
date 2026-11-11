@@ -64,7 +64,7 @@ export function SubsidiaryNav({ label, items, accent }: SubsidiaryNavProps) {
   return (
     <nav
       aria-label={`${label} navigation`}
-      className="sticky top-[4.5rem] z-30 border-b border-border/50 bg-background/85 shadow-sm backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85"
+      className="sticky top-[6.65rem] z-30 border-b border-border/50 bg-background/85 shadow-sm backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85 lg:top-[4.5rem]"
     >
       <div className="container mx-auto max-w-6xl px-3 py-2 sm:px-6">
         <div className="flex items-center justify-between gap-3">

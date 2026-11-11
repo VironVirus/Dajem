@@ -45,6 +45,7 @@ import {
   Maximize,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   Tag,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -129,6 +130,7 @@ export default function RealEstatePage() {
   const [selectedGroup, setSelectedGroup] = React.useState<HomesListingGroup | "all">("all");
   const [selectedResidence, setSelectedResidence] = React.useState<ResidenceType | "all">("all");
   const [selectedPrice, setSelectedPrice] = React.useState<string>("all");
+  const [filtersExpanded, setFiltersExpanded] = React.useState(false);
   const [activeProperty, setActiveProperty] = React.useState<PropertyListing | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
   const [listSubmitted, setListSubmitted] = React.useState(false);
@@ -319,7 +321,7 @@ export default function RealEstatePage() {
         {pageView === "home" && (
           <>
         <HeroSlideshow
-          className="dajem-mobile-hero flex min-h-[31rem] items-center py-14 sm:min-h-0 sm:py-24"
+          className="dajem-mobile-hero flex min-h-[22rem] items-center py-8 sm:min-h-0 sm:py-24"
           overlayClassName="bg-[linear-gradient(135deg,rgba(239,246,255,0.28),rgba(239,246,255,0.5),rgba(255,255,255,0.82))] dark:bg-[linear-gradient(135deg,rgba(30,64,175,0.24),rgba(2,6,23,0.54),rgba(2,6,23,0.84))]"
           slides={[
             { src: "/images/homes-hero-suite-v2.png", position: "center", label: "Verified homes and short-lets", actionLabel: "Browse available properties", href: "/properties/listings" },
@@ -328,21 +330,21 @@ export default function RealEstatePage() {
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#1d4ed812_1px,transparent_1px),linear-gradient(to_bottom,#1d4ed812_1px,transparent_1px)] bg-[size:32px_32px] -z-10" />
 
-          <div className="container mx-auto max-w-6xl px-5 text-center sm:px-6">
-            <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
+          <div className="container mx-auto max-w-6xl px-4 text-center sm:px-6">
+            <div className="dajem-hero-copy-panel mx-auto max-w-4xl space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8">
               <Badge variant="secondary" className="border border-blue-500/20 bg-blue-500/10 px-3 py-1 font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/15">
                 Find your place
               </Badge>
-              <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
+              <h1 className="text-[2.1rem] font-bold leading-[1.02] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
+                <span className="mt-2 block text-[1.02rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:mt-3 sm:text-[1.45rem]">
                   Spaces for your next chapter.
                 </span>
               </h1>
-              <p className="dajem-hero-lede mx-auto max-w-3xl text-base leading-relaxed">
+              <p className="dajem-hero-lede mx-auto max-w-3xl text-sm leading-relaxed sm:text-base">
                 Explore homes, land and short stays, or list a property with us.
               </p>
-              <div className="flex flex-col justify-center gap-3 pt-3 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
+              <div className="flex flex-col justify-center gap-2.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4">
                 <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/25 hover:bg-blue-700 transition-all" onClick={() => router.push("/properties/listings")}>
                   Browse Listings
                 </Button>
@@ -411,44 +413,97 @@ export default function RealEstatePage() {
         )}
 
         {pageView === "listings" && (
-        <section id="listings" className="container mx-auto max-w-6xl px-5 py-14 sm:px-6 sm:py-20">
-          <div className="mb-8 text-center">
-            <Badge variant="secondary" className="mb-2">Dajem Homes Catalog</Badge>
-            <h2 className="text-3xl font-bold text-primary dark:text-foreground">Available Properties</h2>
+        <section id="listings" className="container mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-16">
+          <div className="mb-5 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <Badge variant="secondary" className="mb-1.5">Dajem Homes Catalog</Badge>
+              <h2 className="text-2xl font-bold text-primary dark:text-foreground sm:text-3xl">Available Properties</h2>
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                Showing {filteredProperties.length} of {approvedProperties.length} approved properties
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="w-full rounded-full bg-blue-600 font-bold text-white hover:bg-blue-700 sm:w-auto"
+              onClick={() => router.push("/properties/submit")}
+            >
+              + List Your Property
+            </Button>
           </div>
 
-          <Card className="mb-10 border bg-card/60 p-6 backdrop-blur-sm">
-            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-              <Button size="sm" variant={selectedGroup === "all" ? "default" : "outline"} onClick={() => { setSelectedGroup("all"); setSelectedResidence("all"); }}>All</Button>
+          <Card className="mb-6 border bg-card/70 p-3.5 backdrop-blur-sm sm:mb-10 sm:p-6">
+            {/* Search + Filter Toggle on Mobile */}
+            <div className="mb-3 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
+                <Input
+                  id="search"
+                  placeholder="Search location, house, plot..."
+                  className="h-10 pl-9"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                variant={filtersExpanded ? "default" : "outline"}
+                size="sm"
+                className="h-10 shrink-0 gap-1.5 rounded-xl px-3 text-xs font-bold lg:hidden"
+                onClick={() => setFiltersExpanded((current) => !current)}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Filters</span>
+              </Button>
+            </div>
+
+            {/* Property Category Pills - Scrollable on mobile */}
+            <div className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                onClick={() => { setSelectedGroup("all"); setSelectedResidence("all"); }}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${selectedGroup === "all" ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-border bg-background/80 text-muted-foreground hover:text-foreground"}`}
+              >
+                All Categories
+              </button>
               {homesListingGroupOptions.map((group) => (
-                <Button key={group.value} size="sm" variant={selectedGroup === group.value ? "default" : "outline"} className="h-auto min-h-10 whitespace-normal text-xs" onClick={() => { setSelectedGroup(group.value); setSelectedResidence("all"); }}>{group.label}</Button>
+                <button
+                  key={group.value}
+                  type="button"
+                  onClick={() => { setSelectedGroup(group.value); setSelectedResidence("all"); }}
+                  className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${selectedGroup === group.value ? "border-blue-600 bg-blue-600 text-white shadow-sm" : "border-border bg-background/80 text-muted-foreground hover:text-foreground"}`}
+                >
+                  {group.label}
+                </button>
               ))}
             </div>
-            {selectedGroup === "house-rent" && (
-              <div className="mb-5 rounded-2xl border border-blue-500/15 bg-blue-500/5 p-3">
-                <p className="mb-2 text-xs font-bold text-foreground">Choose a house type</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                  <Button size="sm" variant={selectedResidence === "all" ? "default" : "outline"} className="h-auto min-h-9 text-xs" onClick={() => setSelectedResidence("all")}>All house types</Button>
-                  {rentalResidenceTypeOptions.map((option) => (
-                    <Button key={option.value} size="sm" variant={selectedResidence === option.value ? "default" : "outline"} className="h-auto min-h-9 whitespace-normal text-xs" onClick={() => setSelectedResidence(option.value)}>{option.label}</Button>
+
+            {(selectedGroup === "house-rent" || selectedGroup === "house-sale" || selectedGroup === "short-let") && (
+              <div className="mb-3 rounded-2xl border border-blue-500/15 bg-blue-500/5 p-2.5 sm:p-3">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-foreground">House Type</p>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedResidence("all")}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold transition ${selectedResidence === "all" ? "border-blue-600 bg-blue-600 text-white" : "border-border bg-background text-muted-foreground"}`}
+                  >
+                    All house types
+                  </button>
+                  {(selectedGroup === "house-rent" ? rentalResidenceTypeOptions : residenceTypeOptions).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedResidence(option.value)}
+                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold transition ${selectedResidence === option.value ? "border-blue-600 bg-blue-600 text-white" : "border-border bg-background text-muted-foreground"}`}
+                    >
+                      {option.label}
+                    </button>
                   ))}
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="space-y-1.5 lg:col-span-2">
-                <Label htmlFor="search">Search Keywords</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                  <Input
-                    id="search"
-                    placeholder="Search location, title, or highlight..."
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                  />
-                </div>
-              </div>
+
+            <div className={`${filtersExpanded ? "grid" : "hidden"} grid-cols-1 items-end gap-3 border-t border-border/50 pt-3 sm:grid-cols-3 lg:grid lg:border-t-0 lg:pt-0`}>
               <Select
                 label="Listing Type"
                 value={selectedType}

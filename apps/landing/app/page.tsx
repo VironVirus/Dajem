@@ -109,7 +109,7 @@ export default function LandingPage() {
         />
 
         <HeroSlideshow
-          className="dajem-mobile-hero min-h-[36rem] py-12 sm:min-h-[42rem] sm:py-20"
+          className="dajem-mobile-hero min-h-[22rem] py-8 sm:min-h-[42rem] sm:py-20"
           contentClassName="landing-hero-copy"
           overlayClassName="bg-gradient-to-r from-slate-950/90 via-slate-950/75 to-slate-950/45"
           slides={[
@@ -139,42 +139,42 @@ export default function LandingPage() {
             },
           ]}
         >
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 py-6 sm:px-8 lg:grid-cols-12 lg:gap-10">
-            <div className="dajem-hero-copy-panel space-y-5 rounded-[1.85rem] p-6 sm:space-y-6 sm:p-9 lg:col-span-7">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 py-3 sm:px-8 sm:py-6 lg:grid-cols-12 lg:gap-10">
+            <div className="dajem-hero-copy-panel space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-9 lg:col-span-7">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 Rooted in Nigeria · Built for Progress
               </div>
 
-              <h1 className="text-4xl font-extrabold leading-[1.04] tracking-tight sm:text-5xl lg:text-[3.4rem]">
+              <h1 className="text-3xl font-extrabold leading-[1.04] tracking-tight sm:text-5xl lg:text-[3.4rem]">
                 <span className="dajem-hero-title block">One group.</span>
-                <span className="mt-2 block bg-gradient-to-r from-cyan-600 via-emerald-600 to-blue-600 bg-clip-text text-transparent dark:from-cyan-300 dark:via-emerald-300 dark:to-blue-300">
+                <span className="mt-1.5 block bg-gradient-to-r from-cyan-600 via-emerald-600 to-blue-600 bg-clip-text text-transparent dark:from-cyan-300 dark:via-emerald-300 dark:to-blue-300 sm:mt-2">
                   More possibilities.
                 </span>
               </h1>
 
-              <p className="dajem-hero-lede max-w-xl text-base leading-relaxed sm:text-lg">
+              <p className="dajem-hero-lede max-w-xl text-sm leading-relaxed sm:text-lg">
                 From land surveying and cadastral mapping to verified homes and fresh farm produce — access three specialized DAJEM companies with one unified account.
               </p>
 
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
+              <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:flex-wrap sm:gap-3 sm:pt-2">
                 <a
                   href="#companies"
-                  className="sheen-glow inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full bg-slate-950 px-6 text-sm font-bold text-white shadow-lg transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
+                  className="sheen-glow inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full bg-slate-950 px-6 text-sm font-bold text-white shadow-lg transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100 sm:min-h-12"
                 >
                   <span>Explore Our Businesses</span>
                   <ArrowRight className="h-4 w-4" />
                 </a>
                 <Link
-                  href="/mobile-designs"
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-indigo-500/35 bg-indigo-500/10 px-5 text-sm font-bold text-indigo-800 backdrop-blur-md transition hover:bg-indigo-500/20 dark:text-indigo-200"
+                  href="/download"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-5 text-sm font-bold text-emerald-800 backdrop-blur-md transition hover:bg-emerald-500/20 dark:text-emerald-200 sm:min-h-12"
                 >
                   <Smartphone className="h-4 w-4" />
-                  <span>Mobile App Designs</span>
+                  <span>Download Android App</span>
                 </Link>
                 <Link
                   href="/support"
-                  className="inline-flex min-h-12 items-center justify-center rounded-full border border-border/80 bg-background/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-background/90"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/80 bg-background/60 px-5 text-sm font-semibold text-foreground backdrop-blur-md transition hover:bg-background/90 sm:min-h-12"
                 >
                   Talk to Us
                 </Link>
@@ -324,48 +324,54 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Mobile App Showcase Banner */}
+        {/* Mobile App Download & Super-App Banner */}
         <section id="mobile-app" className="scroll-mt-28 px-5 pb-16 sm:px-8 sm:pb-24">
           <div className="mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-indigo-500/25 bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 p-6 text-white shadow-2xl sm:p-10 lg:p-12">
             <div className="grid items-center gap-8 lg:grid-cols-12">
               <div className="space-y-4 lg:col-span-7">
                 <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3.5 py-1 text-xs font-bold text-cyan-300">
                   <Smartphone className="h-3.5 w-3.5" />
-                  <span>Android & iPhone Super-App Experience</span>
+                  <span>Unified Android &amp; iOS App</span>
                 </div>
                 <h2 className="text-2xl font-black tracking-tight sm:text-4xl">
-                  Three specialized mobile apps inside one unified DAJEM app.
+                  Every DAJEM service in your pocket.
                 </h2>
                 <p className="max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                  Explore our interactive mobile design studio featuring a <strong className="text-cyan-300">Survey Plan & Geomatics App</strong> for Orbital, a <strong className="text-blue-300">Property & Home Listing App</strong> for Homes, and a <strong className="text-emerald-300">Farming E-Commerce App</strong> for Farms — engineered so every commit to Hostinger deploys live to Android and iOS.
+                  Install the Android APK for seamless mobile access to <strong className="text-cyan-300">DAJEM Orbital</strong> (estimates to document submission &amp; DHL shipping), <strong className="text-blue-300">DAJEM Homes</strong> (all property &amp; house types + listing submissions), and <strong className="text-emerald-300">DAJEM Farms</strong> (categorized farm catalog &amp; Chicken Order Studio).
                 </p>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <Link
-                    href="/mobile-designs"
-                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-6 text-sm font-extrabold text-slate-950 shadow-lg transition hover:bg-cyan-100"
+                    href="/download"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-6 text-sm font-extrabold text-slate-950 shadow-lg transition hover:bg-emerald-100"
                   >
-                    <span>Explore Mobile Design Options</span>
+                    <span>Download Android APK</span>
                     <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/survey/estimate"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 text-sm font-bold text-white transition hover:bg-white/20"
+                  >
+                    <span>Start Survey Estimate</span>
                   </Link>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 lg:col-span-5">
-                <div className="rounded-2xl border border-cyan-400/25 bg-cyan-950/40 p-4 backdrop-blur-md">
+                <Link href="/survey" className="rounded-2xl border border-cyan-400/25 bg-cyan-950/40 p-4 backdrop-blur-md transition hover:border-cyan-400/60">
                   <Calculator className="h-5 w-5 text-cyan-300" />
-                  <p className="mt-3 text-sm font-extrabold">Orbital CAD App</p>
-                  <p className="mt-1 text-xs text-slate-300">Beacon map, parcel fee calculator & DHL plan tracker.</p>
-                </div>
-                <div className="rounded-2xl border border-blue-400/25 bg-blue-950/40 p-4 backdrop-blur-md">
+                  <p className="mt-3 text-sm font-extrabold">DAJEM Orbital</p>
+                  <p className="mt-1 text-xs text-slate-300">Cost estimator, booking, document upload, DHL plan shipping &amp; tracker.</p>
+                </Link>
+                <Link href="/properties" className="rounded-2xl border border-blue-400/25 bg-blue-950/40 p-4 backdrop-blur-md transition hover:border-blue-400/60">
                   <Building2 className="h-5 w-5 text-blue-300" />
-                  <p className="mt-3 text-sm font-extrabold">Homes Listing App</p>
-                  <p className="mt-1 text-xs text-slate-300">Swipeable properties, short-lets & tracked bidding.</p>
-                </div>
-                <div className="rounded-2xl border border-emerald-400/25 bg-emerald-950/40 p-4 backdrop-blur-md">
+                  <p className="mt-3 text-sm font-extrabold">DAJEM Homes</p>
+                  <p className="mt-1 text-xs text-slate-300">Land plots, rentals, homes for sale, short-lets, bidding &amp; owner submission.</p>
+                </Link>
+                <Link href="/farms" className="rounded-2xl border border-emerald-400/25 bg-emerald-950/40 p-4 backdrop-blur-md transition hover:border-emerald-400/60">
                   <ShoppingCart className="h-5 w-5 text-emerald-300" />
-                  <p className="mt-3 text-sm font-extrabold">Farms Market App</p>
-                  <p className="mt-1 text-xs text-slate-300">Chicken cut studio, flash promos & instant cart checkout.</p>
-                </div>
+                  <p className="mt-3 text-sm font-extrabold">DAJEM Farms</p>
+                  <p className="mt-1 text-xs text-slate-300">Categorized farm shop, Chicken Order Studio, bulk quotes &amp; Flutterwave cart.</p>
+                </Link>
               </div>
             </div>
           </div>

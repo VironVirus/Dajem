@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "DAJEM",
     description:
       "Unified mobile & web platform for DAJEM Orbital (Survey Plan & Geomatics), DAJEM Homes (Verified Property Listings), and DAJEM Farms (Agro E-Commerce).",
-    start_url: "/app",
+    start_url: "/",
     display: "standalone",
     background_color: "#040812",
     theme_color: "#06b6d4",

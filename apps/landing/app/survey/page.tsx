@@ -1621,10 +1621,45 @@ export default function SurveyPage() {
           />
         )}
 
+        {pageView !== "home" && (
+          <div className="border-b border-border/60 bg-muted/20 px-4 py-3">
+            <div className="container mx-auto grid max-w-6xl grid-cols-4 gap-1.5 text-center text-[10px] font-extrabold sm:text-xs">
+              <button
+                type="button"
+                onClick={() => router.push("/survey/services")}
+                className={`rounded-xl border px-2 py-2 transition ${pageView === "services" ? "border-cyan-500 bg-cyan-600 text-white shadow-sm" : "border-border/60 bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                1. Services
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/survey/estimate")}
+                className={`rounded-xl border px-2 py-2 transition ${pageView === "estimate" ? "border-cyan-500 bg-cyan-600 text-white shadow-sm" : "border-border/60 bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                2. Estimate
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/survey/inquiry")}
+                className={`rounded-xl border px-2 py-2 transition ${pageView === "inquiry" ? "border-cyan-500 bg-cyan-600 text-white shadow-sm" : "border-border/60 bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                3. Consult &amp; Papers
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/survey/tracker")}
+                className={`rounded-xl border px-2 py-2 transition ${pageView === "tracker" ? "border-cyan-500 bg-cyan-600 text-white shadow-sm" : "border-border/60 bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                4. Ship &amp; Track
+              </button>
+            </div>
+          </div>
+        )}
+
         {pageView === "home" && (
           <>
         <HeroSlideshow
-          className="dajem-mobile-hero py-14 sm:py-20 lg:py-24"
+          className="dajem-mobile-hero py-8 sm:py-20 lg:py-24"
           overlayClassName="bg-[linear-gradient(180deg,rgba(236,254,255,0.12),rgba(236,254,255,0.3),rgba(255,255,255,0.66))] dark:bg-[linear-gradient(180deg,rgba(8,47,73,0.12),rgba(2,6,23,0.38),rgba(2,6,23,0.72))]"
           slides={[
             { src: "/images/orbital-hero-remediation.jpg", position: "center 42%", label: "Field geomatics & project survey", actionLabel: "Calculate survey cost", href: "/survey/estimate" },
@@ -1632,26 +1667,26 @@ export default function SurveyPage() {
           ]}
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px] -z-10" />
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-5 sm:px-6 lg:grid-cols-12 lg:gap-12">
-            <div className="dajem-hero-copy-panel space-y-5 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12">
+            <div className="dajem-hero-copy-panel space-y-4 rounded-[1.75rem] p-5 sm:space-y-6 sm:p-8 lg:col-span-7">
               <Badge variant="secondary" className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-semibold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/15">
                 Surveying & geomatics
               </Badge>
-              <h1 className="text-[2.55rem] font-bold leading-[0.98] sm:text-5xl">
+              <h1 className="text-[2.1rem] font-bold leading-[1.02] sm:text-5xl">
                 <span className="dajem-hero-title block">{profile.shortName}</span>
-                <span className="mt-3 block text-[1.08rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:text-[1.45rem]">
-                  Know your land. Plan with confidence.
+                <span className="mt-2 block text-[1.02rem] font-semibold leading-[1.3] tracking-tight text-slate-800 dark:text-slate-100 sm:mt-3 sm:text-[1.45rem]">
+                  Estimate, book consult, submit papers &amp; track DHL shipping.
                 </span>
               </h1>
-              <p className="dajem-hero-lede text-base leading-relaxed">
+              <p className="dajem-hero-lede text-sm leading-relaxed sm:text-base">
                 Explore land surveys, mapping and project support tailored to your needs.
               </p>
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:gap-4">
-                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => router.push("/survey/inquiry")}>
-                  Request a survey
+              <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:gap-4 sm:pt-2">
+                <Button size="lg" className="sheen-glow w-full sm:w-auto rounded-full bg-cyan-600 text-white font-semibold shadow-lg shadow-cyan-600/25 hover:bg-cyan-700 transition-all" onClick={() => router.push("/survey/estimate")}>
+                  1. Get Survey Estimate
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/survey/estimate")}>
-                  Get an estimate
+                <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full border-border/80 bg-background/60 hover:bg-background/90 text-foreground font-semibold shadow-sm backdrop-blur-md transition-all" onClick={() => router.push("/survey/inquiry")}>
+                  2. Book &amp; Submit Papers
                 </Button>
               </div>
             </div>
@@ -1758,8 +1793,27 @@ export default function SurveyPage() {
         )}
 
         {pageView === "estimate" && (
-        <section id="calculator" className="border-y border-border bg-muted/30 py-10 sm:py-16">
-          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-8 px-4 lg:grid-cols-12">
+        <section id="calculator" className="border-y border-border bg-muted/30 py-6 sm:py-16">
+          <div className="container mx-auto grid max-w-6xl grid-cols-1 items-start gap-6 px-4 lg:grid-cols-12 lg:gap-8">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-cyan-500/30 bg-card/90 p-3.5 shadow-sm backdrop-blur-md lg:hidden">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
+                  Live Estimated Budget
+                </p>
+                <p className="text-xl font-black text-cyan-600 dark:text-cyan-400">
+                  {calculatedEstimate.amount ? formatCurrency(calculatedEstimate.amount) : "Assessment Required"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="shrink-0 rounded-full bg-cyan-600 font-bold text-white hover:bg-cyan-700"
+                onClick={openInquiryFromEstimate}
+              >
+                Use in Inquiry ▸
+              </Button>
+            </div>
+
             <Card className="border bg-card p-5 shadow-lg sm:p-8 lg:col-span-7">
               <div className="mb-6 flex items-center justify-between gap-3 border-b border-border/60 pb-4">
                 <h3 className="flex items-center gap-2 text-xl font-bold text-primary dark:text-foreground">

@@ -3,7 +3,7 @@
   "appName": "DAJEM Group",
   "webDir": "apps/landing/out",
   "server": {
-    "url": "https://dajemgroup.com/app?v=1.0.1&vc=101",
+    "url": "https://dajemgroup.com/?v=1.0.2&vc=102",
     "cleartext": false,
     "allowNavigation": [
       "dajemgroup.com",

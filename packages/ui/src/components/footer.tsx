@@ -128,16 +128,7 @@ export function Footer({ compact = false }: FooterProps) {
                   onClick={(event) => handleNavigate(event, "/download")}
                   className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-colors"
                 >
-                  <span>📱 Download Android App (.APK)</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/app"
-                  onClick={(event) => handleNavigate(event, "/app")}
-                  className="text-xs sm:text-sm font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5 transition-colors"
-                >
-                  <span>⚡ Launch Mobile Web App</span>
+                  <span>Download Android App (.APK)</span>
                 </a>
               </li>
             </ul>

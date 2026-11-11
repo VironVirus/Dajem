@@ -157,11 +157,15 @@
     body {
       padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
     }
+
+    section[id] {
+      scroll-margin-top: 10rem;
+    }
   }
 
   @media (max-width: 640px) {
     .dajem-mobile-hero {
-      min-height: 32rem;
+      min-height: 22rem;
     }
 
     .dajem-mobile-hero .dajem-ambient-orb {
