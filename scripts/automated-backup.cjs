@@ -1,14 +1,72 @@
 #!/usr/bin/env node
 // Hostinger cron: keep one encrypted, recovery-compatible copy outside the web root.
 const { createCipheriv, createDecipheriv, randomBytes, scryptSync } = require('node:crypto');
-const { chmod, mkdir, rename, rm, writeFile } = require('node:fs/promises');
+const { constants } = require('node:fs');
+const { chmod, copyFile, mkdir, readdir, rename, rm, unlink, writeFile } = require('node:fs/promises');
 const { homedir } = require('node:os');
 const { join } = require('node:path');
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_FILES = 2000;
 
+function backupRetentionCount() {
+  const value = Number.parseInt(process.env.DAJEM_BACKUP_RETENTION_COUNT || '7', 10);
+  if (!Number.isSafeInteger(value) || value < 2 || value > 31) throw new Error('DAJEM_BACKUP_RETENTION_COUNT must be between 2 and 31');
+  return value;
+}
+
+function healthcheckUrl() {
+  const value = process.env.DAJEM_BACKUP_HEALTHCHECK_URL?.trim();
+  if (!value) return null;
+  const url = new URL(value);
+  const local = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+  if ((url.protocol !== 'https:' && !local) || url.username || url.password) throw new Error('Invalid DAJEM_BACKUP_HEALTHCHECK_URL');
+  return url;
+}
+
+async function healthcheck(url, suffix = '') {
+  if (!url) return;
+  const endpoint = new URL(url);
+  endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}${suffix}`;
+  try {
+    await fetch(endpoint, { method: 'POST', body: 'DAJEM backup job', signal: AbortSignal.timeout(10000) });
+  } catch (error) {
+    console.error(`Backup monitor ping failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
+}
+
+async function sendFailureAlert(message) {
+  const apiKey = process.env.DAJEM_RESEND_API_KEY?.trim();
+  const from = process.env.DAJEM_EMAIL_FROM?.trim();
+  const to = process.env.DAJEM_BACKUP_ALERT_EMAIL?.trim();
+  if (!apiKey || !from || !to) return;
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject: 'DAJEM backup failed', text: `The DAJEM backup job failed at ${new Date().toISOString()}.\n\n${message}` }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) console.error(`Backup alert email failed (${response.status})`);
+  } catch (error) {
+    console.error(`Backup alert email failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+  }
+}
+
+async function retainBackups(directory, retention) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const archives = entries
+    .filter((entry) => entry.isFile() && /^daily-\d{8}T\d{6}Z\.encrypted\.json$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+  await Promise.all(archives.slice(retention).map((name) => unlink(join(directory, name))));
+}
+
 async function run() {
+  const monitor = healthcheckUrl();
+  await healthcheck(monitor, '/start');
+  if (process.env.DAJEM_BACKUP_FORCE_FAILURE_TEST === '1') throw new Error('Forced backup failure test requested');
   const secret = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   const passphrase = process.env.DAJEM_AUTOMATED_BACKUP_PASSPHRASE;
   const url = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '');
@@ -78,13 +136,29 @@ async function run() {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await chmod(directory, 0o700);
   const temporary = join(directory, `.backup-${randomBytes(12).toString('hex')}.tmp`);
+  const latestTemporary = join(directory, `.latest-${randomBytes(12).toString('hex')}.tmp`);
+  const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[-:]/g, '');
+  const dated = join(directory, `daily-${stamp}.encrypted.json`);
   try {
     await writeFile(temporary, archive, { mode: 0o600, flag: 'wx' });
-    await rename(temporary, join(directory, 'daily.encrypted.json'));
+    await rename(temporary, dated);
+    await copyFile(dated, latestTemporary, constants.COPYFILE_EXCL);
+    await rename(latestTemporary, join(directory, 'daily.encrypted.json'));
+    await retainBackups(directory, backupRetentionCount());
   } finally {
     await rm(temporary, { force: true });
+    await rm(latestTemporary, { force: true });
   }
   console.log(`DAJEM backup completed; ${files.length} files, ${bytes} bytes.`);
+  await healthcheck(monitor);
 }
 
-run().catch((error) => { console.error(`DAJEM backup failed: ${error.message}`); process.exitCode = 1; });
+run().catch(async (error) => {
+  const message = error instanceof Error ? error.message : 'Unknown backup failure';
+  console.error(`DAJEM backup failed: ${message}`);
+  let monitor = null;
+  try { monitor = healthcheckUrl(); } catch { /* The primary configuration error is already reported above. */ }
+  await healthcheck(monitor, '/fail');
+  await sendFailureAlert(message);
+  process.exitCode = 1;
+});
