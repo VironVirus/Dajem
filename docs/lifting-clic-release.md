@@ -13,8 +13,9 @@ node --env-file=.env.hostinger scripts/seed-approved-lifting-catalogue.cjs --con
 
 The helper detects the configured Supabase or MySQL platform-state backend. It
 accepts only the local ignored CLIC source catalogue and requires exactly 43
-plots. It replaces the private lifting catalogue with CLIC only. It does not
-seed other estates, owner contacts, or non-residential schedules.
+residential plots plus the approved `UT/1` utility plot and `C/S 1` commercial
+space. It replaces the private lifting catalogue with CLIC only. It does not
+seed other estates or owner contacts.
 
 Before allowing HEIC, HEIF or WEBP title documents, run the updated
 `supabase/dajem_storage.sql` in the production Supabase SQL Editor. The app

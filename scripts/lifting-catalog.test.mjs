@@ -7,6 +7,8 @@ test("CLIC aliases resolve to the approved canonical reference", () => {
     assert.equal(canonicalizeLiftingPlotInput("clic-estate", value), "1A");
   }
   assert.equal(canonicalizeLiftingPlotInput("clic-estate", "1/B"), "1B");
+  assert.equal(canonicalizeLiftingPlotInput("clic-estate", "UT / 1"), "UT/1");
+  assert.equal(canonicalizeLiftingPlotInput("clic-estate", "Plot C/S-1"), "C/S 1");
 });
 
 test("invalid CLIC aliases cannot silently resolve", () => {

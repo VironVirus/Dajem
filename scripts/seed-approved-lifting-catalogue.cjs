@@ -12,8 +12,17 @@ if (!process.argv.includes("--confirm")) {
 }
 const catalogue = JSON.parse(readFileSync("packages/ui/src/lib/lifting-estates.json", "utf8"));
 const clic = catalogue.find((estate) => estate.id === "clic-estate");
-if (!clic || !Array.isArray(clic.plots) || clic.plots.length !== 43) {
-  throw new Error("Expected the reviewed 43-plot CLIC source catalogue. Stop and re-check the workbook before seeding.");
+const CLIC_SECONDARY_PLOTS = new Map([
+  ["UT/1", { areaSqm: 248, use: "Utility Plot" }],
+  ["C/S 1", { areaSqm: 143, use: "Commercial Space" }],
+]);
+if (!clic || !Array.isArray(clic.plots)) {
+  throw new Error("The reviewed CLIC source catalogue is missing. Stop and re-check the workbook before seeding.");
+}
+const residentialPlots = clic.plots.filter((plot) => !CLIC_SECONDARY_PLOTS.has(String(plot.number).trim().toUpperCase()));
+const secondaryPlots = clic.plots.filter((plot) => CLIC_SECONDARY_PLOTS.has(String(plot.number).trim().toUpperCase()));
+if (residentialPlots.length !== 43 || secondaryPlots.length !== 2) {
+  throw new Error("Expected 43 residential and 2 approved secondary CLIC records. Rebuild and review the private catalogue before seeding.");
 }
 
 const table = process.env.SUPABASE_DAJEM_STATE_TABLE ?? "dajem_state";
@@ -24,7 +33,19 @@ function clicEstate() {
     id: "clic-estate",
     name: "CLIC ESTATE",
     approved: true,
-    plots: clic.plots.map((plot) => ({ number: plot.number, areaSqm: plot.areaSqm, layout: "CLIC ESTATE" })),
+    plots: clic.plots.map((plot) => {
+      const number = String(plot.number).trim().toUpperCase();
+      const approvedSecondary = CLIC_SECONDARY_PLOTS.get(number);
+      if (approvedSecondary && Number(plot.areaSqm) !== approvedSecondary.areaSqm) {
+        throw new Error(`CLIC ${number} does not match the approved area. Stop and review the workbook.`);
+      }
+      return {
+        number: plot.number,
+        areaSqm: plot.areaSqm,
+        layout: "CLIC ESTATE",
+        ...(approvedSecondary ? { use: approvedSecondary.use } : { use: "Residential Plot" }),
+      };
+    }),
   };
 }
 
@@ -66,7 +87,7 @@ async function seedSupabase() {
 async function main() {
   if (process.env.DAJEM_DATA_BACKEND === "mysql") await seedMySql();
   else await seedSupabase();
-  console.log("Private CLIC catalogue seeded: 43 residential plots. Other estates remain unavailable.");
+  console.log("Private CLIC catalogue seeded: 43 residential and 2 approved secondary plots. Other estates remain unavailable.");
 }
 
 main().catch((error) => {
