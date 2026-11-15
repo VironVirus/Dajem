@@ -9,6 +9,7 @@ import type {
   FarmDeliverySettings,
   PlatformState,
   PropertyListing,
+  LiftingCatalogueEstate,
   ServerUser,
   SurveyService,
   User,
@@ -131,6 +132,7 @@ function createDefaultState(): PlatformState {
     farmDeliverySettings: defaultFarmDeliverySettings(),
     supportTickets: [],
     auditLogs: [],
+    liftingCatalogue: [],
   };
 }
 
@@ -229,6 +231,27 @@ function sanitizeState(raw: unknown): PlatformState {
     farmDeliverySettings: normalizeFarmDeliverySettings(candidate.farmDeliverySettings),
     supportTickets: Array.isArray(candidate.supportTickets) ? candidate.supportTickets : [],
     auditLogs: Array.isArray(candidate.auditLogs) ? candidate.auditLogs.slice(0, 1000) : [],
+    liftingCatalogue: Array.isArray(candidate.liftingCatalogue)
+      ? candidate.liftingCatalogue
+        .filter((estate): estate is LiftingCatalogueEstate => Boolean(estate && typeof estate === "object"))
+        .map((estate) => ({
+          id: String(estate.id ?? "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 80),
+          name: String(estate.name ?? "").trim().slice(0, 160),
+          approved: Boolean(estate.approved),
+          plots: Array.isArray(estate.plots)
+            ? estate.plots.map((plot) => ({
+              number: String(plot?.number ?? "").trim().slice(0, 80),
+              areaSqm: Number(plot?.areaSqm ?? 0),
+              layout: String(plot?.layout ?? "").trim().slice(0, 120),
+              use: typeof plot?.use === "string" ? plot.use.trim().slice(0, 100) : undefined,
+              excluded: Boolean(plot?.excluded),
+              exclusionReason: typeof plot?.exclusionReason === "string" ? plot.exclusionReason.trim().slice(0, 200) : undefined,
+            })).filter((plot) => plot.number && Number.isFinite(plot.areaSqm) && plot.areaSqm > 0 && plot.layout)
+            : [],
+        }))
+        .filter((estate) => estate.id && estate.name)
+        .slice(0, 100)
+      : [],
     brandLogoUrl: typeof candidate.brandLogoUrl === "string" ? candidate.brandLogoUrl.slice(0, 2000) : undefined,
   };
 }

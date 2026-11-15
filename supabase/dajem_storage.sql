@@ -10,7 +10,7 @@ values (
   'dajem-documents',
   false,
   5242880,
-  array['application/pdf', 'image/jpeg', 'image/png']
+  array['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 )
 on conflict (id) do update
 set

@@ -10,6 +10,9 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
 ]);
 
 function assertSameOrigin(request: NextRequest) {
@@ -43,6 +46,14 @@ function hasExpectedFileSignature(bytes: Buffer, mimeType: string) {
     return bytes.length >= 8
       && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   }
+  if (mimeType === "image/webp") {
+    return bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+  }
+  if (mimeType === "image/heic" || mimeType === "image/heif") {
+    if (bytes.length < 12 || bytes.subarray(4, 8).toString("ascii") !== "ftyp") return false;
+    const brands = bytes.subarray(8, Math.min(bytes.length, 64)).toString("ascii");
+    return /heic|heix|heif|mif1|msf1/.test(brands);
+  }
   return false;
 }
 
@@ -69,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") {
-      throw new Error("Please attach a valid PDF, JPG, or PNG document.");
+      throw new Error("Please attach a valid PDF or image document.");
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -77,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      throw new Error("Only PDF, JPG, and PNG documents are allowed.");
+      throw new Error("Only PDF, JPG, PNG, WEBP, HEIC, and HEIF documents are allowed.");
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());

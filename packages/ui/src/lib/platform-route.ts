@@ -18,6 +18,9 @@ import {
   submitPropertyListing,
   submitPropertyListingPaymentProof,
   submitSurvey,
+  startLiftingApplication,
+  attachLiftingForm,
+  replaceLiftingCatalogue,
   updateBidStatus,
   updateCartItem,
   updateFarmDeliverySettings,
@@ -27,6 +30,7 @@ import {
   updateSurveyDelivery,
   updateSurveyStatus,
   updateSupportTicket,
+  updateLiftingVerification,
   upsertPropertyListing,
   upsertSurveyService,
   quoteFarmDeliveryForCheckout,
@@ -133,6 +137,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(await submitPropertyListingPaymentProof(sessionEmail, payload));
       case "submit-survey":
         return NextResponse.json(await submitSurvey(sessionEmail, payload));
+      case "start-lifting":
+        return NextResponse.json(await startLiftingApplication(sessionEmail, payload));
+      case "attach-lifting-form":
+        return NextResponse.json(await attachLiftingForm(sessionEmail, payload));
+      case "update-lifting-verification":
+        return NextResponse.json(await updateLiftingVerification(sessionEmail, payload));
+      case "replace-lifting-catalogue":
+        return NextResponse.json(await replaceLiftingCatalogue(sessionEmail, payload));
       case "update-bid-status":
         return NextResponse.json(await updateBidStatus(sessionEmail, payload));
       case "update-property-listing-status":

@@ -389,6 +389,7 @@ export function AdminView() {
     updatePropertyListingAgentPayment,
     updateSurveyDelivery,
     updateSurveyStatus,
+    updateLiftingVerification,
     updateSupportTicket,
     upsertPropertyListing,
     upsertSurveyService,
@@ -1996,6 +1997,7 @@ export function AdminView() {
                       <p className="mt-2.5 text-xs text-muted-foreground leading-relaxed whitespace-pre-line bg-muted/30 p-3 rounded-xl border border-border/40">
                         {survey.description}
                       </p>
+                      {survey.lifting && <div className="mt-2.5 space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-foreground"><div><p className="font-bold">Lifting verification · {survey.lifting.estateName}, plot {survey.lifting.plotNumber}</p><p className="mt-1">KYC: {survey.lifting.kycStatus} · Owner authorization: {survey.lifting.authorizationStatus}</p><p className="mt-1 text-muted-foreground">Only the configured Principal Consultant can record a verification outcome. Do not lift or release a plan until both checks are independently confirmed.</p></div><div className="grid gap-2 sm:grid-cols-3"><Select label="KYC" value={survey.lifting.kycStatus} onChange={(event) => void updateLiftingVerification({ surveyId: survey.id, kycStatus: event.target.value as "Pending verification" | "Verified" | "Rejected", authorizationStatus: survey.lifting?.authorizationStatus ?? "Not requested" })} options={[{ value: "Pending verification", label: "Pending verification" }, { value: "Verified", label: "Verified" }, { value: "Rejected", label: "Rejected" }]} /><Select label="Owner authorization" value={survey.lifting.authorizationStatus} onChange={(event) => void updateLiftingVerification({ surveyId: survey.id, kycStatus: survey.lifting?.kycStatus ?? "Pending verification", authorizationStatus: event.target.value as "Not requested" | "Awaiting owner" | "Approved" | "Declined" })} options={[{ value: "Not requested", label: "Not requested" }, { value: "Awaiting owner", label: "Awaiting owner" }, { value: "Approved", label: "Approved" }, { value: "Declined", label: "Declined" }]} /><Button type="button" variant="outline" className="self-end" onClick={() => void updateLiftingVerification({ surveyId: survey.id, kycStatus: survey.lifting?.kycStatus ?? "Pending verification", authorizationStatus: survey.lifting?.authorizationStatus ?? "Not requested" })}>Save verification</Button></div></div>}
 
                       {/* Documents Attachments */}
                       {survey.documentAttachments && survey.documentAttachments.length > 0 && (

@@ -284,6 +284,40 @@ export interface SurveyRequest {
   completedFileName?: string;
   status: SurveyStatus;
   date: string;
+  lifting?: {
+    estateId: string;
+    estateName: string;
+    plotNumber: string;
+    layout: string;
+    areaSqm: number;
+    buyerAddress: string;
+    sellerName: string;
+    sellerAddress: string;
+    sellerPhone: string;
+    documentType: string;
+    declarationName: string;
+    declarationVersion: string;
+    declaredAt: string;
+    kycStatus: "Pending verification" | "Verified" | "Rejected";
+    authorizationStatus: "Not requested" | "Awaiting owner" | "Approved" | "Declined";
+  };
+}
+
+/** Private catalogue data. It is stored with the server-side platform state, never sent in snapshots. */
+export interface LiftingCataloguePlot {
+  number: string;
+  areaSqm: number;
+  layout: string;
+  use?: string;
+  excluded?: boolean;
+  exclusionReason?: string;
+}
+
+export interface LiftingCatalogueEstate {
+  id: string;
+  name: string;
+  approved: boolean;
+  plots: LiftingCataloguePlot[];
 }
 
 export interface CommunicationLog {
@@ -380,6 +414,7 @@ export interface PlatformState {
   farmDeliverySettings: FarmDeliverySettings;
   supportTickets: SupportTicket[];
   auditLogs: AuditLog[];
+  liftingCatalogue: LiftingCatalogueEstate[];
   brandLogoUrl?: string;
 }
 

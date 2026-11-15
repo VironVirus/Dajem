@@ -22,6 +22,7 @@ import type {
   ResidenceType,
   AgentListingPaymentStatus,
   FarmDeliverySettings,
+  LiftingCatalogueEstate,
   ServerUser,
   SupportTicketCategory,
   SupportTicketStatus,
@@ -33,9 +34,10 @@ import type {
 } from "../store";
 import { shippingWeightKg } from "../store";
 import { normalizeFarmDeliveryInput, quoteFarmDelivery, type FarmDeliveryInput } from "../farm-delivery";
-import { getIntegrationStatus, getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseMediaBucket, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
+import { getIntegrationStatus, getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseMediaBucket, getSupabaseStorageBucket, hashPassword, publicUser, readPlatformState, updatePlatformState } from "./platform-backend";
 import { propertyListingForViewer } from "./public-listing";
 import { mockPaymentsAllowed } from "../payment-policy";
+import { canonicalizeLiftingPlotInput } from "../lifting-estates";
 
 function nowIso() {
   return new Date().toISOString();
@@ -173,6 +175,42 @@ function requireAdmin(state: PlatformState, sessionEmail: string | null) {
   return currentUser;
 }
 
+function requirePrincipalConsultant(state: PlatformState, sessionEmail: string | null) {
+  const user = requireAdmin(state, sessionEmail);
+  const principalEmail = normalizeEmail(process.env.DAJEM_PRINCIPAL_CONSULTANT_EMAIL ?? "");
+  if (!principalEmail || normalizeEmail(user.email) !== principalEmail) {
+    throw new Error("Principal Consultant approval is required for lifting verification.");
+  }
+  return user;
+}
+
+function approvedLiftingEstate(state: PlatformState, estateId: string) {
+  return state.liftingCatalogue.find((estate) => estate.id === estateId && estate.approved) ?? null;
+}
+
+function findApprovedLiftingPlot(state: PlatformState, estateId: string, rawPlotNumber: string) {
+  const estate = approvedLiftingEstate(state, estateId);
+  const canonical = canonicalizeLiftingPlotInput(estateId, rawPlotNumber);
+  if (!estate || !canonical) return null;
+  const plot = estate.plots.find((entry) => entry.number === canonical && !entry.excluded) ?? null;
+  return plot ? { estate, plot } : null;
+}
+
+export async function listApprovedLiftingEstates(sessionEmail: string | null) {
+  const state = await readPlatformState();
+  requireUser(state, sessionEmail);
+  return state.liftingCatalogue
+    .filter((estate) => estate.approved && estate.plots.some((plot) => !plot.excluded))
+    .map(({ id, name }) => ({ id, name }));
+}
+
+export async function lookupApprovedLiftingPlot(sessionEmail: string | null, estateId: string, plotNumber: string) {
+  const state = await readPlatformState();
+  requireUser(state, sessionEmail);
+  const match = findApprovedLiftingPlot(state, estateId, plotNumber);
+  return match ? { number: match.plot.number, areaSqm: match.plot.areaSqm, layout: match.plot.layout, use: match.plot.use } : null;
+}
+
 const supportTicketCategories: SupportTicketCategory[] = ["Order & Delivery", "Survey", "Homes", "Account", "General"];
 const supportTicketStatuses: SupportTicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
@@ -254,6 +292,21 @@ function isOwnedDocumentStoragePath(email: string, storagePath: string) {
   return storagePath.startsWith(prefix) || storagePath.startsWith(`local-preview/${prefix}`);
 }
 
+async function assertStoredLiftingDocument(email: string, storagePath: string) {
+  if (!isOwnedDocumentStoragePath(email, storagePath)) throw new Error("The document does not belong to this account.");
+  if (storagePath.startsWith("local-preview/")) {
+    if (process.env.NODE_ENV === "production") throw new Error("Upload the actual document before continuing.");
+    return;
+  }
+  const client = getSupabaseAdminClient();
+  if (!client) throw new Error("Document storage is unavailable. Please try again later.");
+  const separator = storagePath.lastIndexOf("/");
+  const folder = storagePath.slice(0, separator);
+  const filename = storagePath.slice(separator + 1);
+  const { data, error } = await client.storage.from(getSupabaseStorageBucket()).list(folder, { search: filename, limit: 20 });
+  if (error || !data?.some((entry) => entry.name === filename)) throw new Error("The uploaded document could not be verified in storage.");
+}
+
 function cloneCartItem(
   item: InventoryItem,
   quantity: number,
@@ -283,6 +336,15 @@ function cloneCartItem(
 
 function snapshotFor(state: PlatformState, sessionEmail: string | null): DashboardSnapshot {
   const currentUser = getCurrentUser(state, sessionEmail);
+  if (!currentUser) {
+    return {
+      currentUser: null, users: [], cart: [], orders: [], bids: [], surveys: [], inventory: [],
+      propertyListings: [], surveyServices: [], communicationLogs: [], supportTickets: [], auditLogs: [],
+      farmDeliverySettings: state.farmDeliverySettings,
+      brandLogoUrl: state.brandLogoUrl,
+      integrations: getIntegrationStatus(),
+    };
+  }
   const isAdmin = currentUser?.role === "admin";
   const email = currentUser?.email ?? "";
   const visibleProperties = isAdmin
@@ -1108,6 +1170,161 @@ export async function submitSurvey(
   };
 }
 
+export async function startLiftingApplication(sessionEmail: string | null, payload: {
+  estateId: string;
+  plotNumber: string;
+  buyerName: string;
+  buyerPhone: string;
+  buyerAddress: string;
+  sellerName: string;
+  sellerAddress: string;
+  sellerPhone: string;
+  documentType: string;
+  declarationName: string;
+  documentAttachment: NonNullable<SurveyRequest["documentAttachments"]>[number];
+}) {
+  const { state, result } = await updatePlatformState(async (draft) => {
+    const user = requireUser(draft, sessionEmail);
+    if (!user.emailVerified) throw new Error("Confirm your email before starting a lifting application.");
+    const match = findApprovedLiftingPlot(draft, String(payload.estateId ?? ""), String(payload.plotNumber ?? ""));
+    if (!match) throw new Error("That plot was not found in the selected estate. Check the plot reference or contact DAJEM.");
+
+    const buyerName = String(payload.buyerName ?? "").trim().slice(0, 120);
+    const buyerPhone = String(payload.buyerPhone ?? "").trim().slice(0, 40);
+    const buyerAddress = String(payload.buyerAddress ?? "").trim().slice(0, 240);
+    const sellerName = String(payload.sellerName ?? "").trim().slice(0, 120);
+    const sellerAddress = String(payload.sellerAddress ?? "").trim().slice(0, 240);
+    const sellerPhone = String(payload.sellerPhone ?? "").trim().slice(0, 40);
+    const documentType = String(payload.documentType ?? "").trim().slice(0, 100);
+    const declarationName = String(payload.declarationName ?? "").trim().slice(0, 120);
+    if (!buyerName || !buyerPhone || !buyerAddress || !sellerName || !sellerPhone || !documentType || !declarationName) {
+      throw new Error("Complete the purchaser, seller, and document details before continuing.");
+    }
+    if (normalizeEmail(declarationName) !== normalizeEmail(buyerName)) {
+      throw new Error("Type your purchaser name exactly in the declaration.");
+    }
+    if (draft.surveys.some((entry) => entry.lifting?.estateId === match.estate.id && entry.lifting.plotNumber === match.plot.number && entry.status !== "Rejected" && entry.status !== "Completed & Sent")) {
+      throw new Error("This plot already has an active lifting application. Contact DAJEM if you believe this is an error.");
+    }
+
+    const attachment = payload.documentAttachment;
+    if (!attachment || !String(attachment.fileName ?? "").trim()) {
+      throw new Error("Attach a supporting title document before continuing.");
+    }
+    await assertStoredLiftingDocument(user.email, String(attachment.storagePath ?? ""));
+    const safeAttachment = { documentName: "Supporting title document", fileName: String(attachment.fileName ?? "").slice(0, 140), fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)), storagePath: String(attachment.storagePath).slice(0, 240) };
+    const request: SurveyRequest = {
+      id: makeId("LIFT"),
+      applicationNumber: makeId("APP"),
+      userName: buyerName,
+      userEmail: user.email,
+      userPhone: buyerPhone,
+      location: match.estate.name,
+      serviceType: "Lifting (Extraction from Layout)",
+      description: `Plot ${match.plot.number} in ${match.plot.layout}; ${match.plot.areaSqm} sq.m. Seller/donor: ${sellerName}. Identity and ownership authorization are pending verification.`,
+      billingType: "Change of Title",
+      documentAttachments: [safeAttachment],
+      status: "Pending Approval",
+      paymentStatus: "Awaiting Review",
+      processingNote: "Identity verification is pending. No plan will be lifted until DAJEM confirms KYC and owner authorization.",
+      date: formatDate(),
+      lifting: {
+        estateId: match.estate.id,
+        estateName: match.estate.name,
+        plotNumber: match.plot.number,
+        layout: match.plot.layout,
+        areaSqm: match.plot.areaSqm,
+        buyerAddress,
+        sellerName,
+        sellerAddress,
+        sellerPhone,
+        documentType,
+        declarationName,
+        declarationVersion: "lifting-declaration-v1",
+        declaredAt: nowIso(),
+        kycStatus: "Pending verification",
+        authorizationStatus: "Not requested",
+      },
+    };
+    draft.surveys.unshift(request);
+    draft.communicationLogs.unshift(buildEmailLog(user.email, "Lifting application received", `Your lifting application ${request.applicationNumber} for ${match.estate.name}, plot ${match.plot.number}, has been received. Identity and owner authorization are not yet verified.`));
+    appendAuditLog(draft, { actor: user, action: "lifting.started", detail: `${request.applicationNumber}: ${match.estate.name}, plot ${match.plot.number}; declaration lifting-declaration-v1` });
+    return request;
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Lifting application received; verification is pending.", applicationNumber: result.applicationNumber };
+}
+
+export async function attachLiftingForm(sessionEmail: string | null, payload: {
+  applicationNumber: string;
+  attachment: NonNullable<SurveyRequest["documentAttachments"]>[number];
+}) {
+  const { state } = await updatePlatformState(async (draft) => {
+    const user = requireUser(draft, sessionEmail);
+    const survey = draft.surveys.find((entry) => entry.applicationNumber === payload.applicationNumber && entry.userEmail === user.email && entry.lifting);
+    if (!survey) throw new Error("Lifting application not found.");
+    if (survey.status === "Completed & Sent" || survey.status === "Rejected") throw new Error("This application is no longer accepting documents.");
+    const attachment = payload.attachment;
+    const storagePath = String(attachment?.storagePath ?? "").slice(0, 240);
+    if (!String(attachment?.fileName ?? "").trim()) {
+      throw new Error("Upload the signed form from your account before attaching it.");
+    }
+    await assertStoredLiftingDocument(user.email, storagePath);
+    survey.documentAttachments ??= [];
+    if (survey.documentAttachments.some((entry) => entry.storagePath === storagePath)) throw new Error("This form is already attached.");
+    survey.documentAttachments.push({ documentName: "Signed lifting form", fileName: String(attachment.fileName).slice(0, 140), fileSizeKb: Math.max(0, Number(attachment.fileSizeKb ?? 0)), storagePath });
+    draft.communicationLogs.unshift(buildEmailLog(user.email, "Lifting form received", `The signed form for ${survey.applicationNumber} was uploaded. DAJEM will review it alongside identity and owner authorization.`));
+    appendAuditLog(draft, { actor: user, action: "lifting.form_uploaded", detail: survey.applicationNumber ?? survey.id });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Signed form uploaded for review." };
+}
+
+export async function updateLiftingVerification(
+  sessionEmail: string | null,
+  payload: {
+    surveyId: string;
+    kycStatus: "Pending verification" | "Verified" | "Rejected";
+    authorizationStatus: "Not requested" | "Awaiting owner" | "Approved" | "Declined";
+    note?: string;
+  },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    const principal = requirePrincipalConsultant(draft, sessionEmail);
+    const survey = draft.surveys.find((entry) => entry.id === payload.surveyId && entry.lifting);
+    if (!survey?.lifting) throw new Error("Lifting application not found.");
+
+    const kycStatuses = ["Pending verification", "Verified", "Rejected"] as const;
+    const authorizationStatuses = ["Not requested", "Awaiting owner", "Approved", "Declined"] as const;
+    if (!kycStatuses.includes(payload.kycStatus) || !authorizationStatuses.includes(payload.authorizationStatus)) {
+      throw new Error("Select valid lifting verification statuses.");
+    }
+
+    survey.lifting.kycStatus = payload.kycStatus;
+    survey.lifting.authorizationStatus = payload.authorizationStatus;
+    survey.processingNote = String(payload.note ?? "").trim().slice(0, 500) || survey.processingNote;
+    appendAuditLog(draft, {
+      actor: publicUser(principal),
+      action: "lifting.verification_updated",
+      detail: `${survey.applicationNumber ?? survey.id}: KYC ${payload.kycStatus}; authorization ${payload.authorizationStatus}`,
+      targetUserId: draft.users.find((user) => normalizeEmail(user.email) === normalizeEmail(survey.userEmail))?.id,
+    });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Lifting verification updated." };
+}
+
+export async function replaceLiftingCatalogue(
+  sessionEmail: string | null,
+  payload: { estates: LiftingCatalogueEstate[] },
+) {
+  const { state } = await updatePlatformState((draft) => {
+    const principal = requirePrincipalConsultant(draft, sessionEmail);
+    const estates = Array.isArray(payload.estates) ? payload.estates : [];
+    if (estates.length > 100) throw new Error("Too many estates in one catalogue update.");
+    draft.liftingCatalogue = estates;
+    appendAuditLog(draft, { actor: publicUser(principal), action: "lifting.catalogue_replaced", detail: `${estates.length} private lifting estates saved.` });
+  });
+  return { snapshot: snapshotFor(state, sessionEmail), message: "Private lifting catalogue saved." };
+}
+
 export async function updateBidStatus(
   sessionEmail: string | null,
   payload: { bidId: string; status: BidStatus },
@@ -1133,6 +1350,10 @@ export async function updateSurveyStatus(
     requireAdmin(draft, sessionEmail);
     const survey = draft.surveys.find((entry) => entry.id === payload.surveyId);
     if (!survey) throw new Error("Survey request not found.");
+
+    if (survey.lifting && (payload.status === "In Progress" || payload.status === "Completed & Sent") && (survey.lifting.kycStatus !== "Verified" || survey.lifting.authorizationStatus !== "Approved")) {
+      throw new Error("Verify KYC and landowner authorization before lifting or completing this plan.");
+    }
 
     survey.status = payload.status;
     if (payload.status === "Completed & Sent" && !survey.completedFileName) {

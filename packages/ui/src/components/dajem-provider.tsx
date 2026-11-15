@@ -162,6 +162,12 @@ interface DajemContextValue {
     status?: ApprovalStatus;
   }) => Promise<void>;
   updateSurveyStatus: (surveyId: string, status: SurveyStatus) => Promise<void>;
+  updateLiftingVerification: (payload: {
+    surveyId: string;
+    kycStatus: "Pending verification" | "Verified" | "Rejected";
+    authorizationStatus: "Not requested" | "Awaiting owner" | "Approved" | "Declined";
+    note?: string;
+  }) => Promise<void>;
   updateSurveyDelivery: (surveyId: string, status: SurveyDeliveryStatus, trackingNumber?: string) => Promise<void>;
   updateInventoryItem: (payload: {
     productId?: string;
@@ -561,6 +567,9 @@ export function DajemProvider({ children }: { children: React.ReactNode }) {
     },
     updateSurveyStatus: async (surveyId, status) => {
       await postAction("update-survey-status", { surveyId, status });
+    },
+    updateLiftingVerification: async (payload) => {
+      await postAction("update-lifting-verification", payload);
     },
     updateSurveyDelivery: async (surveyId, status, trackingNumber) => {
       await postAction("update-survey-delivery", { surveyId, status, trackingNumber });

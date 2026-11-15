@@ -111,6 +111,7 @@ const orbitalNavItems = [
   { href: "/survey/services", label: "Services", icon: Layers },
   { href: "/survey/estimate", label: "Estimate", icon: Calculator },
   { href: "/survey/inquiry", label: "Inquiry", icon: FileUp },
+  { href: "/survey/lifting", label: "Lifting", icon: MapPin },
   { href: "/survey/tracker", label: "Tracker", icon: Clock },
 ];
 
@@ -1693,6 +1694,7 @@ export default function SurveyPage() {
               {[
                 { href: "/survey/estimate", label: "Fee Estimator", meta: "Calculate cost bands", icon: Calculator },
                 { href: "/survey/inquiry", label: "Inquiry & Upload", meta: "Consult & upload docs", icon: FileUp },
+                { href: "/survey/lifting", label: "Plot Lifting", meta: "Apply & verify", icon: MapPin },
                 { href: "/survey/services", label: "Survey Catalog", meta: `${services.length} approved services`, icon: Compass },
                 { href: "/survey/tracker", label: "Ship & Track", meta: `${userSurveys.length} active requests`, icon: PackageCheck },
               ].map((item) => {
@@ -2366,6 +2368,8 @@ export default function SurveyPage() {
                       <p className="mt-3 whitespace-pre-line text-xs leading-relaxed">{survey.description}</p>
                     </details>
                     <div className="flex flex-wrap items-center gap-2">
+                      {survey.lifting && <Badge variant="outline">KYC: {survey.lifting.kycStatus}</Badge>}
+                      {survey.lifting && <Badge variant="outline">Owner: {survey.lifting.authorizationStatus}</Badge>}
                       {survey.billingType && (
                         <Badge variant="outline">{survey.billingType}</Badge>
                       )}
@@ -2375,6 +2379,7 @@ export default function SurveyPage() {
                         </Badge>
                       )}
                     </div>
+                    {survey.lifting && <a href={`/api/lifting/form?application=${encodeURIComponent(survey.applicationNumber ?? "")}`} className="inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold text-foreground hover:bg-accent"><FileUp className="h-4 w-4" />Download lifting form</a>}
                     {survey.uploadedDocuments && survey.uploadedDocuments.length > 0 && (
                       <p className="text-xs text-muted-foreground">Documents selected: {survey.uploadedDocuments.join(", ")}</p>
                     )}
