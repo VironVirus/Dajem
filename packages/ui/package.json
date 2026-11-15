@@ -14,6 +14,7 @@
     "./lib/flutterwave-verify-route": "./src/lib/flutterwave-verify-route.ts",
     "./lib/flutterwave-webhook-route": "./src/lib/flutterwave-webhook-route.ts",
     "./lib/nigeria-locations": "./src/lib/nigeria-locations.ts",
+    "./lib/lifting-estates": "./src/lib/lifting-estates.ts",
     "./lib/image-upload-route": "./src/lib/image-upload-route.ts",
     "./lib/survey-document-upload-route": "./src/lib/survey-document-upload-route.ts",
     "./lib/server/platform-repository": "./src/lib/server/platform-repository.ts",
@@ -32,6 +33,7 @@
     "next": "^16.3.8",
     "next-themes": "^0.4.4",
     "nigeria-state-lga-data": "^1.1.5",
+    "pdf-lib": "^1.17.1",
     "sharp": "0.35.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
